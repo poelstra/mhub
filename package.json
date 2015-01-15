@@ -1,0 +1,30 @@
+{
+  "name": "mserver",
+  "version": "0.0.1",
+  "description": "FLL Message Server",
+  "main": "dist/src/server.js",
+  "scripts": {
+    "test": "npm run lint && npm run mocha",
+    "mocha": "mocha -R spec dist/test/",
+    "start": "node dist/test/index.js",
+    "lint": "tslint -c tslint.json -f src/client.ts -f src/pubsub.ts -f src/server.ts",
+    "build:src": "tsc @tsc.options.txt --outDir dist/src/ src/*.ts",
+    "watch:src": "tsc @tsc.options.txt --outDir dist/src/ src/*.ts --watch",
+    "build:test": "tsc @tsc.options.txt --outDir dist/test/ test/*.ts",
+    "watch:test": "tsc @tsc.options.txt --outDir dist/test/ test/*.ts --watch",
+    "build": "npm run build:src && npm run build:test",
+    "watch:start": "mkdir -p dist/src/ && touch dist/src/server.js && nodemon --delay 1 --watch dist/src/",
+    "watch": "parallelshell 'npm run watch:src' 'npm run watch:test' 'npm run watch:start'",
+    "clean": "rimraf -rf dist"
+  },
+  "author": "Martin Poelstra <martin@beryllium.net>",
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^1.3.0",
+    "mocha": "^2.1.0",
+    "tslint": "^1.2.0"
+  },
+  "dependencies": {
+    "minimatch": "^2.0.1"
+  }
+}
