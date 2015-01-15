@@ -6,7 +6,7 @@
   "scripts": {
     "test": "npm run lint && npm run mocha",
     "mocha": "mocha -R spec dist/test/",
-    "start": "node dist/test/index.js",
+    "start": "node dist/src/server.js",
     "lint": "tslint -c tslint.json -f src/client.ts -f src/pubsub.ts -f src/server.ts",
     "build:src": "tsc @tsc.options.txt --outDir dist/src/ src/*.ts",
     "watch:src": "tsc @tsc.options.txt --outDir dist/src/ src/*.ts --watch",
