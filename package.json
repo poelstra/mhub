@@ -25,6 +25,7 @@
     "tslint": "^1.2.0"
   },
   "dependencies": {
-    "minimatch": "^2.0.1"
+    "minimatch": "^2.0.1",
+    "yargs": "^1.3.3"
   }
 }
