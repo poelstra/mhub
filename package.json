@@ -7,7 +7,7 @@
     "test": "npm run lint && npm run mocha",
     "mocha": "mocha -R spec dist/test/",
     "start": "node dist/src/server.js",
-    "lint": "tslint -c tslint.json -f src/client.ts -f src/pubsub.ts -f src/server.ts",
+    "lint": "node support/tslint_wrapper.js src/*.ts test/*.ts",
     "build:src": "tsc @tsc.options.txt --outDir dist/src/ src/*.ts",
     "watch:src": "tsc @tsc.options.txt --outDir dist/src/ src/*.ts --watch",
     "build:test": "tsc @tsc.options.txt --outDir dist/test/ test/*.ts",
@@ -22,10 +22,12 @@
   "devDependencies": {
     "typescript": "^1.3.0",
     "mocha": "^2.1.0",
-    "tslint": "^1.2.0"
+    "tslint": "^1.2.0",
+    "multi-glob": "^0.4.0"
   },
   "dependencies": {
     "minimatch": "^2.0.1",
     "yargs": "^1.3.3"
-  }
+  },
+  "tslintConfig": "tslint.json"
 }
