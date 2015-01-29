@@ -45,7 +45,7 @@
     "no-trailing-comma": true,
     "no-trailing-whitespace": true,
     "no-unused-expression": true,
-    "no-unused-variable": true,
+    "no-unused-variable": false, "//": "Disabled because of bug in tsc 1.3+",
     "no-unreachable": true,
     "no-use-before-declare": true,
     "no-var-requires": true,
