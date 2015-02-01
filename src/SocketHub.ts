@@ -1,3 +1,7 @@
+/**
+ * Convert WebSocket into an MServer hub (i.e. a bunch of Nodes).
+ */
+
 /// <reference path="../typings/tsd.d.ts" />
 
 "use strict";
@@ -10,15 +14,16 @@ import d = require("./debug");
 import debug = d.debug;
 
 import pubsub = require("./pubsub");
+import Message = require("./Message");
 
 class SocketDestination extends events.EventEmitter implements pubsub.Destination {
 	public hub: SocketHub;
 	public socket: ws;
 	public name: string;
 
-	private subscriptions: { [name: string]: pubsub.Node } = Object.create(null);
+	private subscriptions: pubsub.Node[] = [];
 
-	private static lastMessage: pubsub.Message;
+	private static lastMessage: Message;
 	private static lastJSON: string;
 
 	constructor(hub: SocketHub, socket: ws, id: number) {
@@ -34,12 +39,12 @@ class SocketDestination extends events.EventEmitter implements pubsub.Destinatio
 		debug.write("[ %s ] connected", this.name);
 	}
 
-	send(message: pubsub.Message): void {
+	send(message: Message): void {
 		debug.write("-> %s", this.name, message);
 		if (message !== SocketDestination.lastMessage) {
 			SocketDestination.lastMessage = message;
 			SocketDestination.lastJSON = JSON.stringify({
-				type: "event",
+				type: "message",
 				topic: message.topic,
 				data: message.data,
 				headers: message.headers
@@ -49,10 +54,10 @@ class SocketDestination extends events.EventEmitter implements pubsub.Destinatio
 	}
 
 	private _handleClose(): void {
-		Object.keys(this.subscriptions).forEach((name: string): void => {
-			this.subscriptions[name].unbind(this);
+		this.subscriptions.forEach((node: pubsub.Node): void => {
+			node.unbind(this);
 		});
-		this.subscriptions = Object.create(null);
+		this.subscriptions = [];
 		this.emit("close");
 		debug.write("[ %s ] disconnected", this.name);
 	}
@@ -66,39 +71,55 @@ class SocketDestination extends events.EventEmitter implements pubsub.Destinatio
 		debug.write("[ %s ] message", this.name, data);
 		try {
 			var msg = JSON.parse(data);
+			var node = this.hub.find(msg.node);
+			if (!node) {
+				debug.write("[ %s ] unknown node %s", this.name, msg.node);
+				this.socket.send(JSON.stringify({
+					type: "error",
+					message: "unknown node " + msg.node
+				}));
+				return;
+			}
 			if (msg.type === "publish") {
-				if (this.hub.nodes[msg.node]) {
-					this.hub.nodes[msg.node].send(new pubsub.Message(msg.topic, msg.data, msg.headers));
-				}
+				node.send(new Message(msg.topic, msg.data, msg.headers));
 			} else if (msg.type === "subscribe") {
-				if (!this.subscriptions[msg.node] && this.hub.nodes[msg.node]) {
-					this.hub.nodes[msg.node].bind(this);
-					this.subscriptions[msg.node] = this.hub.nodes[msg.node];
+				if (this.subscriptions.indexOf(node) < 0) {
+					this.subscriptions.push(node);
 				}
+				node.bind(this, msg.pattern);
 			}
 		} catch (e) {
 			debug.write("[ %s ] decode error", this.name, e);
-			this.socket.close();
+			this.socket.send(JSON.stringify({
+				type: "error",
+				message: "decode error " + e
+			}));
 		}
 	}
 }
 
 class SocketHub {
-	public nodes: { [name: string]: pubsub.Node } = Object.create(null);
-
+	private nodes: { [name: string]: pubsub.Node } = Object.create(null);
 	private clients: { [index: number]: SocketDestination } = Object.create(null);
 	private clientIndex: number = 0;
 
 	constructor(server: http.Server, location: string = "/") {
 		var wss = new ws.Server({ server: server, path: location });
 		wss.on("connection", this._handleConnection.bind(this));
+		wss.on("error", (e: Error): void => {
+			console.log("WebSocketServer error:", e);
+		});
 	}
 
 	add(node: pubsub.Node): void {
-		if (this.nodes[node.name]) {
+		if (this.find(node.name)) {
 			throw new Error("duplicate node: " + node.name);
 		}
-		this.nodes[node.name] = node;
+		this.nodes["_" + node.name] = node;
+	}
+
+	find(nodeName: string): pubsub.Node {
+		return this.nodes["_" + nodeName];
 	}
 
 	private _handleConnection(conn: ws): void {

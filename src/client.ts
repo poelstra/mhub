@@ -7,7 +7,8 @@
 "use strict";
 
 import yargs = require("yargs");
-import ws = require("ws");
+import MClient = require("./MClient");
+import Message = require("./Message");
 
 var usage = [
 	"Listen mode: $0 -s <host>[:<port>] -n <nodename> -l",
@@ -57,17 +58,14 @@ var args = yargs
 
 function listenMode(): void {
 	var argv = args.argv;
-	var socket = new ws("ws://" + argv.socket);
-	socket.on("open", (): void => {
-		socket.send(JSON.stringify({
-			type: "subscribe",
-			node: argv.node
-		}));
-		socket.on("message", (data: string): void => {
-			console.log(data);
-		});
+	var client = new MClient("ws://" + argv.socket);
+	client.on("open", (): void => {
+		client.subscribe(argv.node);
 	});
-	socket.on("error", (e: Error): void => {
+	client.on("message", (msg: Message): void => {
+		console.log(msg);
+	});
+	client.on("error", (e: Error): void => {
 		die("Socket error:", e);
 	});
 }
@@ -95,19 +93,13 @@ function postMode(): void {
 		die("Error parsing message headers as JSON: " + e.message);
 	}
 
-	var socket = new ws("ws://" + argv.socket);
-	socket.on("open", (): void => {
-		socket.send(JSON.stringify({
-			type: "publish",
-			node: argv.node,
-			topic: argv.topic,
-			data: data,
-			headers: headers
-		}), (): void => {
-			socket.close();
+	var client = new MClient("ws://" + argv.socket);
+	client.on("open", (): void => {
+		client.publish(argv.node, argv.topic, data, headers, (): void => {
+			client.close();
 		});
 	});
-	socket.on("error", (e: Error): void => {
+	client.on("error", (e: Error): void => {
 		die("Socket error:", e);
 	});
 }

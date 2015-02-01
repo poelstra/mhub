@@ -1,3 +1,8 @@
+/**
+ * MServer pubsub fabric: nodes and bindings.
+ * Provides the basic routing infrastructure to send and receive messages.
+ */
+
 /// <reference path="../typings/tsd.d.ts" />
 
 "use strict";
@@ -7,6 +12,8 @@ import minimatch = require("minimatch");
 import d = require("./debug");
 import debug = d.debug;
 
+import Message = require("./Message");
+
 interface Matcher {
 	pattern: string;
 	filter: (topic: string) => boolean;
@@ -15,44 +22,6 @@ interface Matcher {
 interface Binding {
 	matchers: Matcher[];
 	destination: Destination;
-}
-
-/**
- * Message to be sent over pubsub network.
- *
- * Warning: do NOT change a message once it's been passed to the pubsub framework!
- */
-export class Message {
-	/**
-	 * Topic of message.
-	 * Can be used to determine routing between pubsub Nodes.
-	 */
-	topic: string;
-
-	/**
-	 * Optional message data, can be null.
-	 * Must be JSON serializable.
-	 */
-	data: any;
-
-	/**
-	 * Optional message headers.
-	 */
-	headers: { [name: string]: string };
-
-	/**
-	 * Construct message object.
-	 *
-	 * Warning: do NOT change a message once it's been passed to the pubsub framework!
-	 */
-	constructor(topic: string, data: any = null, headers?: { [name: string]: string }) {
-		if (typeof topic !== "string") {
-			throw new TypeError("invalid topic: expected string, got " + typeof topic);
-		}
-		this.topic = topic;
-		this.data = data;
-		this.headers = headers || Object.create(null);
-	}
 }
 
 export interface Destination {

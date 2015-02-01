@@ -1,3 +1,7 @@
+/**
+ * Debug helper to print nested messages.
+ */
+
 /// <reference path="../typings/tsd.d.ts" />
 
 "use strict";
@@ -36,4 +40,7 @@ export class Debug {
 	}
 }
 
+// TODO: This is a mess.
+// I'd hope for a simple "export = new Debug();", but that's not currently possible.
+// Makes for very akward usage in our libraries too.
 export var debug = new Debug();
