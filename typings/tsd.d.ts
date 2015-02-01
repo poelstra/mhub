@@ -4,3 +4,4 @@
 /// <reference path="basic-auth/basic-auth.d.ts" />
 /// <reference path="minimatch/minimatch.d.ts" />
 /// <reference path="yargs/yargs.d.ts" />
+/// <reference path="node-uuid/node-uuid.d.ts" />

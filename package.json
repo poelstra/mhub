@@ -30,7 +30,8 @@
     "minimatch": "^2.0.1",
     "yargs": "^1.3.3",
     "express": "^4.11.1",
-    "ws": "^0.7.1"
+    "ws": "^0.7.1",
+    "node-uuid": "^1.4.2"
   },
   "tslintConfig": "tslint.json"
 }

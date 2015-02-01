@@ -22,6 +22,9 @@
     },
     "yargs/yargs.d.ts": {
       "commit": "b3324f69165309a3ea2bd02fd10e97841bf07c83"
+    },
+    "node-uuid/node-uuid.d.ts": {
+      "commit": "7bab855ae33d79e86da1eb6c73a7f7eab2676ddb"
     }
   }
 }
