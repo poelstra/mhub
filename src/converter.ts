@@ -82,7 +82,7 @@ function stringToMessage(data: string): Message {
 				msgData["message"] = s.getRest(); // Note: don't use overlayMsgDecode() here
 				msg = new Message("announcement:show", msgData);
 			} else {
-				msg = new Message("announcement:" + msgCmd);
+				msg = new Message("announcement:hide");
 			}
 			break;
 		default:
@@ -163,12 +163,17 @@ function messageToString(msg: Message): string {
 			}
 			break;
 		case "announcement":
-			if (typeof msg.data === "string") {
+			if (cmd === "show" && typeof msg.data === "string") {
 				return "directmsg " + overlay.messageEncode(msg.data);
 			}
 			break;
 		case "image":
-			return cmd + namespace;
+			if (cmd === "show" && msg.data && msg.data.name) {
+				return cmd + namespace + " " + msg.data.name;
+			} else {
+				return cmd + namespace;
+			}
+			break;
 	}
 	return null;
 }
