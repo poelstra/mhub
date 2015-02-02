@@ -2,17 +2,24 @@
 
 ## Introduction
 
-This project contains a simple message broker for connecting various parts of First Lego League tournament software, developed collaboratively at https://github.com/FirstLegoLeague/.
+This project contains a simple message broker for connecting various parts of First Lego League
+tournament software, developed collaboratively at [Github](https://github.com/FirstLegoLeague/).
 
-It replaces the RabbitMQ server that we were using initially, which was removed to reduce the number of dependencies on software packages (we're already using Node and WebSockets), and to allow specific features to be implemented such as adding history to queues.
+It replaces the RabbitMQ server that we were using initially, which was removed to reduce the number
+of dependencies on software packages (we're already using Node and WebSockets), and to allow
+specific features to be implemented such as adding history to queues.
 
-## Installation
+## Status
 
-Current package is still in active development, and pretty much hardcoded to a specific tournament (FLL Benelux Final, February 7th 2015, in the Netherlands).
+Current package is still in active development, and mainly focussed on a specific tournament
+(FLL Benelux Final, February 7th 2015, in the Netherlands).
 
-Therefore, installation is currently only suitable for developers. A more user-friendly way of starting it will be developed later.
+Therefore, installation is currently only suitable for developers. A more user-friendly way of
+starting it will be developed later.
 
-For now, to install and start the server:
+## Installation and running the server
+
+For now, to install and start the server using the default configuration:
 ```sh
 git clone https://github.com/poelstra/mserver
 cd mserver
@@ -21,38 +28,71 @@ npm run build
 npm start
 ```
 
-## Usage
+To customize the available nodes and bindings, create a copy of `server.conf.json`, edit it to your
+needs and start the server as:
+```sh
+node start -- -c <config_filename>
+```
+(Note: passing custom arguments only works with a recent npm, tested with 2.4.1)
+
+## Interfacing with the server from the commandline
 
 Once the server is running, you can use the provided commandline tool to interface with it.
 
 In one terminal, start:
 ```sh
-node dist/src/client -n queue -l
+node dist/src/client -n blib -l
 ```
 
-This will subscribe to the node named 'queue', and log all messages that are posted to it to the console.
-You should see a test message every 5 seconds.
+This will subscribe to the node named 'blib', and log all messages that are posted to it to the
+console. You should see a test message every 5 seconds.
 
 In another terminal, run:
 ```sh
-node dist/src/client -n queue -t my:topic -d '"topic data"'
+node dist/src/client -n blib -t my:topic -d '"topic data"'
 ```
 
-This posts a message to the same queue, which you should see in the output of the first client (and in the debug output of the server).
+This posts a message to the same queue, which you should see in the output of the first client (and
+in the debug output of the server).
 
 Use the client's `--help` option for somewhat more advanced usage.
 
+## Interfacing with the server programmatically
+
+A class for interfacing with the server is provided (and documented) in src/MClient.ts.
+
+Example usage:
+```js
+var MClient = require("./dist/src/MClient");
+var client = new MClient("ws://localhost:13900");
+client.on("message", function(message) {
+	console.log(message.topic, message.data, message.headers);
+});
+client.on("open", function() {
+	client.subscribe("blib"); // or e.g. client.subscribe("blib", "my:*");
+	client.publish("blib", "my:topic", 42, { some: "header" });
+});
+```
+
+For use in the browser, browserify is recommended.
+
+For internal details about the protocol, see the source of src/MClient.ts.
+
 ## Development
 
-See Installation for basic installation, but instead of rebuilding and restarting the server manually every time, run:
+See Installation for basic installation, but instead of rebuilding and restarting the server
+manually every time, run:
 ```sh
 npm run watch
 ```
 
-The package is developed using Typescript: a superset of Javascript, adding type-safety and e.g. sophisticated code-completion (if your editor supports it). See http://www.typescriptlang.org/
+The package is developed using [Typescript](http://www.typescriptlang.org/).
 
-CATS has been used as a simple open-source editor. It has some rough edges, but does provide code-completion and on-the-fly error checking of the Typescript code, see https://github.com/jbaron/cats/tree/unstable (be sure to take the 'unstable' branch for now).
+For editing the code, give [CATS](https://github.com/jbaron/cats/tree/unstable) a try.
+It's a Typescript editor that supports code-completion, realtime error checking, linting,
+etc., It has some rough edges, but its succesfully been used to program everything in this repo
+(be sure to take the 'unstable' branch of CATS for now though).
 
-## Protocol
+## Authors
 
-For now, see the source of src/client.ts.
+* [Martin Poelstra](https://github.com/poelstra)
