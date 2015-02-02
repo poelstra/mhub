@@ -214,6 +214,7 @@ function mserverConnecter(): void {
 		c.on("open", (): void => {
 			console.log("MClient connected");
 			mclient = c;
+			c.subscribe(config.mserver.subscribe_node);
 		});
 		c.on("close", (): void => {
 			console.log("MClient closed");
