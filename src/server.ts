@@ -10,42 +10,70 @@
 
 import express = require("express");
 import http = require("http");
+import yargs = require("yargs");
+import path = require("path");
+import fs = require("fs");
 import pubsub = require("./pubsub");
 import SocketHub = require("./SocketHub");
 import Message = require("./Message");
+
+var args = yargs
+	.usage("$0 [-c <config_file>]")
+	.help("help")
+	.option("c", {
+		type: "string",
+		alias: "config",
+		description: "Filename of config",
+		default: "server.conf.json"
+	})
+	.argv;
+
+var configFile = path.resolve(args.config);
+console.log("Using config file " + configFile);
+var config = JSON.parse(fs.readFileSync(configFile, "utf8"));
 
 var app = express();
 
 //app.use("/", express.static(__dirname + "/static"));
 
-var PORT = process.env.PORT || 13900;
 var server = http.createServer(app);
-server.listen(PORT, (): void => {
-	console.log("Listening on " + PORT);
+server.listen(config.port, (): void => {
+	console.log("Listening on " + config.port);
 });
 server.on("error", (e: Error): void => {
 	console.log("Webserver error:", e);
 });
 
-// TODO: Make this stuff configurable instead of hard-coded
-var blib = new pubsub.Node("blib");
-var twitter = new pubsub.Node("twitter");
-var twitterbar = new pubsub.Node("twitterbar");
-var controller = new pubsub.Node("controller");
-var proxy = new pubsub.Node("proxy");
-
-twitter.bind(twitterbar, "twitter:{add,remove}"); // twitter:add and twitter:remove go to twitterbar
-controller.bind(twitterbar, "twitter:{show,hide}"); // controller is in charge of hide/show of twitterbar
-proxy.bind(twitterbar, "twitter:{show,hide}"); // Show/hide buttons on 'old' Overlay Controller can also be used
-
 var hub = new SocketHub(server);
-hub.add(blib);
-hub.add(twitter);
-hub.add(twitterbar);
-hub.add(controller);
-hub.add(proxy);
 
-var blibCount = 0;
-setInterval((): void => {
-	blib.send(new Message("blib", blibCount++));
-}, 5000);
+config.nodes.forEach((nodeName: string): void => {
+	var node = new pubsub.Node(nodeName);
+	hub.add(node);
+});
+
+interface Binding {
+	from: string;
+	to: string;
+	pattern?: string;
+}
+
+config.bindings.forEach((binding: Binding): void => {
+	var from = hub.find(binding.from);
+	if (!from) {
+		throw new Error("Unknown node '" + binding.from + "'");
+	}
+	var to = hub.find(binding.to);
+	if (!to) {
+		throw new Error("Unknown node '" + binding.to + "'");
+	}
+	from.bind(to, binding.pattern);
+});
+
+// Automatically send blibs when a blib node is configured, useful for testing
+var blibNode = hub.find("blib");
+if (blibNode) {
+	var blibCount = 0;
+	setInterval((): void => {
+		blibNode.send(new Message("blib", blibCount++));
+	}, 5000);
+}

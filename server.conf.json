@@ -1,0 +1,9 @@
+{
+	"port": 13900,
+	"nodes": ["blib", "twitter", "twitterbar", "controller", "proxy"],
+	"bindings": [
+		{ "from": "twitter", "to": "twitterbar", "pattern": "twitter:{add,remove}" },
+		{ "from": "controller", "to": "twitterbar", "pattern": "twitter:{show,hide}" },
+		{ "from": "proxy", "to": "twitterbar", "pattern": "twitter:{show,hide}" }
+	]
+}
