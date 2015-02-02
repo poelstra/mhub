@@ -9,13 +9,15 @@
 
 import http = require("http");
 import util = require("util");
+import fs = require("fs");
+import path = require("path");
 import querystring = require("querystring");
 import overlay = require("./overlay");
 import MClient = require("./MClient");
 
-/* tslint:disable:no-var-requires */
-var config = require("../../config");
-/* tslint:enable:no-var-requires */
+var configFile = path.resolve(__dirname, "../../twitter_pusher.conf.json");
+console.log("Using config file " + configFile);
+var config = JSON.parse(fs.readFileSync(configFile, "utf8"));
 
 /* FLL Twitter API handling */
 
@@ -185,7 +187,7 @@ function publish(mode: string, tweet: Tweet): boolean {
 	if (!mclient) {
 		return false;
 	}
-	mclient.publish(config.mserver.twitter.node, "twitter:" + mode, tweet);
+	mclient.publish(config.mserver.node, "twitter:" + mode, tweet);
 	return true;
 }
 

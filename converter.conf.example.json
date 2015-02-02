@@ -1,0 +1,14 @@
+{
+	"README": "Copy this file to converter.conf.json, and fill in appropriate details (notably overlay.login).",
+
+	"mserver": {
+		"url": "ws://localhost:13900",
+		"publish_node": "proxy",
+		"subscribe_node": "proxy"
+	},
+	"overlay": {
+		"host": "localhost",
+		"port": 10011,
+		"login": "supersecret"
+	}
+}

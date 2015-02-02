@@ -8,14 +8,16 @@
 "use strict";
 
 import util = require("util");
-import overlay = require("./overlay");
 import uuid = require("node-uuid");
+import fs = require("fs");
+import path = require("path");
+import overlay = require("./overlay");
 import MClient = require("./MClient");
 import Message = require("./Message");
 
-/* tslint:disable:no-var-requires */
-var config = require("../../config");
-/* tslint:enable:no-var-requires */
+var configFile = path.resolve(__dirname, "../../converter.conf.json");
+console.log("Using config file " + configFile);
+var config = JSON.parse(fs.readFileSync(configFile, "utf8"));
 
 /* Shared state */
 
@@ -238,7 +240,7 @@ function publish(message: Message, callback?: (err: Error) => void): boolean {
 	if (!mclient) {
 		return false;
 	}
-	mclient.publish(config.mserver.proxy.publish_node, message, callback);
+	mclient.publish(config.mserver.publish_node, message, callback);
 	return true;
 }
 
