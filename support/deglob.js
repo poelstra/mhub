@@ -7,15 +7,22 @@
 
 "use strict";
 
-var mglob = require("multi-glob");
-var spawn = require("child_process").spawn;
-var fs = require("fs");
+var glob = require("glob");
+var spawn = require("cross-spawn");
 
+// Strip call to node and our own filename
 var args = process.argv.slice(2);
 
-mglob.glob(args, function(err, files) {
-	var proc = spawn(args.shift(), args, { stdio: "inherit" });
-	proc.on("close", function (code) {
-		process.exit(code);
-	});
+// Expand each input argument, or leave it as-is
+args = args.reduce(function(args, arg) {
+	var matches = glob.sync(arg);
+	if (matches.length === 0) {
+		matches = [arg];
+	}
+	return args.concat(matches);
+}, []);
+
+var proc = spawn(args.shift(), args, { stdio: "inherit" });
+proc.on("close", function (code) {
+	process.exit(code);
 });
