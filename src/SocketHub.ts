@@ -40,7 +40,7 @@ class SocketDestination extends events.EventEmitter implements pubsub.Destinatio
 	}
 
 	send(message: Message): void {
-		debug.write("-> %s", this.name, message);
+		debug.write("-> %s", this.name, message.topic);
 		if (message !== SocketDestination.lastMessage) {
 			SocketDestination.lastMessage = message;
 			SocketDestination.lastJSON = JSON.stringify({

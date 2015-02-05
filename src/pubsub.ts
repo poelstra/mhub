@@ -79,7 +79,7 @@ export class Node implements Destination {
 	}
 
 	send(message: Message): void {
-		debug.push("-> %s", this.name, message);
+		debug.push("-> %s", this.name, message.topic);
 		this._bindings.forEach((b: Binding): void => {
 			if (b.matchers.some((m: Matcher): boolean => m.filter(message.topic))) {
 				b.destination.send(message);
