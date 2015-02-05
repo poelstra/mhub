@@ -11,8 +11,8 @@ import MClient = require("./MClient");
 import Message = require("./Message");
 
 var usage = [
-	"Listen mode: $0 -s <host>[:<port>] -n <nodename> -l",
-	"Post mode: $0 -s <host>[:<port>] -n <nodename> -t <topic> [-d <json_data>] [-h <json_headers>]",
+	"Listen mode: $0 [-s <host>[:<port>]] -n <nodename> -l",
+	"Post mode: $0 [-s <host>[:<port>]] -n <nodename> -t <topic> [-d <json_data>] [-h <json_headers>]",
 ].join("\n");
 
 function die(...args: any[]): void {
