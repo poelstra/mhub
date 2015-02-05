@@ -114,6 +114,7 @@ export class OverlayClient extends events.EventEmitter {
 		this.client.on("data", this._onData.bind(this));
 		this.client.on("close", this._onClose.bind(this));
 		this.client.on("timeout", this._onTimeout.bind(this));
+		this.client.setNoDelay(true);
 
 		this.expect(100, this._onHello.bind(this));
 	}
