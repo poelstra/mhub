@@ -105,6 +105,9 @@ function postShown(cb: () => void): void {
 		getAll("shown.php", {
 			ids: shownIDs.join(",")
 		}, (err: Error): void => {
+			if (err) {
+				console.log(err);
+			}
 			if (!err) {
 				shownIDs = [];
 			}
@@ -121,6 +124,9 @@ function postDeleted(cb: () => void): void {
 		getAll("deleted.php", {
 			ids: deletedIDs.join(",")
 		}, (err: Error): void => {
+			if (err) {
+				console.log(err);
+			}
 			if (!err) {
 				deletedIDs = [];
 			}
