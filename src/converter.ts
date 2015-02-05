@@ -84,7 +84,7 @@ function stringToMessage(data: string): Message {
 		case "showmessage":
 			msgCmd = (s.getPart() === "True") ? "hide" : "show"; // hideNow argument
 			if (msgCmd === "show") {
-				msgData["message"] = s.getRest(); // Note: don't use overlayMsgDecode() here
+				msgData["main"] = s.getRest(); // Note: don't use overlayMsgDecode() here
 				msg = new Message("announcement:show", msgData);
 			} else {
 				msg = new Message("announcement:hide");
@@ -175,8 +175,8 @@ function messageToString(msg: Message): string {
 			}
 			break;
 		case "announcement":
-			if (cmd === "show" && typeof msg.data === "string") {
-				return "directmsg " + overlay.messageEncode(msg.data);
+			if (cmd === "show" && typeof msg.data === "object" && typeof msg.data.main === "string") {
+				return "directmsg " + overlay.messageEncode(msg.data.main);
 			}
 			break;
 		case "image":
