@@ -39,7 +39,12 @@ function stringToMessage(data: string): Message {
 	var msgData: { [name: string]: any } = {};
 	switch (cmd) {
 		case "servertime":
-			msg = new Message("time:tick", s.getRest());
+			var serverTime = s.getRest().split(":");
+			var d = new Date();
+			d.setHours(parseInt(serverTime[0], 10), parseInt(serverTime[1], 10), parseInt(serverTime[2], 10));
+			msg = new Message("time:tick", {
+				timestamp: d.toISOString()
+			});
 			break;
 		case "showclock":
 			msgCmd = s.getRest();
@@ -114,7 +119,7 @@ function overlay2mserver(): void {
 				var msg = stringToMessage(data);
 				// Skip 'noisy' events
 				switch (msg.topic) {
-					case "time:tick":
+					// case "time:tick":
 					case "debug:message":
 					case "misc:unknown_command":
 						return;
