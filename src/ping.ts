@@ -1,0 +1,94 @@
+/**
+ * Commandline tool for determining latency.
+ */
+
+/// <reference path="../typings/tsd.d.ts" />
+
+"use strict";
+
+import yargs = require("yargs");
+import MClient = require("./MClient");
+import Message = require("./Message");
+
+var usage = [
+	"$0 [-s <host>[:<port>]] -n <nodename> [-d <json_data>] [-h <json_headers>]",
+].join("\n");
+
+function die(...args: any[]): void {
+	console.log.apply(this, args);
+	process.exit(1);
+}
+
+var argv = yargs
+	.usage(usage)
+	.help("help")
+	.option("s", {
+		type: "string",
+		alias: "socket",
+		description: "WebSocket to connect to",
+		default: "localhost:13900"
+	})
+	.option("n", {
+		type: "string",
+		alias: "node",
+		description: "Node to subscribe/publish to",
+		required: true
+	})
+	.option("d", {
+		type: "string",
+		alias: "data",
+		description: "Optional message data as JSON object, e.g. '\"a string\"' or '{ \"foo\": \"bar\" }'"
+	})
+	.option("h", {
+		type: "string",
+		alias: "headers",
+		description: "Optional message headers as JSON object, e.g. '{ \"my-header\": \"foo\" }'"
+	})
+	.argv;
+
+var data: any;
+try {
+	data = argv.data && JSON.parse(argv.data);
+} catch (e) {
+	console.log("Error parsing message data as JSON: " + e.message);
+	die(
+		"Hint: if you're passing a string, make sure to put double-quotes around it, " +
+		"and escape these quotes for your shell with single-quotes, e.g.: '\"my string\"'"
+	);
+}
+
+var headers: any;
+try {
+	headers = argv.headers && JSON.parse(argv.headers);
+} catch (e) {
+	die("Error parsing message headers as JSON: " + e.message);
+}
+
+var pingCount = 10;
+
+var client = new MClient("ws://" + argv.socket);
+client.on("error", (e: Error): void => {
+	die("Socket error:", e);
+});
+client.on("open", (): void => {
+	client.subscribe(argv.node, "ping:response");
+	ping();
+});
+client.on("message", (msg: Message): void => {
+	var reply = JSON.stringify(msg.data);
+	if (argv.data === msg.data) {
+		console.timeEnd("pong");
+		if (pingCount > 0) {
+			ping();
+		} else {
+			client.close();
+		}
+	}
+});
+
+function ping(): void {
+	pingCount--;
+	console.log("ping");
+	console.time("pong");
+	client.publish(argv.node, "ping:request", data, headers);
+}

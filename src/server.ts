@@ -17,6 +17,9 @@ import pubsub = require("./pubsub");
 import SocketHub = require("./SocketHub");
 import Message = require("./Message");
 
+import d = require("./debug");
+import debug = d.debug;
+
 var args = yargs
 	.usage("$0 [-c <config_file>]")
 	.help("help")
@@ -76,4 +79,22 @@ if (blibNode) {
 	setInterval((): void => {
 		blibNode.send(new Message("blib", blibCount++));
 	}, 5000);
+}
+
+class PingResponder implements pubsub.Destination {
+	constructor(public name: string, private pingNode: pubsub.Node) {
+		this.pingNode.bind(this, "ping:request");
+	}
+
+	send(message: Message): void {
+		debug.push("-> %s", this.name, message.topic);
+		this.pingNode.send(new Message("ping:response", message.data));
+		debug.pop();
+	}
+}
+
+// Automatically respond to pings when a ping node is configured, useful for testing
+var pingNode = hub.find("ping");
+if (pingNode) {
+	var pongNode = new PingResponder("pong", pingNode);
 }
