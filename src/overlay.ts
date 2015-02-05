@@ -112,7 +112,7 @@ export class OverlayClient extends events.EventEmitter {
 		this.client = net.connect(options, this._onConnect.bind(this));
 		this.client.on("error", this._onError.bind(this));
 		this.client.on("data", this._onData.bind(this));
-		this.client.on("end", this._onDisconnect.bind(this));
+		this.client.on("close", this._onClose.bind(this));
 		this.client.on("timeout", this._onTimeout.bind(this));
 
 		this.expect(100, this._onHello.bind(this));
@@ -167,8 +167,8 @@ export class OverlayClient extends events.EventEmitter {
 		this.emit("error", new Error("timeout"));
 	}
 
-	private _onDisconnect(): void {
-		this.log("Disconnected");
+	private _onClose(): void {
+		this.log("Closed");
 		this.emit("close");
 	}
 

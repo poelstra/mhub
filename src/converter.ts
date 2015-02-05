@@ -137,6 +137,13 @@ function overlay2mserver(): void {
 		if (overlayConn) {
 			overlayConn.destroy();
 		}
+		if (controlConn) {
+			log("Destroying control");
+			// Also destroy control connection (which is not managed by us),
+			// otherwise it will stay connected and will only notice its disconnect
+			// when the first command is sent after that.
+			controlConn.destroy();
+		}
 		overlayConn = null;
 		clearTimeout(timer);
 		timer = setTimeout(connect, 1000);
