@@ -88,10 +88,10 @@ npm run watch
 
 The package is developed using [Typescript](http://www.typescriptlang.org/).
 
-For editing the code, give [CATS](https://github.com/jbaron/cats/tree/unstable) a try.
-It's a Typescript editor that supports code-completion, realtime error checking, linting,
-etc., It has some rough edges, but its succesfully been used to program everything in this repo
-(be sure to take the 'unstable' branch of CATS for now though).
+Tip: use GitHub's [Atom Editor](https://atom.io/) and install the [Atom Typescript package](https://github.com/TypeStrong/atom-typescript).
+You'll get instant smart code-completion ('IntelliSense'), compile-on-save, etc.
+
+Or, if you're into SublimeText, try [Microsoft's plugin](https://github.com/Microsoft/ngconf2015demo).
 
 ## Authors
 

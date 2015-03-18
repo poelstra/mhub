@@ -1,0 +1,29 @@
+{
+    "version": "1.4.1",
+    "compilerOptions": {
+        "target": "es5",
+        "module": "commonjs",
+        "declaration": true,
+        "noImplicitAny": true,
+        "removeComments": false,
+        "sourceMap": true,
+        "outDir": "../dist/src",
+        "noLib": false
+    },
+    "filesGlob": [
+        "./**/*.ts"
+    ],
+    "files": [
+        "./MClient.ts",
+        "./Message.ts",
+        "./SocketHub.ts",
+        "./client.ts",
+        "./converter.ts",
+        "./debug.ts",
+        "./overlay.ts",
+        "./ping.ts",
+        "./pubsub.ts",
+        "./server.ts",
+        "./twitter_pusher.ts"
+    ]
+}
