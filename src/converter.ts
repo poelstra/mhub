@@ -119,7 +119,7 @@ function overlay2mserver(): void {
 				var msg = stringToMessage(data);
 				// Skip 'noisy' events
 				switch (msg.topic) {
-					// case "time:tick":
+					case "time:tick":
 					case "debug:message":
 					case "misc:unknown_command":
 						return;
