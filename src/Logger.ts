@@ -1,5 +1,6 @@
 /**
  * Debug helper to print nested messages.
+ * See log.ts for a convenient singleton instance of this.
  */
 
 /// <reference path="../typings/tsd.d.ts" />
@@ -8,14 +9,14 @@
 
 import util = require("util");
 
-export class Debug {
+class Logger {
 	/**
-	 * Debug function that is called whenever a noteworthy action happens within the pubsub logic, e.g.
-	 * when a message is routed from an exchange to a destination (which could be another Exchange,
-	 * a Queue, etc.)
+	 * Debug function that is called whenever a noteworthy action happens within
+	 * the pubsub logic, e.g. when a message is routed from an exchange to a
+	 * destination (which could be another Exchange, a Queue, etc.)
 	 * Default action is to log the message to the console.
 	 */
-	public onDebug = (msg: string): void => {
+	public onMessage = (msg: string): void => {
 		console.log(msg);
 	};
 
@@ -23,9 +24,9 @@ export class Debug {
 
 	write(fmt: string, ...args: any[]): void;
 	write(...args: any[]): void {
-		if (this.onDebug) {
+		if (this.onMessage) {
 			var msg = this.indent + util.format.apply(null, args);
-			this.onDebug(msg);
+			this.onMessage(msg);
 		}
 	}
 
@@ -40,7 +41,4 @@ export class Debug {
 	}
 }
 
-// TODO: This is a mess.
-// I'd hope for a simple "export = new Debug();", but that's not currently possible.
-// Makes for very akward usage in our libraries too.
-export var debug = new Debug();
+export = Logger;

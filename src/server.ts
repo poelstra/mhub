@@ -17,8 +17,7 @@ import pubsub = require("./pubsub");
 import SocketHub = require("./SocketHub");
 import Message = require("./Message");
 
-import d = require("./debug");
-import debug = d.debug;
+import log = require("./log");
 
 var args = yargs
 	.usage("$0 [-c <config_file>]")
@@ -87,9 +86,9 @@ class PingResponder implements pubsub.Destination {
 	}
 
 	send(message: Message): void {
-		debug.push("-> %s", this.name, message.topic);
+		log.push("-> %s", this.name, message.topic);
 		this.pingNode.send(new Message("ping:response", message.data));
-		debug.pop();
+		log.pop();
 	}
 }
 

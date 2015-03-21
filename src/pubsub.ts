@@ -9,8 +9,7 @@
 
 import minimatch = require("minimatch");
 
-import d = require("./debug");
-import debug = d.debug;
+import log = require("./log");
 
 import Message = require("./Message");
 
@@ -79,13 +78,13 @@ export class Node implements Destination {
 	}
 
 	send(message: Message): void {
-		debug.push("-> %s", this.name, message.topic);
+		log.push("-> %s", this.name, message.topic);
 		this._bindings.forEach((b: Binding): void => {
 			if (b.matchers.some((m: Matcher): boolean => m.filter(message.topic))) {
 				b.destination.send(message);
 			}
 		});
-		debug.pop();
+		log.pop();
 	}
 }
 

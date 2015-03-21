@@ -10,8 +10,7 @@ import http = require("http");
 import events = require("events");
 import ws = require("ws");
 
-import d = require("./debug");
-import debug = d.debug;
+import log = require("./log");
 
 import pubsub = require("./pubsub");
 import Message = require("./Message");
@@ -36,11 +35,11 @@ class SocketDestination extends events.EventEmitter implements pubsub.Destinatio
 		socket.on("error", this._handleError.bind(this));
 		socket.on("message", this._handleMessage.bind(this));
 
-		debug.write("[ %s ] connected", this.name);
+		log.write("[ %s ] connected", this.name);
 	}
 
 	send(message: Message): void {
-		debug.write("-> %s", this.name, message.topic);
+		log.write("-> %s", this.name, message.topic);
 		if (message !== SocketDestination.lastMessage) {
 			SocketDestination.lastMessage = message;
 			SocketDestination.lastJSON = JSON.stringify({
@@ -59,21 +58,21 @@ class SocketDestination extends events.EventEmitter implements pubsub.Destinatio
 		});
 		this.subscriptions = [];
 		this.emit("close");
-		debug.write("[ %s ] disconnected", this.name);
+		log.write("[ %s ] disconnected", this.name);
 	}
 
 	private _handleError(e: Error): void {
-		debug.write("[ %s ] error", this.name, e);
+		log.write("[ %s ] error", this.name, e);
 		this.socket.close();
 	}
 
 	private _handleMessage(data: string): void {
-		debug.write("[ %s ] message", this.name, data);
+		log.write("[ %s ] message", this.name, data);
 		try {
 			var msg = JSON.parse(data);
 			var node = this.hub.find(msg.node);
 			if (!node) {
-				debug.write("[ %s ] unknown node %s", this.name, msg.node);
+				log.write("[ %s ] unknown node %s", this.name, msg.node);
 				this.socket.send(JSON.stringify({
 					type: "error",
 					message: "unknown node " + msg.node
@@ -89,7 +88,7 @@ class SocketDestination extends events.EventEmitter implements pubsub.Destinatio
 				node.bind(this, msg.pattern);
 			}
 		} catch (e) {
-			debug.write("[ %s ] decode error", this.name, e);
+			log.write("[ %s ] decode error", this.name, e);
 			this.socket.send(JSON.stringify({
 				type: "error",
 				message: "decode error " + e
