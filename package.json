@@ -29,11 +29,11 @@
     "typescript": "^1.3.0"
   },
   "dependencies": {
-    "minimatch": "^2.0.1",
-    "yargs": "^1.3.3",
     "express": "^4.11.1",
+    "minimatch": "^2.0.1",
+    "node-uuid": "^1.4.2",
     "ws": "^0.7.1",
-    "node-uuid": "^1.4.2"
+    "yargs": "^1.3.3"
   },
   "tslintConfig": "tslint.json"
 }
