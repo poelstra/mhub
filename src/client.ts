@@ -11,12 +11,13 @@ import MClient = require("./MClient");
 import Message = require("./Message");
 
 var usage = [
-	"Listen mode: $0 [-s <host>[:<port>]] -n <nodename> -l",
+	"Listen mode: $0 [-s <host>[:<port>]] -n <nodename> -l [-p <topic_pattern>] [-o <output_format>]",
 	"Post mode: $0 [-s <host>[:<port>]] -n <nodename> -t <topic> [-d <json_data>] [-h <json_headers>]",
 	"Pipe mode: $0 [-s <host>[:<port>]] -n <nodename> -t <topic> -i <input_format> [-h <json_headers>]",
 ].join("\n");
 
 function die(...args: any[]): void {
+	// TODO: change to stderr
 	console.log.apply(this, args);
 	process.exit(1);
 }
@@ -33,13 +34,24 @@ var args = yargs
 	.option("n", {
 		type: "string",
 		alias: "node",
-		description: "Node to subscribe/publish to",
+		description: "Node to subscribe/publish to, e.g. 'blib'",
 		required: true
 	})
 	.option("l", {
 		type: "boolean",
 		alias: "listen",
 		description: "Select listen mode"
+	})
+	.option("p", {
+		type: "string",
+		alias: "pattern",
+		description: "Topic subscription pattern as glob, e.g. 'twitter:*'"
+	})
+	.option("o", {
+		type: "string",
+		alias: "output",
+		description: "Output format, can be: human, text, jsondata, json",
+		default: "human"
 	})
 	.option("t", {
 		type: "string",
@@ -63,14 +75,50 @@ var args = yargs
 	})
 	.strict();
 
+enum OutputFormat {
+	Human,
+	Text,
+	JsonData,
+	Json
+}
+
+function parseOutputFormat(s: string): OutputFormat {
+	switch (s) {
+		case "human":
+			return OutputFormat.Human;
+		case "text":
+			return OutputFormat.Text;
+		case "jsondata":
+			return OutputFormat.JsonData;
+		case "json":
+			return OutputFormat.Json;
+		default:
+			die("Invalid output format:", s);
+	}
+}
+
 function listenMode(): void {
 	var argv = args.argv;
+	var format = parseOutputFormat(argv.output);
 	var client = new MClient("ws://" + argv.socket);
 	client.on("open", (): void => {
-		client.subscribe(argv.node);
+		client.subscribe(argv.node, argv.pattern);
 	});
 	client.on("message", (msg: Message): void => {
-		console.log(msg);
+		switch (format) {
+			case OutputFormat.Human:
+				console.log(msg);
+				break;
+			case OutputFormat.Text:
+				console.log(msg.data);
+				break;
+			case OutputFormat.JsonData:
+				console.log(JSON.stringify(msg.data));
+				break;
+			case OutputFormat.Json:
+				console.log(JSON.stringify(msg));
+				break;
+		}
 	});
 	client.on("error", (e: Error): void => {
 		die("Socket error:", e);
@@ -111,19 +159,19 @@ function postMode(): void {
 	});
 }
 
-enum Format {
-	Json,
-	Text
+enum InputFormat {
+	Text,
+	Json
 }
 
-function parseFormat(s: string): Format {
+function parseInputFormat(s: string): InputFormat {
 	switch (s) {
 		case "text":
-			return Format.Text;
+			return InputFormat.Text;
 		case "json":
-			return Format.Json;
+			return InputFormat.Json;
 		default:
-			die("Invalid format:", s);
+			die("Invalid input format:", s);
 	}
 }
 
@@ -132,7 +180,7 @@ function pipeMode(): void {
 		.require("topic", true)
 		.argv;
 
-	var format = parseFormat(argv.input);
+	var format = parseInputFormat(argv.input);
 
 	var headers: any;
 	try {
@@ -188,7 +236,7 @@ function pipeMode(): void {
 			line = line.slice(0, -1);
 		}
 		var data: any;
-		if (format === Format.Json) {
+		if (format === InputFormat.Json) {
 			try {
 				data = JSON.parse(line);
 			} catch (e) {
