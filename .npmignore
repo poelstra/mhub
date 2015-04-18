@@ -1,5 +1,14 @@
+/converter.conf.json
 /src
 /support
 /test
 /typings
+/tsc.options.txt
+/tsd.json
+/tslint.json
+/twitter_pusher.conf.json
+/.editorconfig
+/.gitattributes
+/.gitignore
+/.npmignore
 /.travis.yml
