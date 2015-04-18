@@ -1,1 +1,0 @@
---module commonjs --declaration --noImplicitAny --sourceMap --target ES5
