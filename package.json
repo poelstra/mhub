@@ -20,7 +20,8 @@
     "build": "npm run build:src && npm run build:test",
     "watch:start": "mkdir -p dist/src/ && touch dist/src/server.js && nodemon --delay 1 --watch dist/src/",
     "watch": "parallelshell 'npm run watch:src' 'npm run watch:test' 'npm run watch:start'",
-    "clean": "rimraf -rf dist"
+    "clean": "rimraf -rf dist",
+    "prepublish": "npm run lint && npm run build && npm run test"
   },
   "author": "Martin Poelstra <martin@beryllium.net>",
   "license": "MIT",
