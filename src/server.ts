@@ -104,5 +104,7 @@ class PingResponder implements pubsub.Destination {
 // Automatically respond to pings when a ping node is configured, useful for testing
 var pingNode = hub.find("ping");
 if (pingNode) {
+	/* tslint:disable:no-unused-variable */
 	var pongNode = new PingResponder("pong", pingNode);
+	/* tslint:enable:no-unused-variable */
 }

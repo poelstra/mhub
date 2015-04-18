@@ -82,7 +82,7 @@ client.on("open", (): void => {
 });
 client.on("message", (msg: Message): void => {
 	var reply = JSON.stringify(msg.data);
-	if (argv.data === msg.data) {
+	if (argv.data === reply) {
 		console.timeEnd("pong");
 		if (pingCount > 0) {
 			ping();
