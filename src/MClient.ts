@@ -1,5 +1,5 @@
 /**
- * FLL Message Server client.
+ * MHub client library.
  */
 
 /// <reference path="../typings/tsd.d.ts" />

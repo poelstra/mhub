@@ -1,6 +1,6 @@
 /**
  * Poll moderated tweets from FLL Twitter api (https://github.com/FirstLegoLeague/twitter-admin)
- * and post them to FLL Message Server (https://github.com/poelstra/mserver).
+ * and post them to FLL Message Server (https://github.com/poelstra/mhub).
  */
 
 /// <reference path="../typings/tsd.d.ts" />

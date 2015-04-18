@@ -1,5 +1,5 @@
 /**
- * MServer pubsub fabric: nodes and bindings.
+ * MHub pubsub fabric: nodes and bindings.
  * Provides the basic routing infrastructure to send and receive messages.
  */
 

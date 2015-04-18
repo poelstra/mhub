@@ -1,5 +1,5 @@
 /**
- * Commandline tool for sending/receiving mserver messages.
+ * Commandline tool for sending/receiving MHub messages to/from an mserver.
  */
 
 /// <reference path="../typings/tsd.d.ts" />

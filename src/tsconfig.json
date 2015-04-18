@@ -20,6 +20,7 @@
         "./SocketHub.ts",
         "./client.ts",
         "./converter.ts",
+        "./index.ts",
         "./log.ts",
         "./overlay.ts",
         "./ping.ts",

@@ -1,7 +1,7 @@
 /**
- * FLL Message Server (MServer).
+ * MHub server (mserver)
  *
- * Makes MServer pubsub Nodes available through WebSockets.
+ * Makes MHub pubsub Nodes available through WebSockets.
  */
 
 /// <reference path="../typings/tsd.d.ts" />
