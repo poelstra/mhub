@@ -3,7 +3,7 @@
  * including glob support.
  * Note: no other options to tslint are supported...
  */
- 
+
 var Linter = require("tslint");
 var mglob = require("multi-glob");
 var fs = require("fs");
@@ -29,10 +29,10 @@ mglob.glob(patterns, function(err, files) {
 		var lintResult = ll.lint();
 		if (lintResult.failureCount > 0) {
 			output += lintResult.output;
-	    }
-    }
-    if (output) {
-    	console.log(output.trimRight());
-    	process.exit(2);
-    }
+		}
+	}
+	if (output) {
+		console.log(output.trimRight());
+		process.exit(2);
+	}
 });
