@@ -17,8 +17,7 @@ var usage = [
 ].join("\n");
 
 function die(...args: any[]): void {
-	// TODO: change to stderr
-	console.log.apply(this, args);
+	console.error.apply(this, args);
 	process.exit(1);
 }
 
@@ -121,7 +120,7 @@ function listenMode(): void {
 		}
 	});
 	client.on("error", (e: Error): void => {
-		die("Socket error:", e);
+		die("Client error:", e);
 	});
 }
 
@@ -134,7 +133,7 @@ function postMode(): void {
 	try {
 		data = argv.data && JSON.parse(argv.data);
 	} catch (e) {
-		console.log("Error parsing message data as JSON: " + e.message);
+		console.error("Error parsing message data as JSON:", e.message);
 		die(
 			"Hint: if you're passing a string, make sure to put double-quotes around it, " +
 			"and escape these quotes for your shell with single-quotes, e.g.: '\"my string\"'"
@@ -155,7 +154,7 @@ function postMode(): void {
 		});
 	});
 	client.on("error", (e: Error): void => {
-		die("Socket error:", e);
+		die("Client error:", e);
 	});
 }
 
@@ -200,7 +199,7 @@ function pipeMode(): void {
 
 	});
 	client.on("error", (e: Error): void => {
-		die("Socket error:", e);
+		die("Client error:", e);
 	});
 
 	function onRead(): void {
