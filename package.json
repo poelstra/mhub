@@ -3,10 +3,14 @@
   "version": "0.1.0",
   "description": "FLL Message Server",
   "main": "dist/src/server.js",
+  "bin": {
+    "mclient": "./bin/mclient",
+    "mserver": "./bin/mserver"
+  },
   "scripts": {
     "test": "npm run lint && npm run mocha",
     "mocha": "mocha -R spec dist/test/",
-    "start": "node dist/src/server.js",
+    "start": "node ./mserver",
     "lint": "node support/tslint_wrapper.js src/*.ts test/*.ts",
     "build:src": "node support/deglob.js tsc @tsc.options.txt --outDir dist/src/ src/*.ts",
     "watch:src": "node support/deglob.js tsc @tsc.options.txt --outDir dist/src/ src/*.ts --watch",
