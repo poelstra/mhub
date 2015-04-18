@@ -5,6 +5,7 @@
   "main": "./dist/src/index.js",
   "bin": {
     "mclient": "./bin/mclient",
+    "mping": "./bin/mping",
     "mserver": "./bin/mserver"
   },
   "scripts": {

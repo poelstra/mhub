@@ -11,11 +11,11 @@ import MClient = require("./MClient");
 import Message = require("./Message");
 
 var usage = [
-	"$0 [-s <host>[:<port>]] -n <nodename> [-d <json_data>] [-h <json_headers>]",
+	"$0 [-s <host>[:<port>]] [-n <nodename>] [-d <json_data>] [-h <json_headers>] [-c <count>]",
 ].join("\n");
 
 function die(...args: any[]): void {
-	console.log.apply(this, args);
+	console.error.apply(this, args);
 	process.exit(1);
 }
 
@@ -32,7 +32,7 @@ var argv = yargs
 		type: "string",
 		alias: "node",
 		description: "Node to subscribe/publish to",
-		required: true
+		default: "ping"
 	})
 	.option("d", {
 		type: "string",
@@ -44,13 +44,19 @@ var argv = yargs
 		alias: "headers",
 		description: "Optional message headers as JSON object, e.g. '{ \"my-header\": \"foo\" }'"
 	})
+	.option("c", {
+		type: "number",
+		alias: "count",
+		description: "Number of pings to send",
+		default: 10
+	})
 	.argv;
 
 var data: any;
 try {
 	data = argv.data && JSON.parse(argv.data);
 } catch (e) {
-	console.log("Error parsing message data as JSON: " + e.message);
+	console.error("Error parsing message data as JSON: " + e.message);
 	die(
 		"Hint: if you're passing a string, make sure to put double-quotes around it, " +
 		"and escape these quotes for your shell with single-quotes, e.g.: '\"my string\"'"
@@ -64,7 +70,7 @@ try {
 	die("Error parsing message headers as JSON: " + e.message);
 }
 
-var pingCount = 10;
+var pingCount = argv.count;
 
 var client = new MClient("ws://" + argv.socket);
 client.on("error", (e: Error): void => {
@@ -88,7 +94,6 @@ client.on("message", (msg: Message): void => {
 
 function ping(): void {
 	pingCount--;
-	console.log("ping");
 	console.time("pong");
 	client.publish(argv.node, "ping:request", data, headers);
 }
