@@ -25,12 +25,21 @@ var args = yargs
 	.option("c", {
 		type: "string",
 		alias: "config",
-		description: "Filename of config",
-		default: "server.conf.json"
+		description: "Filename of config, uses mhub's server.conf.json by default"
 	})
 	.argv;
 
-var configFile = path.resolve(args.config);
+function die(...args: any[]): void {
+	console.error.apply(this, args);
+	process.exit(1);
+}
+
+var configFile: string;
+if (!args.config) {
+	configFile = path.resolve(__dirname, "../../server.conf.json");
+} else {
+	configFile = path.resolve(args.config);
+}
 console.log("Using config file " + configFile);
 var config = JSON.parse(fs.readFileSync(configFile, "utf8"));
 
@@ -43,7 +52,7 @@ server.listen(config.port, (): void => {
 	console.log("Listening on " + config.port);
 });
 server.on("error", (e: Error): void => {
-	console.log("Webserver error:", e);
+	die("Webserver error:", e);
 });
 
 var hub = new SocketHub(server);
