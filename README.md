@@ -51,7 +51,7 @@ be used by e.g. proxy servers to prevent message loops.
 
 To install and run the server:
 ```sh
-npm install -g poelstra/mhub
+npm install -g mhub
 mserver
 ```
 
@@ -143,6 +143,7 @@ Clone this repository and run the server with auto-reload:
 ```sh
 git clone https://github.com/poelstra/mhub
 cd mhub
+npm install
 npm run watch:start
 ```
 
@@ -150,6 +151,7 @@ For other editors, to get automatic compilation and live-reload:
 ```sh
 git clone https://github.com/poelstra/mhub
 cd mhub
+npm install
 npm run watch
 # or run `npm run build` for one-time compilation
 ```
