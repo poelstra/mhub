@@ -8,16 +8,16 @@
 
 "use strict";
 
-import express = require("express");
-import http = require("http");
-import yargs = require("yargs");
-import path = require("path");
-import fs = require("fs");
-import pubsub = require("./pubsub");
-import SocketHub = require("./SocketHub");
-import Message = require("./Message");
+import * as express from "express";
+import * as http from "http";
+import * as yargs from "yargs";
+import * as path from "path";
+import * as fs from "fs";
+import * as pubsub from "./pubsub";
+import SocketHub from "./SocketHub";
+import Message from "./Message";
 
-import log = require("./log");
+import log from "./log";
 
 var args = yargs
 	.usage("$0 [-c <config_file>]")

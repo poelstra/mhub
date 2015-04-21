@@ -7,11 +7,11 @@
 
 "use strict";
 
-import minimatch = require("minimatch");
+import * as minimatch from "minimatch";
 
-import log = require("./log");
+import log from "./log";
 
-import Message = require("./Message");
+import Message from "./Message";
 
 interface Matcher {
 	pattern: string;

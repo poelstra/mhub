@@ -6,9 +6,9 @@
 
 "use strict";
 
-import events = require("events");
-import ws = require("ws");
-import Message = require("./Message");
+import * as events from "events";
+import * as ws from "ws";
+import Message from "./Message";
 
 /**
  * FLL Message Server client.
@@ -131,4 +131,4 @@ class MClient extends events.EventEmitter {
 	}
 }
 
-export = MClient;
+export default MClient;

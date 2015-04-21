@@ -6,4 +6,8 @@
 
 "use strict";
 
-export import MClient = require("./MClient");
+import MClient from "./MClient";
+export { MClient };
+export default MClient;
+
+export { default as Message } from "./Message";

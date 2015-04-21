@@ -6,7 +6,6 @@
 
 "use strict";
 
-import Logger = require("./Logger");
+import Logger from "./Logger";
 
-var log = new Logger();
-export = log;
+export default new Logger();

@@ -6,9 +6,9 @@
 
 "use strict";
 
-import yargs = require("yargs");
-import MClient = require("./MClient");
-import Message = require("./Message");
+import * as yargs from "yargs";
+import MClient from "./MClient";
+import Message from "./Message";
 
 var usage = [
 	"$0 [-s <host>[:<port>]] [-n <nodename>] [-d <json_data>] [-h <json_headers>] [-c <count>]",

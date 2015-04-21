@@ -6,9 +6,9 @@
 
 "use strict";
 
-import yargs = require("yargs");
-import MClient = require("./MClient");
-import Message = require("./Message");
+import * as yargs from "yargs";
+import MClient from "./MClient";
+import Message from "./Message";
 
 var usage = [
 	"Listen mode: $0 [-s <host>[:<port>]] -n <nodename> -l [-p <topic_pattern>] [-o <output_format>]",

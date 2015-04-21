@@ -7,7 +7,7 @@
 
 "use strict";
 
-import util = require("util");
+import * as util from "util";
 
 class Logger {
 	/**
@@ -41,4 +41,4 @@ class Logger {
 	}
 }
 
-export = Logger;
+export default Logger;

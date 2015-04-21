@@ -6,14 +6,14 @@
 
 "use strict";
 
-import http = require("http");
-import events = require("events");
-import ws = require("ws");
+import * as http from "http";
+import * as events from "events";
+import * as ws from "ws";
 
-import log = require("./log");
+import log from "./log";
 
-import pubsub = require("./pubsub");
-import Message = require("./Message");
+import * as pubsub from "./pubsub";
+import Message from "./Message";
 
 class SocketDestination extends events.EventEmitter implements pubsub.Destination {
 	public hub: SocketHub;
@@ -131,4 +131,4 @@ class SocketHub {
 	}
 }
 
-export = SocketHub;
+export default SocketHub;
