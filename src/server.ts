@@ -22,6 +22,7 @@ import log from "./log";
 var args = yargs
 	.usage("$0 [-c <config_file>]")
 	.help("help")
+	.alias("h", "help")
 	.option("c", {
 		type: "string",
 		alias: "config",
