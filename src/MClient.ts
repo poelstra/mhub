@@ -37,6 +37,7 @@ interface PublishMessage extends RawMessage {
 	topic: string;
 	data: any;
 	headers: { [header: string]: string; };
+	subscription: string;
 }
 
 interface ErrorMessage extends RawMessage {
@@ -94,7 +95,7 @@ class MClient extends events.EventEmitter {
 				switch (decoded.type) {
 					case "message":
 						let msgDec = <PublishMessage>decoded;
-						this.emit("message", new Message(msgDec.topic, msgDec.data, msgDec.headers));
+						this.emit("message", new Message(msgDec.topic, msgDec.data, msgDec.headers), msgDec.subscription);
 						break;
 					case "error":
 						let errDec = <ErrorMessage>decoded;

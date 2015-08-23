@@ -16,15 +16,51 @@ import log from "./log";
 import * as pubsub from "./pubsub";
 import Message from "./Message";
 
-class SocketDestination extends events.EventEmitter implements pubsub.Destination {
+class SubscriptionNode implements pubsub.Destination {
+	conn: ClientConnection;
+	name: string;
+	id: string;
+	nodes: pubsub.Node[] = [];
+
+	constructor(conn: ClientConnection, id: string) {
+		this.conn = conn;
+		this.name = this.conn.name + "_" + id;
+		this.id = id;
+	}
+
+	send(message: Message): void {
+		log.write("-> %s", this.name, message.topic);
+		let s = JSON.stringify({
+			type: "message",
+			topic: message.topic,
+			data: message.data,
+			headers: message.headers,
+			subscription: this.id
+		});
+		this.conn.send(s);
+	}
+
+	bind(node: pubsub.Node, pattern?: string): void {
+		if (this.nodes.indexOf(node) < 0) {
+			this.nodes.push(node);
+		}
+		node.bind(this, pattern);
+	}
+
+	destroy(): void {
+		this.nodes.forEach((node: pubsub.Node): void => {
+			node.unbind(this);
+		});
+		this.nodes = [];
+	}
+}
+
+class ClientConnection extends events.EventEmitter {
 	public hub: SocketHub;
 	public socket: ws;
 	public name: string;
 
-	private subscriptions: pubsub.Node[] = [];
-
-	private static lastMessage: Message;
-	private static lastJSON: string;
+	private subscriptions: { [id: string]: SubscriptionNode; } = Object.create(null);
 
 	constructor(hub: SocketHub, socket: ws, id: number) {
 		super();
@@ -39,25 +75,15 @@ class SocketDestination extends events.EventEmitter implements pubsub.Destinatio
 		log.write("[ %s ] connected", this.name);
 	}
 
-	send(message: Message): void {
-		log.write("-> %s", this.name, message.topic);
-		if (message !== SocketDestination.lastMessage) {
-			SocketDestination.lastMessage = message;
-			SocketDestination.lastJSON = JSON.stringify({
-				type: "message",
-				topic: message.topic,
-				data: message.data,
-				headers: message.headers
-			});
-		}
-		this.socket.send(SocketDestination.lastJSON);
+	send(message: string): void {
+		this.socket.send(message);
 	}
 
 	private _handleClose(): void {
-		this.subscriptions.forEach((node: pubsub.Node): void => {
-			node.unbind(this);
-		});
-		this.subscriptions = [];
+		for (let id in this.subscriptions) {
+			this.subscriptions[id].destroy();
+		}
+		this.subscriptions = Object.create(null);
 		this.emit("close");
 		log.write("[ %s ] disconnected", this.name);
 	}
@@ -87,10 +113,13 @@ class SocketDestination extends events.EventEmitter implements pubsub.Destinatio
 					seq: msg.seq
 				};
 			} else if (msg.type === "subscribe") {
-				if (this.subscriptions.indexOf(node) < 0) {
-					this.subscriptions.push(node);
+				let id = msg.id || "default";
+				let sub = this.subscriptions[id];
+				if (!sub) {
+					sub = new SubscriptionNode(this, id);
+					this.subscriptions[id] = sub;
 				}
-				node.bind(this, msg.pattern);
+				sub.bind(node, msg.pattern);
 				response = {
 					type: "suback",
 					seq: msg.seq
@@ -111,7 +140,7 @@ class SocketDestination extends events.EventEmitter implements pubsub.Destinatio
 
 class SocketHub {
 	private nodes: { [name: string]: pubsub.Node } = Object.create(null);
-	private clients: { [index: number]: SocketDestination } = Object.create(null);
+	private clients: { [index: number]: ClientConnection } = Object.create(null);
 	private clientIndex: number = 0;
 
 	constructor(server: http.Server, location: string = "/") {
@@ -135,7 +164,7 @@ class SocketHub {
 
 	private _handleConnection(conn: ws): void {
 		var id = this.clientIndex++;
-		var dest = new SocketDestination(this, conn, id);
+		var dest = new ClientConnection(this, conn, id);
 		this.clients[id] = dest;
 		dest.on("close", (): void => {
 			delete this.clients[id];
