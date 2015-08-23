@@ -13,10 +13,10 @@
     "mocha": "mocha -R spec dist/test/",
     "start": "node ./mserver",
     "lint": "node support/tslint_wrapper.js src/*.ts test/*.ts",
-    "build:src": "cd src && tsc && dts-generator --name mhub --baseDir . --out ../dist/mhub.d.ts --main mhub/index index.ts",
-    "watch:src": "cd src && tsc --watch",
-    "build:test": "cd test && tsc",
-    "watch:test": "cd test && tsc --watch",
+    "build:src": "tsc -p src/ && cd src && dts-generator --name mhub --baseDir . --out ../dist/mhub.d.ts --main mhub/index --es6 --es6default index.ts",
+    "watch:src": "tsc -p src/ --watch",
+    "build:test": "tsc -p test/",
+    "watch:test": "tsc -p test/ --watch",
     "build": "npm run build:src && npm run build:test",
     "watch:start": "mkdir -p dist/src/ && touch dist/src/server.js && nodemon --delay 1 --watch dist/src/",
     "watch": "parallelshell 'npm run watch:src' 'npm run watch:test' 'npm run watch:start'",
@@ -26,17 +26,17 @@
   "author": "Martin Poelstra <martin@beryllium.net>",
   "license": "MIT",
   "devDependencies": {
-    "dts-generator": "^1.3.1",
-    "mocha": "^2.2.4",
+    "dts-generator": "poelstra/dts-generator#6c96dfba98a467d76071fa67666474f760dab64f",
+    "mocha": "^2.2.5",
     "multi-glob": "^0.4.0",
-    "parallelshell": "^1.1.1",
-    "tslint": "^2.1.1",
-    "typescript": "^1.5.0-alpha"
+    "parallelshell": "^2.0.0",
+    "tslint": "^2.4.3",
+    "typescript": "^1.5.3"
   },
   "dependencies": {
-    "express": "^4.12.3",
-    "minimatch": "^2.0.4",
-    "ws": "^0.7.1",
+    "express": "^4.13.3",
+    "minimatch": "^2.0.10",
+    "ws": "^0.7.2",
     "yargs": "^1.3.3"
   },
   "typescript": {

@@ -1,17 +1,22 @@
 {
-    "version": "1.4.1",
+    "version": "1.5.3",
     "compilerOptions": {
         "target": "es5",
         "module": "commonjs",
+        "isolatedModules": false,
         "declaration": true,
         "noImplicitAny": true,
         "removeComments": false,
+        "noLib": false,
+        "preserveConstEnums": true,
+        "suppressImplicitAnyIndexErrors": true,
         "sourceMap": true,
-        "outDir": "../dist/test",
-        "noLib": false
+        "outDir": "../dist/test/"
     },
     "filesGlob": [
-        "./**/*.ts"
+        "./**/*.ts",
+        "./**/*.tsx",
+        "!./node_modules/**/*"
     ],
     "files": [
         "./test-index.ts"
