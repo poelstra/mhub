@@ -6,9 +6,45 @@
 
 "use strict";
 
+import * as assert from "assert";
 import * as events from "events";
 import * as ws from "ws";
 import Message from "./Message";
+
+const MAX_SEQ = 65536;
+
+interface Resolver<T> {
+	(v: T|PromiseLike<T>): void;
+}
+
+interface VoidResolver extends Resolver<void> {
+	(v?: PromiseLike<void>): void;
+}
+
+interface RawMessage {
+	type: string;
+	seq?: number;
+}
+
+interface SubscribeMessage extends RawMessage {
+	node: string;
+	pattern: string;
+	id: string;
+}
+
+interface PublishMessage extends RawMessage {
+	node: string;
+	topic: string;
+	data: any;
+	headers: { [header: string]: string; };
+}
+
+interface ErrorMessage extends RawMessage {
+	message: string;
+}
+
+interface SubAckMessage extends RawMessage {
+}
 
 /**
  * FLL Message Server client.
@@ -23,6 +59,9 @@ import Message from "./Message";
 class MClient extends events.EventEmitter {
 	url: string;
 	socket: ws = null;
+
+	private _transactions: { [seqNo: number]: Resolver<RawMessage> } = {};
+	private _seqNo = 0;
 
 	/**
 	 * Create new connection to MServer.
@@ -51,13 +90,21 @@ class MClient extends events.EventEmitter {
 		this.socket.on("close", (): void => { this.emit("close"); });
 		this.socket.on("message", (data: string): void => {
 			try {
-				var decoded = JSON.parse(data);
+				var decoded: RawMessage = JSON.parse(data);
 				switch (decoded.type) {
 					case "message":
-						this.emit("message", new Message(decoded.topic, decoded.data, decoded.headers));
+						let msgDec = <PublishMessage>decoded;
+						this.emit("message", new Message(msgDec.topic, msgDec.data, msgDec.headers));
 						break;
 					case "error":
-						this.emit("error", new Error("server error: " + decoded.message));
+						let errDec = <ErrorMessage>decoded;
+						let err = new Error("server error: " + errDec.message);
+						this._release(errDec.seq, err, decoded);
+						this.emit("error", err);
+						break;
+					case "suback":
+					case "puback":
+						this._release(decoded.seq, undefined, decoded);
 						break;
 					default:
 						throw new Error("unknown message type: " + decoded.type);
@@ -73,6 +120,14 @@ class MClient extends events.EventEmitter {
 	 */
 	close(): void {
 		this.socket.close();
+		let closedRejection = Promise.reject<RawMessage>(new Error("connection closed"));
+		for (let t in this._transactions) {
+			if (!this._transactions.hasOwnProperty(t)) {
+				continue;
+			}
+			this._transactions[t](closedRejection);
+		}
+		this._transactions = {};
 	}
 
 	/**
@@ -81,13 +136,15 @@ class MClient extends events.EventEmitter {
 	 *
 	 * @param nodeName Name of node in MServer to subscribe to
 	 * @param pattern  Optional pattern glob (e.g. "namespace:*"), matches all messages if not given
+	 * @param id       Optional subscription ID sent back with all matching messages
 	 */
-	subscribe(nodeName: string, pattern?: string): void {
-		this.socket.send(JSON.stringify({
+	subscribe(nodeName: string, pattern?: string, id?: string): Promise<void> {
+		return this._send(<SubscribeMessage>{
 			type: "subscribe",
 			node: nodeName,
-			pattern: pattern
-		}));
+			pattern: pattern,
+			id: id
+		}).then(() => undefined);
 	}
 
 	/**
@@ -97,37 +154,71 @@ class MClient extends events.EventEmitter {
 	 * @param topic Message topic
 	 * @param data  Message data
 	 * @param headers Message headers
-	 * @param callback Function to call when message is written to server (note: does not guarantee that e.g. nodeName actually exists)
 	 */
-	publish(nodeName: string, topic: string, data?: any, headers?: { [name: string]: string }, callback?: (err: Error) => void): void;
+	publish(nodeName: string, topic: string, data?: any, headers?: { [name: string]: string }): Promise<void>;
 	/**
 	 * Publish message to a node.
 	 *
 	 * @param nodeName Name of node in MServer to publish to
 	 * @param message Message object
-	 * @param callback Function to call when message is written to server (note: does not guarantee that e.g. nodeName actually exists)
 	 */
-	publish(nodeName: string, message: Message, callback?: (err: Error) => void): void;
+	publish(nodeName: string, message: Message): Promise<void>;
 	// Implementation
-	publish(nodeName: string, ...args: any[]): void {
+	publish(nodeName: string, ...args: any[]): Promise<void> {
 		if (typeof args[0] === "object") {
 			var message: Message = args[0];
-			this.socket.send(JSON.stringify({
+			return this._send(<PublishMessage>{
 				type: "publish",
 				node: nodeName,
 				topic: message.topic,
 				data: message.data,
 				headers: message.headers
-			}), args[1]);
+			}).then(() => undefined);
 		} else {
-			this.socket.send(JSON.stringify({
+			return this._send(<PublishMessage>{
 				type: "publish",
 				node: nodeName,
 				topic: args[0],
 				data: args[1],
 				headers: args[2]
-			}), args[3]);
+			}).then(() => undefined);
 		}
+	}
+
+	private _send(msg: RawMessage): Promise<RawMessage> {
+		return new Promise<RawMessage>((resolve: () => void, reject: (err: Error) => void) => {
+			msg.seq = this._nextSeq();
+			this._transactions[msg.seq] = resolve;
+			this.socket.send(JSON.stringify(msg), (err?: Error) => {
+				if (err) {
+					this._release(msg.seq, err);
+					return reject(err);
+				}
+			});
+		});
+	}
+
+	private _release(seqNr: number, err: Error|void, msg?: RawMessage): void {
+		let resolver = this._transactions[seqNr];
+		if (!resolver) {
+			return;
+		}
+		if (err) {
+			resolver(Promise.reject<RawMessage>(err));
+		} else {
+			resolver(msg);
+		}
+	}
+
+	private _nextSeq(): number {
+		let maxIteration = MAX_SEQ;
+		while (--maxIteration > 0 && this._transactions[this._seqNo]) {
+			this._seqNo++;
+		}
+		assert(maxIteration, "out of sequence numbers");
+		let result = this._seqNo;
+		this._seqNo = (this._seqNo + 1) % MAX_SEQ;
+		return result;
 	}
 }
 

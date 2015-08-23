@@ -9,6 +9,7 @@
 import * as http from "http";
 import * as events from "events";
 import * as ws from "ws";
+import * as assert from "assert";
 
 import log from "./log";
 
@@ -68,32 +69,43 @@ class SocketDestination extends events.EventEmitter implements pubsub.Destinatio
 
 	private _handleMessage(data: string): void {
 		log.write("[ %s ] message", this.name, data);
+		var response: { type: string; [header: string]: any; };
 		try {
 			var msg = JSON.parse(data);
 			var node = this.hub.find(msg.node);
 			if (!node) {
 				log.write("[ %s ] unknown node %s", this.name, msg.node);
-				this.socket.send(JSON.stringify({
+				response = {
 					type: "error",
-					message: "unknown node " + msg.node
-				}));
-				return;
-			}
-			if (msg.type === "publish") {
+					message: "unknown node " + msg.node,
+					seq: msg.seq
+				};
+			} else if (msg.type === "publish") {
 				node.send(new Message(msg.topic, msg.data, msg.headers));
+				response = {
+					type: "puback",
+					seq: msg.seq
+				};
 			} else if (msg.type === "subscribe") {
 				if (this.subscriptions.indexOf(node) < 0) {
 					this.subscriptions.push(node);
 				}
 				node.bind(this, msg.pattern);
+				response = {
+					type: "suback",
+					seq: msg.seq
+				};
 			}
 		} catch (e) {
 			log.write("[ %s ] decode error", this.name, e);
-			this.socket.send(JSON.stringify({
+			response = {
 				type: "error",
-				message: "decode error " + e
-			}));
+				message: "decode error " + e,
+				seq: msg.seq
+			};
 		}
+		assert(response);
+		this.socket.send(JSON.stringify(response));
 	}
 }
 

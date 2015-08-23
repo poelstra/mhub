@@ -7,7 +7,7 @@
         "declaration": true,
         "noImplicitAny": true,
         "removeComments": false,
-        "noLib": false,
+        "noLib": true,
         "preserveConstEnums": true,
         "suppressImplicitAnyIndexErrors": true,
         "sourceMap": true,

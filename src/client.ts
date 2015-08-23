@@ -149,9 +149,8 @@ function postMode(): void {
 
 	var client = new MClient("ws://" + argv.socket);
 	client.on("open", (): void => {
-		client.publish(argv.node, argv.topic, data, headers, (): void => {
-			client.close();
-		});
+		let closer = () => client.close();
+		client.publish(argv.node, argv.topic, data, headers).then(closer, closer);
 	});
 	client.on("error", (e: Error): void => {
 		die("Client error:", e);
@@ -245,11 +244,12 @@ function pipeMode(): void {
 			data = line;
 		}
 
-		client.publish(argv.node, argv.topic, data, headers, (): void => {
+		let closer = () => {
 			if (ended) {
 				client.close();
 			}
-		});
+		};
+		client.publish(argv.node, argv.topic, data, headers).then(closer, closer);
 	}
 }
 
