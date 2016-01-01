@@ -75,20 +75,19 @@ class MClient extends events.EventEmitter {
 	}
 
 	/**
-	 * (Re-)connect to MServer.
-	 *
-	 * Note: any existing subscriptions will be lost.
+	 * Connect to the MServer.
+	 * If connection is already active or pending, this is a no-op.
+	 * Note: a connection is already initiated when the constructor is called.
 	 */
 	connect(): void {
+		if (this.socket) {
+			return;
+		}
+
 		this.socket = new ws(this.url);
-		this.socket.on("error", (e: any): void => {
-			if (!(e instanceof Error)) {
-				e = new Error("WebSocket error: " + e);
-			}
-			this.emit("error", e);
-		});
-		this.socket.on("open", (): void => { this.emit("open"); });
-		this.socket.on("close", (): void => { this.emit("close"); });
+		this.socket.on("error", (e: any): void => { this._handleSocketError(e); });
+		this.socket.on("open", (): void => { this._handleSocketOpen(); });
+		this.socket.on("close", (): void => { this._handleSocketClose(); });
 		this.socket.on("message", (data: string): void => {
 			try {
 				var decoded: RawMessage = JSON.parse(data);
@@ -118,9 +117,15 @@ class MClient extends events.EventEmitter {
 
 	/**
 	 * Disconnect from MServer.
+	 * If already disconnected, this becomes a no-op.
+	 *
+	 * Note: any existing subscriptions will be lost.
 	 */
 	close(): void {
-		this.socket.close();
+		if (this.socket) {
+			this.socket.close();
+			this.socket = null;
+		}
 		let closedRejection = Promise.reject<RawMessage>(new Error("connection closed"));
 		for (let t in this._transactions) {
 			if (!this._transactions.hasOwnProperty(t)) {
@@ -135,7 +140,7 @@ class MClient extends events.EventEmitter {
 	 * Subscribe to a node. Emits the "message" event when a message is received for this
 	 * subscription.
 	 *
-	 * @param nodeName Name of node in MServer to subscribe to
+	 * @param nodeName Name of node in MServer to subscribe to (e.g. "default")
 	 * @param pattern  Optional pattern glob (e.g. "namespace:*"), matches all messages if not given
 	 * @param id       Optional subscription ID sent back with all matching messages
 	 */
@@ -151,7 +156,7 @@ class MClient extends events.EventEmitter {
 	/**
 	 * Publish message to a node.
 	 *
-	 * @param nodeName Name of node in MServer to publish to
+	 * @param nodeName Name of node in MServer to publish to (e.g. "default")
 	 * @param topic Message topic
 	 * @param data  Message data
 	 * @param headers Message headers
@@ -160,7 +165,7 @@ class MClient extends events.EventEmitter {
 	/**
 	 * Publish message to a node.
 	 *
-	 * @param nodeName Name of node in MServer to publish to
+	 * @param nodeName Name of node in MServer to publish to (e.g. "default")
 	 * @param message Message object
 	 */
 	publish(nodeName: string, message: Message): Promise<void>;
@@ -186,10 +191,34 @@ class MClient extends events.EventEmitter {
 		}
 	}
 
+	private _handleSocketOpen(): void {
+		this.emit("open");
+	}
+
+	private _handleSocketError(err: any): void {
+		if (!(err instanceof Error)) {
+			err = new Error("WebSocket error: " + err);
+		}
+		this.emit("error", err);
+	}
+
+	private _handleSocketClose(): void {
+		// Emit `close` event when socket is closed (i.e. not just when
+		// `close()` is called without being connected yet)
+		this.emit("close");
+		// Discard socket, abort pending transactions
+		this.close();
+	}
+
 	private _send(msg: RawMessage): Promise<RawMessage> {
 		return new Promise<RawMessage>((resolve: () => void, reject: (err: Error) => void) => {
 			msg.seq = this._nextSeq();
 			this._transactions[msg.seq] = resolve;
+			if (!this.socket) {
+				var e = new Error("not connected");
+				this.emit("error", e);
+				throw e;
+			}
 			this.socket.send(JSON.stringify(msg), (err?: Error) => {
 				if (err) {
 					this._release(msg.seq, err);
