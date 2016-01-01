@@ -1,9 +1,7 @@
 {
 	"port": 13900,
-	"nodes": ["blib", "ping", "twitter", "controller", "proxy", "overlay"],
+	"nodes": ["default", "test"],
 	"bindings": [
-		{ "from": "twitter", "to": "overlay", "pattern": "twitter:{add,remove}" },
-		{ "from": "controller", "to": "proxy" },
-		{ "from": "proxy", "to": "overlay" }
+		{ "from": "default", "to": "test", "pattern": "test:*" }
 	]
 }

@@ -81,15 +81,6 @@ config.bindings.forEach((binding: Binding): void => {
 	from.bind(to, binding.pattern);
 });
 
-// Automatically send blibs when a blib node is configured, useful for testing
-var blibNode = hub.find("blib");
-if (blibNode) {
-	var blibCount = 0;
-	setInterval((): void => {
-		blibNode.send(new Message("blib", blibCount++));
-	}, 5000);
-}
-
 class PingResponder implements pubsub.Destination {
 	constructor(public name: string, private pingNode: pubsub.Node) {
 		this.pingNode.bind(this, "ping:request");
@@ -102,10 +93,16 @@ class PingResponder implements pubsub.Destination {
 	}
 }
 
-// Automatically respond to pings when a ping node is configured, useful for testing
-var pingNode = hub.find("ping");
-if (pingNode) {
+var testNode = hub.find("test");
+if (testNode) {
+	// Automatically send blibs when the test node is configured, useful for testing
+	var blibCount = 0;
+	setInterval((): void => {
+		testNode.send(new Message("blib", blibCount++));
+	}, 5000);
+
+	// Automatically respond to pings when a ping node is configured, useful for testing
 	/* tslint:disable:no-unused-variable */
-	var pongNode = new PingResponder("pong", pingNode);
+	var pingResponder = new PingResponder("pong", testNode);
 	/* tslint:enable:no-unused-variable */
 }
