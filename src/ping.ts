@@ -32,7 +32,7 @@ var argv = yargs
 		type: "string",
 		alias: "node",
 		description: "Node to subscribe/publish to",
-		default: "ping"
+		default: "test"
 	})
 	.option("d", {
 		type: "string",

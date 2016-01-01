@@ -11,9 +11,9 @@ import MClient from "./MClient";
 import Message from "./Message";
 
 var usage = [
-	"Listen mode: $0 [-s <host>[:<port>]] -n <nodename> -l [-p <topic_pattern>] [-o <output_format>]",
-	"Post mode: $0 [-s <host>[:<port>]] -n <nodename> -t <topic> [-d <json_data>] [-h <json_headers>]",
-	"Pipe mode: $0 [-s <host>[:<port>]] -n <nodename> -t <topic> -i <input_format> [-h <json_headers>]",
+	"Listen mode: $0 [-s <host>[:<port>]] [-n <nodename>] -l [-p <topic_pattern>] [-o <output_format>]",
+	"Post mode: $0 [-s <host>[:<port>]] [-n <nodename>] -t <topic> [-d <json_data>] [-h <json_headers>]",
+	"Pipe mode: $0 [-s <host>[:<port>]] [-n <nodename>] -t <topic> -i <input_format> [-h <json_headers>]",
 ].join("\n");
 
 function die(...args: any[]): void {
@@ -28,13 +28,15 @@ var args = yargs
 		type: "string",
 		alias: "socket",
 		description: "WebSocket to connect to",
+		required: true,
 		default: "localhost:13900"
 	})
 	.option("n", {
 		type: "string",
 		alias: "node",
-		description: "Node to subscribe/publish to, e.g. 'blib'",
-		required: true
+		description: "Node to subscribe/publish to, e.g. 'test'",
+		required: true,
+		default: "default"
 	})
 	.option("l", {
 		type: "boolean",
