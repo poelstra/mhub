@@ -19,15 +19,15 @@
         "!./node_modules/**/*"
     ],
     "files": [
-        "./Logger.ts",
-        "./MClient.ts",
-        "./Message.ts",
-        "./SocketHub.ts",
         "./client.ts",
         "./index.ts",
         "./log.ts",
+        "./Logger.ts",
+        "./MClient.ts",
+        "./Message.ts",
         "./ping.ts",
         "./pubsub.ts",
-        "./server.ts"
+        "./server.ts",
+        "./SocketHub.ts"
     ]
 }
