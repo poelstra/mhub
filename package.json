@@ -31,7 +31,7 @@
     "multi-glob": "^0.4.0",
     "parallelshell": "^2.0.0",
     "tslint": "^2.4.3",
-    "typescript": "^1.5.3"
+    "typescript": "~1.7.5"
   },
   "dependencies": {
     "express": "^4.13.3",
