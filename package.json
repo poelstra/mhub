@@ -25,6 +25,17 @@
   },
   "author": "Martin Poelstra <martin@beryllium.net>",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/poelstra/mhub.git"
+  },
+  "keywords": [
+    "mhub"
+  ],
+  "bugs": {
+    "url": "https://github.com/poelstra/mhub/issues"
+  },
+  "homepage": "https://github.com/poelstra/mhub#readme",
   "devDependencies": {
     "dts-generator": "poelstra/dts-generator#6c96dfba98a467d76071fa67666474f760dab64f",
     "mocha": "^2.2.5",
