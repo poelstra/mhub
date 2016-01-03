@@ -40,6 +40,10 @@ class Message {
 		this.data = data;
 		this.headers = headers || Object.create(null);
 	}
+
+	clone(): Message {
+		return new Message(this.topic, this.data, this.headers);
+	}
 }
 
 export default Message;
