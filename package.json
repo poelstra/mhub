@@ -11,14 +11,14 @@
   "scripts": {
     "test": "npm run lint && npm run mocha",
     "mocha": "mocha -R spec dist/test/",
-    "start": "node ./mserver",
+    "start": "node ./bin/mserver",
     "lint": "node support/tslint_wrapper.js src/*.ts test/*.ts",
     "build:src": "tsc -p src/ && cd src && dts-generator --name mhub --baseDir . --out ../dist/mhub.d.ts --main mhub/index --es6 --es6default index.ts",
     "watch:src": "tsc -p src/ --watch",
     "build:test": "tsc -p test/",
     "watch:test": "tsc -p test/ --watch",
     "build": "npm run build:src && npm run build:test",
-    "watch:start": "mkdir -p dist/src/ && touch dist/src/server.js && nodemon --delay 1 --watch dist/src/",
+    "watch:start": "mkdir -p dist/src/ && touch dist/src/server.js && nodemon ./bin/mserver --delay 1 --watch src/",
     "watch": "parallelshell 'npm run watch:src' 'npm run watch:test' 'npm run watch:start'",
     "clean": "rimraf -rf dist",
     "prepublish": "npm run lint && npm run build && npm run test"
