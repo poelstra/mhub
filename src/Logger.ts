@@ -3,8 +3,6 @@
  * See log.ts for a convenient singleton instance of this.
  */
 
-/// <reference path="../typings/tsd.d.ts" />
-
 "use strict";
 
 import * as util from "util";

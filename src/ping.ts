@@ -2,8 +2,6 @@
  * Commandline tool for determining latency.
  */
 
-/// <reference path="../typings/tsd.d.ts" />
-
 "use strict";
 
 import * as yargs from "yargs";

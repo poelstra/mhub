@@ -2,8 +2,6 @@
  * Convert WebSocket into an MServer hub (i.e. a bunch of Nodes).
  */
 
-/// <reference path="../typings/tsd.d.ts" />
-
 "use strict";
 
 import * as http from "http";

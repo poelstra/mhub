@@ -3,8 +3,6 @@
  * Provides the basic routing infrastructure to send and receive messages.
  */
 
-/// <reference path="../typings/tsd.d.ts" />
-
 "use strict";
 
 import * as minimatch from "minimatch";

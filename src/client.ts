@@ -2,8 +2,6 @@
  * Commandline tool for sending/receiving MHub messages to/from an mserver.
  */
 
-/// <reference path="../typings/tsd.d.ts" />
-
 "use strict";
 
 import * as yargs from "yargs";

@@ -1,5 +1,5 @@
 {
-    "version": "1.5.3",
+    "version": "1.7.5",
     "compilerOptions": {
         "target": "es5",
         "module": "commonjs",
@@ -7,18 +7,19 @@
         "declaration": true,
         "noImplicitAny": true,
         "removeComments": false,
-        "noLib": true,
+        "noLib": false,
         "preserveConstEnums": true,
         "suppressImplicitAnyIndexErrors": true,
         "sourceMap": true,
         "outDir": "../dist/src/"
     },
     "filesGlob": [
+        "../typings/tsd.d.ts",
         "./**/*.ts",
-        "./**/*.tsx",
-        "!./node_modules/**/*"
+        "./**/*.tsx"
     ],
     "files": [
+        "../typings/tsd.d.ts",
         "./client.ts",
         "./index.ts",
         "./log.ts",
@@ -29,5 +30,8 @@
         "./pubsub.ts",
         "./server.ts",
         "./SocketHub.ts"
-    ]
+    ],
+    "atom": {
+        "rewriteTsconfig": true
+    }
 }

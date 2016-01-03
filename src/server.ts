@@ -4,8 +4,6 @@
  * Makes MHub pubsub Nodes available through WebSockets.
  */
 
-/// <reference path="../typings/tsd.d.ts" />
-
 "use strict";
 
 import * as express from "express";

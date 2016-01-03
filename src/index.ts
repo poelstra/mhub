@@ -2,8 +2,6 @@
  * MHub programmatic interface.
  */
 
-/// <reference path="../typings/tsd.d.ts" />
-
 "use strict";
 
 import MClient from "./MClient";

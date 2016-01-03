@@ -2,8 +2,6 @@
  * MHub client library.
  */
 
-/// <reference path="../typings/tsd.d.ts" />
-
 "use strict";
 
 import * as assert from "assert";
@@ -126,7 +124,7 @@ class MClient extends events.EventEmitter {
 			this.socket.close();
 			this.socket = null;
 		}
-		let closedRejection = Promise.reject<RawMessage>(new Error("connection closed"));
+		let closedRejection = Promise.reject(new Error("connection closed"));
 		for (let t in this._transactions) {
 			if (!this._transactions.hasOwnProperty(t)) {
 				continue;
@@ -234,7 +232,7 @@ class MClient extends events.EventEmitter {
 			return;
 		}
 		if (err) {
-			resolver(Promise.reject<RawMessage>(err));
+			resolver(Promise.reject(err));
 		} else {
 			resolver(msg);
 		}
