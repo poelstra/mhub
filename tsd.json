@@ -21,7 +21,7 @@
       "commit": "0605ebbdbdd8183c70b4a14e1e34ecb3f2b446bf"
     },
     "yargs/yargs.d.ts": {
-      "commit": "b3324f69165309a3ea2bd02fd10e97841bf07c83"
+      "commit": "c2b4ebb74caeb379c3691646b04cb3db26b53f95"
     },
     "es6-promise/es6-promise.d.ts": {
       "commit": "fe563dff3428bac1260d1794e2c2ecf8f097535a"

@@ -21,6 +21,8 @@ var args = yargs
 	.usage("$0 [-c <config_file>]")
 	.help("help")
 	.alias("h", "help")
+	.version(() => require(path.resolve(__dirname, "../../package.json")).version, "version")
+	.alias("v", "version")
 	.option("c", {
 		type: "string",
 		alias: "config",

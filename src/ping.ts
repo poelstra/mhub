@@ -5,6 +5,7 @@
 "use strict";
 
 import * as yargs from "yargs";
+import * as path from "path";
 import MClient from "./MClient";
 import Message from "./Message";
 
@@ -20,6 +21,8 @@ function die(...args: any[]): void {
 var argv = yargs
 	.usage(usage)
 	.help("help")
+	.version(() => require(path.resolve(__dirname, "../../package.json")).version, "version")
+	.alias("v", "version")
 	.option("s", {
 		type: "string",
 		alias: "socket",
