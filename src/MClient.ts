@@ -126,7 +126,7 @@ class MClient extends events.EventEmitter {
 		}
 		let closedRejection = Promise.reject(new Error("connection closed"));
 		for (let t in this._transactions) {
-			if (!this._transactions.hasOwnProperty(t)) {
+			if (!this._transactions[t]) {
 				continue;
 			}
 			this._transactions[t](closedRejection);
@@ -231,6 +231,7 @@ class MClient extends events.EventEmitter {
 		if (!resolver) {
 			return;
 		}
+		delete this._transactions[seqNr];
 		if (err) {
 			resolver(Promise.reject(err));
 		} else {
@@ -241,7 +242,7 @@ class MClient extends events.EventEmitter {
 	private _nextSeq(): number {
 		let maxIteration = MAX_SEQ;
 		while (--maxIteration > 0 && this._transactions[this._seqNo]) {
-			this._seqNo++;
+			this._seqNo = (this._seqNo + 1) % MAX_SEQ;
 		}
 		assert(maxIteration, "out of sequence numbers");
 		let result = this._seqNo;
