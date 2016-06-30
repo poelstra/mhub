@@ -27,7 +27,7 @@ var args = yargs
 	.help("help")
 	.alias("h", "help")
 	// tslint:disable-next-line:no-require-imports
-	.version(() => require(path.resolve(__dirname, "../../package.json")).version, "version")
+	.version(() => require(path.resolve(__dirname, "../../package.json")).version)
 	.alias("v", "version")
 	.option("c", {
 		type: "string",

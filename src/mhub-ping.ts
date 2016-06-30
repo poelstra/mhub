@@ -22,7 +22,7 @@ var argv = yargs
 	.usage(usage)
 	.help("help")
 	// tslint:disable-next-line:no-require-imports
-	.version(() => require(path.resolve(__dirname, "../../package.json")).version, "version")
+	.version(() => require(path.resolve(__dirname, "../../package.json")).version)
 	.alias("v", "version")
 	.option("s", {
 		type: "string",
