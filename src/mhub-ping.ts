@@ -6,8 +6,8 @@
 
 import * as yargs from "yargs";
 import * as path from "path";
-import MClient from "./MClient";
-import Message from "./Message";
+import MClient from "./client";
+import Message from "./message";
 
 var usage = [
 	"$0 [-s <host>[:<port>]] [-n <nodename>] [-d <json_data>] [-h <json_headers>] [-c <count>]",

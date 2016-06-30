@@ -1,13 +1,22 @@
 /**
- * MServer Message class.
+ * MHub Message class.
  */
 
 "use strict";
 
-/**
- * Message to be sent or received over MServer network.
+/*
+ TODO remove Message.headers in favour of simply adding more optional properties
+      directly on Message?
  */
-class Message {
+
+export interface Headers {
+	[name: string]: string;
+}
+
+/**
+ * Message to be sent or received over MHub network.
+ */
+export class Message {
 	/**
 	 * Topic of message.
 	 * Can be used to determine routing between pubsub Nodes.
@@ -23,7 +32,7 @@ class Message {
 	/**
 	 * Optional message headers.
 	 */
-	headers: { [name: string]: string };
+	headers: Headers;
 
 	/**
 	 * Construct message object.
@@ -32,7 +41,7 @@ class Message {
 	 * I.e. after a call to publish() or send(), make sure to create 'fresh' instances of e.g.
 	 * a headers object.
 	 */
-	constructor(topic: string, data?: any, headers?: { [name: string]: string }) {
+	constructor(topic: string, data?: any, headers?: Headers) {
 		if (typeof topic !== "string") {
 			throw new TypeError("invalid topic: expected string, got " + typeof topic);
 		}

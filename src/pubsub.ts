@@ -9,7 +9,7 @@ import * as minimatch from "minimatch";
 
 import log from "./log";
 
-import Message from "./Message";
+import Message from "./message";
 
 interface Matcher {
 	pattern: string;

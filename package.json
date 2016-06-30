@@ -4,21 +4,24 @@
   "description": "Simple, flexible message hub using websockets",
   "main": "./dist/src/index.js",
   "bin": {
-    "mclient": "./bin/mclient",
-    "mping": "./bin/mping",
-    "mserver": "./bin/mserver"
+    "mhub-client": "./bin/mhub-client",
+    "mhub-ping": "./bin/mhub-ping",
+    "mhub-server": "./bin/mhub-server",
+    "mclient": "./bin/mhub-client",
+    "mping": "./bin/mhub-ping",
+    "mserver": "./bin/mhub-server"
   },
   "scripts": {
     "test": "npm run lint && npm run mocha",
     "mocha": "mocha -R spec dist/test/",
-    "start": "node ./bin/mserver",
+    "start": "node ./bin/mhub-server",
     "lint": "node support/tslint_wrapper.js src/*.ts test/*.ts",
     "build:src": "tsc -p src/",
     "watch:src": "tsc -p src/ --watch",
     "build:test": "tsc -p test/",
     "watch:test": "tsc -p test/ --watch",
     "build": "npm run build:src && npm run build:test",
-    "watch:start": "mkdir -p dist/src/ && touch dist/src/server.js && nodemon ./bin/mserver --delay 1 --watch src/",
+    "watch:start": "mkdir -p dist/src/ && touch dist/src/mhub-server.js && nodemon ./bin/mhub-server --delay 1 --watch src/",
     "watch": "parallelshell 'npm run watch:src' 'npm run watch:test' 'npm run watch:start'",
     "clean": "rimraf -rf dist",
     "prepublish": "npm run lint && npm run build && npm run test"

@@ -12,8 +12,8 @@ import * as yargs from "yargs";
 import * as path from "path";
 import * as fs from "fs";
 import * as pubsub from "./pubsub";
-import SocketHub from "./SocketHub";
-import Message from "./Message";
+import SocketHub from "./sockethub";
+import Message from "./message";
 
 import log from "./log";
 
@@ -28,6 +28,7 @@ var args = yargs
 		alias: "config",
 		description: "Filename of config, uses mhub's server.conf.json by default"
 	})
+	.strict()
 	.argv;
 
 function die(...args: any[]): void {

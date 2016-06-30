@@ -23,13 +23,13 @@
         "./client.ts",
         "./index.ts",
         "./log.ts",
-        "./Logger.ts",
-        "./MClient.ts",
-        "./Message.ts",
-        "./ping.ts",
+        "./logger.ts",
+        "./message.ts",
+        "./mhub-client.ts",
+        "./mhub-ping.ts",
+        "./mhub-server.ts",
         "./pubsub.ts",
-        "./server.ts",
-        "./SocketHub.ts"
+        "./sockethub.ts"
     ],
     "atom": {
         "rewriteTsconfig": true

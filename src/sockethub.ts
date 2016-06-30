@@ -12,7 +12,7 @@ import * as assert from "assert";
 import log from "./log";
 
 import * as pubsub from "./pubsub";
-import Message from "./Message";
+import Message from "./message";
 
 class SubscriptionNode implements pubsub.Destination {
 	conn: ClientConnection;
@@ -87,7 +87,7 @@ class ClientConnection extends events.EventEmitter {
 	}
 
 	private _handleError(e: Error): void {
-		log.write("[ %s ] error", this.name, e);
+		log.write("[ %s ] error:", this.name, e);
 		this.socket.close();
 	}
 
@@ -98,7 +98,7 @@ class ClientConnection extends events.EventEmitter {
 			var msg = JSON.parse(data);
 			var node = this.hub.find(msg.node);
 			if (!node) {
-				log.write("[ %s ] unknown node %s", this.name, msg.node);
+				log.write("[ %s ] error: unknown node '%s'", this.name, msg.node);
 				response = {
 					type: "error",
 					message: "unknown node " + msg.node,
@@ -124,7 +124,7 @@ class ClientConnection extends events.EventEmitter {
 				};
 			}
 		} catch (e) {
-			log.write("[ %s ] decode error", this.name, e);
+			log.write("[ %s ] decode error: ", this.name, e);
 			response = {
 				type: "error",
 				message: "decode error " + e,
