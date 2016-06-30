@@ -46,9 +46,9 @@ interface SubAckMessage extends RawMessage {
 }
 
 /**
- * FLL Message Server client.
+ * MHub client.
  *
- * Allows subscribing and publishing to MServer nodes.
+ * Allows subscribing and publishing to MHub server nodes.
  *
  * @event open() Emitted when connection was established.
  * @event close() Emitted when connection was closed.

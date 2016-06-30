@@ -3,12 +3,9 @@
 ## Introduction
 
 This project provides:
-* a simple message broker (`mserver`) for loosely coupling
-software components
-* accompanying command-line tools (`mclient`) for interacting
-with the server and
-* a library for communicating with the server using
-Javascript.
+* a simple message broker (`mhub-server`) for loosely coupling software components
+* accompanying command-line tools (`mhub-client`) for interacting with the server and
+* a library for communicating with the server using Javascript.
 
 It can be used as a lightweight Javascript-only alternative to e.g. RabbitMQ or
 MQTT.
@@ -21,8 +18,8 @@ and more components are coming.
 
 ### Messages
 
-The purpose of an MHub server (`mserver`) is to pass messages between connected
-clients.
+The purpose of an MHub server (`mhub-server`) is to pass messages between
+connected clients.
 
 A *message* consists of a *topic* and optionally *data* and/or *headers*.
 
@@ -52,18 +49,19 @@ ensure compatibility with other systems.
 
 ### Nodes and bindings
 
-An MHub server (`mserver`) instance contains one or more *nodes*.
+An MHub server (`mhub-server`) instance contains one or more *nodes*, on which
+messages can be published or retrieved.
 
-In many cases, the `default` node will suffice for most users, but to allow for
-more flexibility on larger systems, it is possible to define additional nodes.
+In many cases, the `default` node will suffice, but to allow for more
+flexibility on larger systems, it is possible to define additional nodes.
 
 For example, this mechanism can be used to:
 * route tweets to an 'unmoderated' node first, pass through some moderator
   system, then send them through to a 'moderated' node (which then can have
   bindings to other nodes that are interested in these tweets, e.g. display
   nodes).
-* route a subset of all messages from an mserver on the local network to an
-  mserver on the Internet, e.g. for consumption by a public website.
+* route a subset of all messages from an mhub-server on the local network to an
+  mhub-server on the Internet, e.g. for consumption by a public website.
 * route team scores to both a video overlay display and dedicated score displays
   in other areas, but only route the show/hide commands of the scores view to
   the video overlay, such that the dedicated displays keep displaying their
@@ -80,7 +78,7 @@ their topic) between different nodes. A binding (optionally based on a topic
 *pattern*, like subscriptions), forwards all (matching) messages from
 its source node to its destination node.
 
-These bindings can either directly be specified in the mserver configuration
+These bindings can either directly be specified in the mhub-server configuration
 (for routing between nodes on the same server), or through an external program
 such as [mhub-relay](https://github.com/poelstra/mhub-relay) (for routing
 between nodes on the same, and/or different servers).
@@ -90,16 +88,16 @@ between nodes on the same, and/or different servers).
 To install and run the server:
 ```sh
 npm install -g mhub
-mserver
+mhub-server
 ```
 
 You'll now have an MHub server listening on port 13900, containing `default` and
 `test` nodes.
 
-To verify that it's working, start an `mclient` in listen mode and connect to
+To verify that it's working, start an `mhub-client` in listen mode and connect to
 e.g. the `test` node to see a 'blib' message every five seconds:
 ```sh
-mclient -n test -l
+mhub-client -n test -l
 ```
 
 You should now see e.g.:
@@ -109,13 +107,13 @@ You should now see e.g.:
 etc...
 ```
 
-Leave the listening mclient running, then start another one to send a simple
+Leave the listening mhub-client running, then start another one to send a simple
 test message:
 ```sh
-mclient -t my:topic
+mhub-client -t my:topic
 ```
 
-You'll see it on the listening `mclient` as:
+You'll see it on the listening `mhub-client` as:
 ```
 { topic: 'test:topic', data: undefined, headers: {} }
 ```
@@ -123,37 +121,44 @@ You'll see it on the listening `mclient` as:
 Note that the message was sent to the `default` node (because we didn't specify
 another one with `-n`). However, because the server is by default configured to
 forward all messages with topic pattern `test:*` from that `default` node to the
-`test` node, it does appear at the listening mclient started earlier.
+`test` node, it does appear at the listening mhub-client started earlier.
 You can see this binding in `server.conf.json`. See below for changing it
 yourself.
 
-## `mclient` commandline interface
+## `mhub-client` commandline interface
 
-The `mclient` commandline tool can be used to both listen for messages, or to
-publish messages. See `mclient -h` for available commandline parameters:
+The `mhub-client` commandline tool can be used to both listen for messages, or to
+publish messages. See `mhub-client --help` for available commandline parameters:
 
 ```
-$ mclient -h
-Listen mode: node ./bin/mclient [-s <host>[:<port>]] [-n <nodename>] -l [-p <topic_pattern>] [-o <output_format>]
-Post mode: node ./bin/mclient [-s <host>[:<port>]] [-n <nodename>] -t <topic> [-d <json_data>] [-h <json_headers>]
-Pipe mode: node ./bin/mclient [-s <host>[:<port>]] [-n <nodename>] -t <topic> -i <input_format> [-h <json_headers>]
+$ mhub-client --help
+Listen mode: /usr/bin/nodejs bin/mhub-client [-s <host>[:<port>]] [-n <nodename>] -l [-p <topic_pattern>] [-o <output_format>]
+Post mode: /usr/bin/nodejs bin/mhub-client [-s <host>[:<port>]] [-n <nodename>] -t <topic> [-d <json_data>] [-h <json_headers>]
+Pipe mode: /usr/bin/nodejs bin/mhub-client [-s <host>[:<port>]] [-n <nodename>] -t <topic> -i <input_format> [-h <json_headers>]
 
 Options:
-  --help         Show help
-  -s, --socket   WebSocket to connect to                                                             [required]  [default: "localhost:13900"]
-  -n, --node     Node to subscribe/publish to, e.g. 'test'                                           [required]  [default: "default"]
-  -l, --listen   Select listen mode
-  -p, --pattern  Topic subscription pattern as glob, e.g. 'twitter:*'
-  -o, --output   Output format, can be: human, text, jsondata, json                                  [default: "human"]
-  -t, --topic    Message topic
-  -d, --data     Optional message data as JSON object, e.g. '"a string"' or '{ "foo": "bar" }'
-  -h, --headers  Optional message headers as JSON object, e.g. '{ "my-header": "foo" }'
-  -i, --input    Read lines from stdin, post each line to server. <input_format> can be: text, json
+  --help         Show help                                             [boolean]
+  -s, --socket   WebSocket to connect to
+                                [string] [required] [default: "localhost:13900"]
+  -n, --node     Node to subscribe/publish to, e.g. 'test'
+                                        [string] [required] [default: "default"]
+  -l, --listen   Select listen mode                                    [boolean]
+  -p, --pattern  Topic subscription pattern as glob, e.g. 'twitter:*'   [string]
+  -o, --output   Output format, can be: human, text, jsondata, json
+                                                     [string] [default: "human"]
+  -t, --topic    Message topic                                          [string]
+  -d, --data     Optional message data as JSON object, e.g. '"a string"' or '{
+                 "foo": "bar" }'                                        [string]
+  -h, --headers  Optional message headers as JSON object, e.g. '{ "my-header":
+                 "foo" }'                                               [string]
+  -i, --input    Read lines from stdin, post each line to server. <input_format>
+                 can be: text, json                                     [string]
+  -v, --version  Show version number                                   [boolean]
 ```
 
 ### Listening for messages
 
-Using `mclient`, listen mode is initiated with the `-l` parameter.
+Using `mhub-client`, listen mode is initiated with the `-l` parameter.
 
 In the default (human-friendly) format, short messages are printed on a single
 line, but larger messages will wrap across multiple lines. See below for options
@@ -161,20 +166,20 @@ to change this.
 
 To simply listen for all messages on the `default` topic, use:
 ```sh
-mclient -l
+mhub-client -l
 ```
 
 To listen for all messages on another node use e.g.:
 ```sh
-mclient -l -n somenode
+mhub-client -l -n somenode
 ```
 
 To only receive messages with a certain topic use e.g.:
 ```sh
-mclient -l -n test -p 'ping:*'
+mhub-client -l -n test -p 'ping:*'
 ```
 
-(Tip: use the bundled `mping` program to do a quick round-trip time measurement.)
+(Tip: use the bundled `mhub-ping` program to do a quick round-trip time measurement.)
 
 By default, all messages are printed in a somewhat human-readable format, which
 is not suitable for consumption by other programs. However, a number of output
@@ -199,12 +204,12 @@ passing `-l` nor `-i`).
 To publish a message without data to the `default` topic, use e.g.:
 
 ```sh
-mclient -t test:something
+mhub-client -t test:something
 ```
 
 Again, the `-n` option can be used to specify a custom node.
 ```sh
-mclient -n test -t ping:request
+mhub-client -n test -t ping:request
 ```
 
 To pass data (and/or headers) to a message, it needs to be specified as JSON.
@@ -216,11 +221,11 @@ escaped.
 For example:
 ```sh
 # On *nix shell:
-mclient -t my:topic -d '"some string"'
-mclient -t my:topic -d '{ "key": "value" }'
+mhub-client -t my:topic -d '"some string"'
+mhub-client -t my:topic -d '{ "key": "value" }'
 # On Windows command prompt:
-mclient -t my:topic -d """some string"""
-mclient -t my:topic -d "{ ""key"": ""value"" }"
+mhub-client -t my:topic -d """some string"""
+mhub-client -t my:topic -d "{ ""key"": ""value"" }"
 ```
 
 ### Publishing multiple messages
@@ -231,19 +236,30 @@ Available input formats are:
 * json: Every line of the input is parsed as a JSON object, and used as the
   message's data field.
 
-Example to stream tweets into an mserver, using the `tweet` command from
+Example to stream tweets into an mhub-server, using the `tweet` command from
 `node-tweet-cli`.
 ```sh
 tweet login
-tweet stream some_topic --json | mclient -t twitter:add -i json
+tweet stream some_topic --json | mhub-client -t twitter:add -i json
 ```
+
+### Advanced message routing and transformations
+
+The above examples all use the bundled commandline tools to achieve simple
+message routing.
+
+For more advanced scenario's you can use  [mhub-relay](https://github.com/poelstra/mhub-relay).
+
+This allows you to connect to one or more MHub servers, subscribe to nodes,
+optionally transform messages (using simple JavaScript functions), and publish
+them to other nodes.
 
 ## Customizing server nodes and bindings
 
 To customize the available nodes and bindings, create a copy of
 `server.conf.json`, edit it to your needs and start the server as:
 ```sh
-mserver -c <config_filename>
+mhub-server -c <config_filename>
 ```
 
 Note: the pattern in a binding can be omitted, in which case everything will
@@ -288,9 +304,9 @@ For use in the browser, [browserify](http://browserify.org/) is recommended.
 API doc for MClient:
 ```ts
 /**
- * FLL Message Server client.
+ * MHub client.
  *
- * Allows subscribing and publishing to MServer nodes.
+ * Allows subscribing and publishing to MHub server nodes.
  *
  * @event open() Emitted when connection was established.
  * @event close() Emitted when connection was closed.
@@ -303,6 +319,14 @@ declare class MClient extends events.EventEmitter {
      * @param url Websocket URL of MServer, e.g. ws://localhost:13900
      */
     constructor(url: string);
+
+    /**
+     * Current Websocket, if any.
+     * @return {ws} Websocket or `undefined`
+     */
+    readonly socket: ws;
+
+    readonly url: string;
 
     /**
      * Connect to the MServer.
@@ -337,9 +361,8 @@ declare class MClient extends events.EventEmitter {
      * @param data  Message data
      * @param headers Message headers
      */
-    publish(nodeName: string, topic: string, data?: any, headers?: {
-        [name: string]: string;
-    }): Promise<void>;
+    publish(nodeName: string, topic: string, data?: any, headers?: { [name: string]: string; }): Promise<void>;
+
     /**
      * Publish message to a node.
      *
@@ -348,6 +371,7 @@ declare class MClient extends events.EventEmitter {
      */
     publish(nodeName: string, message: Message): Promise<void>;
 }
+export default MClient;
 ```
 
 API doc for Message (implemented as a class for convenient construction):
@@ -392,7 +416,7 @@ declare class Message {
 
 MHub internally uses JSON messages over websockets. The format of these messages
 is not formally specified yet, as it is still under development.
-If you're interested in the internals though, `src/MClient.ts` probably is the
+If you're interested in the internals though, `src/client.ts` probably is the
 best place to get started.
 
 ## Contributing
@@ -406,8 +430,8 @@ mail, submit an issue, etc.
 git clone https://github.com/poelstra/mhub
 cd mhub
 npm install
-npm run watch
-# or run `npm run build` for one-time compilation
+npm run test
+# or run `npm run watch` for continuous compilation+running
 ```
 
 The package is developed in [Typescript](http://www.typescriptlang.org/), which
@@ -421,17 +445,10 @@ like code-completion ('IntelliSense'), I recommend using e.g. GitHub's
 In SublimeText, use e.g.
 [Microsoft's Typescript plugin](https://packagecontrol.io/packages/TypeScript).
 
-For other editors, to get automatic compilation and live-reload:
+For other editors, to get automatic compilation and live-reload, run `npm watch`.
 
 Please run `npm test` (mainly tslint for now, other tests still pending...)
 before sending a pull-request.
-
-## TODO
-
-* Split `mclient` into separate `msub` and `mpub` programs, easier to explain.
-* Add timeout option to `mping`
-* Document `mping` better
-* Add reconnect logic to commandline programs and JS lib
 
 ## License
 
