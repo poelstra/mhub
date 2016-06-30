@@ -15,10 +15,10 @@ import * as pubsub from "./pubsub";
 import Message from "./message";
 
 class SubscriptionNode implements pubsub.Destination {
-	conn: ClientConnection;
-	name: string;
-	id: string;
-	nodes: pubsub.Node[] = [];
+	public conn: ClientConnection;
+	public name: string;
+	public id: string;
+	public nodes: pubsub.Node[] = [];
 
 	constructor(conn: ClientConnection, id: string) {
 		this.conn = conn;
@@ -26,26 +26,26 @@ class SubscriptionNode implements pubsub.Destination {
 		this.id = id;
 	}
 
-	send(message: Message): void {
+	public send(message: Message): void {
 		log.write("-> %s", this.name, message.topic);
 		let s = JSON.stringify({
 			type: "message",
 			topic: message.topic,
 			data: message.data,
 			headers: message.headers,
-			subscription: this.id
+			subscription: this.id,
 		});
 		this.conn.send(s);
 	}
 
-	bind(node: pubsub.Node, pattern?: string): void {
+	public bind(node: pubsub.Node, pattern?: string): void {
 		if (this.nodes.indexOf(node) < 0) {
 			this.nodes.push(node);
 		}
 		node.bind(this, pattern);
 	}
 
-	destroy(): void {
+	public destroy(): void {
 		this.nodes.forEach((node: pubsub.Node): void => {
 			node.unbind(this);
 		});
@@ -58,6 +58,7 @@ class ClientConnection extends events.EventEmitter {
 	public socket: ws;
 	public name: string;
 
+	// tslint:disable-next-line:no-null-keyword
 	private subscriptions: { [id: string]: SubscriptionNode; } = Object.create(null);
 
 	constructor(hub: SocketHub, socket: ws, id: number) {
@@ -73,14 +74,15 @@ class ClientConnection extends events.EventEmitter {
 		log.write("[ %s ] connected", this.name);
 	}
 
-	send(message: string): void {
+	public send(message: string): void {
 		this.socket.send(message);
 	}
 
 	private _handleClose(): void {
-		for (let id in this.subscriptions) {
+		for (let id in this.subscriptions) { // tslint:disable-line:forin
 			this.subscriptions[id].destroy();
 		}
+		// tslint:disable-next-line:no-null-keyword
 		this.subscriptions = Object.create(null);
 		this.emit("close");
 		log.write("[ %s ] disconnected", this.name);
@@ -102,13 +104,13 @@ class ClientConnection extends events.EventEmitter {
 				response = {
 					type: "error",
 					message: "unknown node " + msg.node,
-					seq: msg.seq
+					seq: msg.seq,
 				};
 			} else if (msg.type === "publish") {
 				node.send(new Message(msg.topic, msg.data, msg.headers));
 				response = {
 					type: "puback",
-					seq: msg.seq
+					seq: msg.seq,
 				};
 			} else if (msg.type === "subscribe") {
 				let id = msg.id || "default";
@@ -120,7 +122,7 @@ class ClientConnection extends events.EventEmitter {
 				sub.bind(node, msg.pattern);
 				response = {
 					type: "suback",
-					seq: msg.seq
+					seq: msg.seq,
 				};
 			}
 		} catch (e) {
@@ -128,7 +130,7 @@ class ClientConnection extends events.EventEmitter {
 			response = {
 				type: "error",
 				message: "decode error " + e,
-				seq: msg.seq
+				seq: msg.seq,
 			};
 		}
 		assert(response);
@@ -137,7 +139,9 @@ class ClientConnection extends events.EventEmitter {
 }
 
 class SocketHub {
+	// tslint:disable-next-line:no-null-keyword
 	private nodes: { [name: string]: pubsub.Node } = Object.create(null);
+	// tslint:disable-next-line:no-null-keyword
 	private clients: { [index: number]: ClientConnection } = Object.create(null);
 	private clientIndex: number = 0;
 
@@ -149,14 +153,14 @@ class SocketHub {
 		});
 	}
 
-	add(node: pubsub.Node): void {
+	public add(node: pubsub.Node): void {
 		if (this.find(node.name)) {
 			throw new Error("duplicate node: " + node.name);
 		}
 		this.nodes["_" + node.name] = node;
 	}
 
-	find(nodeName: string): pubsub.Node {
+	public find(nodeName: string): pubsub.Node {
 		return this.nodes["_" + nodeName];
 	}
 

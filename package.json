@@ -15,7 +15,7 @@
     "test": "npm run lint && npm run mocha",
     "mocha": "mocha -R spec dist/test/",
     "start": "node ./bin/mhub-server",
-    "lint": "node support/tslint_wrapper.js src/*.ts test/*.ts",
+    "lint": "tslint --format=verbose src/*.ts test/*.ts",
     "build:src": "tsc -p src/",
     "watch:src": "tsc -p src/ --watch",
     "build:test": "tsc -p test/",
@@ -47,9 +47,8 @@
   "homepage": "https://github.com/poelstra/mhub#readme",
   "devDependencies": {
     "mocha": "^2.2.5",
-    "multi-glob": "^0.4.0",
     "parallelshell": "^2.0.0",
-    "tslint": "^2.4.3",
+    "tslint": "^3.12.1",
     "typescript": "~1.7.5"
   },
   "dependencies": {

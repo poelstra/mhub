@@ -21,35 +21,36 @@ function die(...args: any[]): void {
 var argv = yargs
 	.usage(usage)
 	.help("help")
+	// tslint:disable-next-line:no-require-imports
 	.version(() => require(path.resolve(__dirname, "../../package.json")).version, "version")
 	.alias("v", "version")
 	.option("s", {
 		type: "string",
 		alias: "socket",
 		description: "WebSocket to connect to",
-		default: "localhost:13900"
+		default: "localhost:13900",
 	})
 	.option("n", {
 		type: "string",
 		alias: "node",
 		description: "Node to subscribe/publish to",
-		default: "test"
+		default: "test",
 	})
 	.option("d", {
 		type: "string",
 		alias: "data",
-		description: "Optional message data as JSON object, e.g. '\"a string\"' or '{ \"foo\": \"bar\" }'"
+		description: "Optional message data as JSON object, e.g. '\"a string\"' or '{ \"foo\": \"bar\" }'",
 	})
 	.option("h", {
 		type: "string",
 		alias: "headers",
-		description: "Optional message headers as JSON object, e.g. '{ \"my-header\": \"foo\" }'"
+		description: "Optional message headers as JSON object, e.g. '{ \"my-header\": \"foo\" }'",
 	})
 	.option("c", {
 		type: "number",
 		alias: "count",
 		description: "Number of pings to send",
-		default: 10
+		default: 10,
 	})
 	.argv;
 
@@ -84,7 +85,7 @@ client.on("open", (): void => {
 client.on("message", (msg: Message): void => {
 	var reply = JSON.stringify(msg.data);
 	if (argv.data === reply) {
-		console.timeEnd("pong");
+		console.timeEnd("pong"); // tslint:disable-line:no-console
 		if (pingCount > 0) {
 			ping();
 		} else {
@@ -95,6 +96,6 @@ client.on("message", (msg: Message): void => {
 
 function ping(): void {
 	pingCount--;
-	console.time("pong");
+	console.time("pong"); // tslint:disable-line:no-console
 	client.publish(argv.node, "ping:request", data, headers);
 }

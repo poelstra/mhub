@@ -8,6 +8,8 @@
 import * as util from "util";
 
 class Logger {
+	private indent: string = "";
+
 	/**
 	 * Debug function that is called whenever a noteworthy action happens within
 	 * the pubsub logic, e.g. when a message is routed from an exchange to a
@@ -18,23 +20,21 @@ class Logger {
 		console.log(msg);
 	};
 
-	private indent: string = "";
-
-	write(fmt: string, ...args: any[]): void;
-	write(...args: any[]): void {
+	public write(fmt: string, ...args: any[]): void;
+	public write(...args: any[]): void {
 		if (this.onMessage) {
-			var msg = this.indent + util.format.apply(null, args);
+			var msg = this.indent + util.format.apply(undefined, args);
 			this.onMessage(msg);
 		}
 	}
 
-	push(fmt: string, ...args: any[]): void;
-	push(...args: any[]): void {
+	public push(fmt: string, ...args: any[]): void;
+	public push(...args: any[]): void {
 		this.write.apply(this, args);
 		this.indent += "  ";
 	}
 
-	pop(): void {
+	public pop(): void {
 		this.indent = this.indent.slice(0, -2);
 	}
 }

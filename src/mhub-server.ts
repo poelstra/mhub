@@ -17,24 +17,25 @@ import Message from "./message";
 
 import log from "./log";
 
+function die(...args: any[]): void {
+	console.error.apply(this, args);
+	process.exit(1);
+}
+
 var args = yargs
 	.usage("$0 [-c <config_file>]")
 	.help("help")
 	.alias("h", "help")
+	// tslint:disable-next-line:no-require-imports
 	.version(() => require(path.resolve(__dirname, "../../package.json")).version, "version")
 	.alias("v", "version")
 	.option("c", {
 		type: "string",
 		alias: "config",
-		description: "Filename of config, uses mhub's server.conf.json by default"
+		description: "Filename of config, uses mhub's server.conf.json by default",
 	})
 	.strict()
 	.argv;
-
-function die(...args: any[]): void {
-	console.error.apply(this, args);
-	process.exit(1);
-}
 
 var configFile: string;
 if (!args.config) {
@@ -46,8 +47,6 @@ console.log("Using config file " + configFile);
 var config = JSON.parse(fs.readFileSync(configFile, "utf8"));
 
 var app = express();
-
-//app.use("/", express.static(__dirname + "/static"));
 
 var server = http.createServer(app);
 server.listen(config.port, (): void => {
@@ -83,11 +82,16 @@ config.bindings.forEach((binding: Binding): void => {
 });
 
 class PingResponder implements pubsub.Destination {
-	constructor(public name: string, private pingNode: pubsub.Node) {
+	public name: string;
+	private pingNode: pubsub.Node;
+
+	constructor(name: string, pingNode: pubsub.Node) {
+		this.name = name;
+		this.pingNode = pingNode;
 		this.pingNode.bind(this, "ping:request");
 	}
 
-	send(message: Message): void {
+	public send(message: Message): void {
 		log.push("-> %s", this.name, message.topic);
 		this.pingNode.send(new Message("ping:response", message.data));
 		log.pop();
@@ -98,9 +102,10 @@ var testNode = hub.find("test");
 if (testNode) {
 	// Automatically send blibs when the test node is configured, useful for testing
 	var blibCount = 0;
-	setInterval((): void => {
-		testNode.send(new Message("blib", blibCount++));
-	}, 5000);
+	setInterval(
+		() => { testNode.send(new Message("blib", blibCount++)); },
+		5000
+	);
 
 	// Automatically respond to pings when a ping node is configured, useful for testing
 	/* tslint:disable:no-unused-variable */

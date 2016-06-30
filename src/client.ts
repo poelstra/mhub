@@ -56,11 +56,10 @@ interface SubAckMessage extends RawMessage {
  * @event message(m: Message) Emitted when message was received (due to subscription).
  */
 class MClient extends events.EventEmitter {
-	url: string;
-	socket: ws = null;
-
 	private _transactions: { [seqNo: number]: Resolver<RawMessage> } = {};
-	private _seqNo = 0;
+	private _seqNo: number = 0;
+	private _socket: ws = undefined;
+	private _url: string;
 
 	/**
 	 * Create new connection to MServer.
@@ -68,8 +67,20 @@ class MClient extends events.EventEmitter {
 	 */
 	constructor(url: string) {
 		super();
-		this.url = url;
+		this._url = url;
 		this.connect();
+	}
+
+	/**
+	 * Current Websocket, if any.
+	 * @return {ws} Websocket or `undefined`
+	 */
+	public get socket(): ws {
+		return this._socket;
+	}
+
+	public get url(): string {
+		return this._url;
 	}
 
 	/**
@@ -77,16 +88,16 @@ class MClient extends events.EventEmitter {
 	 * If connection is already active or pending, this is a no-op.
 	 * Note: a connection is already initiated when the constructor is called.
 	 */
-	connect(): void {
-		if (this.socket) {
+	public connect(): void {
+		if (this._socket) {
 			return;
 		}
 
-		this.socket = new ws(this.url);
-		this.socket.on("error", (e: any): void => { this._handleSocketError(e); });
-		this.socket.on("open", (): void => { this._handleSocketOpen(); });
-		this.socket.on("close", (): void => { this._handleSocketClose(); });
-		this.socket.on("message", (data: string): void => {
+		this._socket = new ws(this._url);
+		this._socket.on("error", (e: any): void => { this._handleSocketError(e); });
+		this._socket.on("open", (): void => { this._handleSocketOpen(); });
+		this._socket.on("close", (): void => { this._handleSocketClose(); });
+		this._socket.on("message", (data: string): void => {
 			try {
 				var decoded: RawMessage = JSON.parse(data);
 				switch (decoded.type) {
@@ -119,10 +130,10 @@ class MClient extends events.EventEmitter {
 	 *
 	 * Note: any existing subscriptions will be lost.
 	 */
-	close(): void {
-		if (this.socket) {
-			this.socket.close();
-			this.socket = null;
+	public close(): void {
+		if (this._socket) {
+			this._socket.close();
+			this._socket = undefined;
 		}
 		let closedRejection = Promise.reject(new Error("connection closed"));
 		for (let t in this._transactions) {
@@ -142,12 +153,12 @@ class MClient extends events.EventEmitter {
 	 * @param pattern  Optional pattern glob (e.g. "namespace:*"), matches all messages if not given
 	 * @param id       Optional subscription ID sent back with all matching messages
 	 */
-	subscribe(nodeName: string, pattern?: string, id?: string): Promise<void> {
+	public subscribe(nodeName: string, pattern?: string, id?: string): Promise<void> {
 		return this._send(<SubscribeMessage>{
 			type: "subscribe",
 			node: nodeName,
 			pattern: pattern,
-			id: id
+			id: id,
 		}).then(() => undefined);
 	}
 
@@ -159,16 +170,16 @@ class MClient extends events.EventEmitter {
 	 * @param data  Message data
 	 * @param headers Message headers
 	 */
-	publish(nodeName: string, topic: string, data?: any, headers?: { [name: string]: string }): Promise<void>;
+	public publish(nodeName: string, topic: string, data?: any, headers?: { [name: string]: string }): Promise<void>;
 	/**
 	 * Publish message to a node.
 	 *
 	 * @param nodeName Name of node in MServer to publish to (e.g. "default")
 	 * @param message Message object
 	 */
-	publish(nodeName: string, message: Message): Promise<void>;
+	public publish(nodeName: string, message: Message): Promise<void>;
 	// Implementation
-	publish(nodeName: string, ...args: any[]): Promise<void> {
+	public publish(nodeName: string, ...args: any[]): Promise<void> {
 		if (typeof args[0] === "object") {
 			var message: Message = args[0];
 			return this._send(<PublishMessage>{
@@ -176,7 +187,7 @@ class MClient extends events.EventEmitter {
 				node: nodeName,
 				topic: message.topic,
 				data: message.data,
-				headers: message.headers
+				headers: message.headers,
 			}).then(() => undefined);
 		} else {
 			return this._send(<PublishMessage>{
@@ -184,7 +195,7 @@ class MClient extends events.EventEmitter {
 				node: nodeName,
 				topic: args[0],
 				data: args[1],
-				headers: args[2]
+				headers: args[2],
 			}).then(() => undefined);
 		}
 	}
@@ -212,12 +223,12 @@ class MClient extends events.EventEmitter {
 		return new Promise<RawMessage>((resolve: () => void, reject: (err: Error) => void) => {
 			msg.seq = this._nextSeq();
 			this._transactions[msg.seq] = resolve;
-			if (!this.socket) {
+			if (!this._socket) {
 				var e = new Error("not connected");
 				this.emit("error", e);
 				throw e;
 			}
-			this.socket.send(JSON.stringify(msg), (err?: Error) => {
+			this._socket.send(JSON.stringify(msg), (err?: Error) => {
 				if (err) {
 					this._release(msg.seq, err);
 					return reject(err);

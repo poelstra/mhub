@@ -23,6 +23,7 @@ function die(...args: any[]): void {
 var args = yargs
 	.usage(usage)
 	.help("help")
+	// tslint:disable-next-line:no-require-imports
 	.version(() => require(path.resolve(__dirname, "../../package.json")).version, "version")
 	.alias("v", "version")
 	.option("s", {
@@ -30,50 +31,50 @@ var args = yargs
 		alias: "socket",
 		description: "WebSocket to connect to",
 		required: true,
-		default: "localhost:13900"
+		default: "localhost:13900",
 	})
 	.option("n", {
 		type: "string",
 		alias: "node",
 		description: "Node to subscribe/publish to, e.g. 'test'",
 		required: true,
-		default: "default"
+		default: "default",
 	})
 	.option("l", {
 		type: "boolean",
 		alias: "listen",
-		description: "Select listen mode"
+		description: "Select listen mode",
 	})
 	.option("p", {
 		type: "string",
 		alias: "pattern",
-		description: "Topic subscription pattern as glob, e.g. 'twitter:*'"
+		description: "Topic subscription pattern as glob, e.g. 'twitter:*'",
 	})
 	.option("o", {
 		type: "string",
 		alias: "output",
 		description: "Output format, can be: human, text, jsondata, json",
-		default: "human"
+		default: "human",
 	})
 	.option("t", {
 		type: "string",
 		alias: "topic",
-		description: "Message topic"
+		description: "Message topic",
 	})
 	.option("d", {
 		type: "string",
 		alias: "data",
-		description: "Optional message data as JSON object, e.g. '\"a string\"' or '{ \"foo\": \"bar\" }'"
+		description: "Optional message data as JSON object, e.g. '\"a string\"' or '{ \"foo\": \"bar\" }'",
 	})
 	.option("h", {
 		type: "string",
 		alias: "headers",
-		description: "Optional message headers as JSON object, e.g. '{ \"my-header\": \"foo\" }'"
+		description: "Optional message headers as JSON object, e.g. '{ \"my-header\": \"foo\" }'",
 	})
 	.option("i", {
 		type: "string",
 		alias: "input",
-		description: "Read lines from stdin, post each line to server. <input_format> can be: text, json"
+		description: "Read lines from stdin, post each line to server. <input_format> can be: text, json",
 	})
 	.strict();
 
@@ -120,6 +121,8 @@ function listenMode(): void {
 			case OutputFormat.Json:
 				console.log(JSON.stringify(msg));
 				break;
+			default:
+				die("Unknown output format:", format);
 		}
 	});
 	client.on("error", (e: Error): void => {
@@ -206,7 +209,7 @@ function pipeMode(): void {
 
 	function onRead(): void {
 		var chunk = process.stdin.read();
-		if (chunk === null) {
+		if (chunk === null) { // tslint:disable-line:no-null-keyword
 			return;
 		}
 		lineBuffer += chunk;
@@ -217,7 +220,7 @@ function pipeMode(): void {
 			}
 			handleLine(lineBuffer.slice(0, p));
 			lineBuffer = lineBuffer.slice(p + 1);
-		};
+		}
 	}
 
 	function onEnd(): void {

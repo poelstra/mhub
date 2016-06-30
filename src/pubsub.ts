@@ -27,12 +27,15 @@ export interface Destination {
 }
 
 export class Node implements Destination {
+	public name: string;
+
 	private _bindings: Binding[] = [];
 
-	constructor(public name: string) {
+	constructor(name: string) {
+		this.name = name;
 	}
 
-	bind(destination: Destination, pattern?: string): void {
+	public bind(destination: Destination, pattern?: string): void {
 		var b: Binding;
 		// Find existing bindings to this destination
 		for (var i = 0; i < this._bindings.length; i++) {
@@ -45,18 +48,18 @@ export class Node implements Destination {
 		if (!b) {
 			b = {
 				matchers: [],
-				destination: destination
+				destination: destination,
 			};
 			this._bindings.push(b);
 		}
 		// Create pattern matcher for this destination
 		b.matchers.push({
 			pattern: (pattern) ? pattern : "",
-			filter: (pattern) ? minimatch.filter(pattern) : (topic: string): boolean => true
+			filter: (pattern) ? minimatch.filter(pattern) : (topic: string): boolean => true,
 		});
 	}
 
-	unbind(destination: Destination, pattern?: string): void {
+	public unbind(destination: Destination, pattern?: string): void {
 		if (!pattern) {
 			// Remove all bindings to given destination
 			this._bindings = this._bindings.filter((b: Binding): boolean => {
@@ -72,10 +75,10 @@ export class Node implements Destination {
 				});
 				return b.matchers.length > 0;
 			});
-		};
+		}
 	}
 
-	send(message: Message): void {
+	public send(message: Message): void {
 		log.push("-> %s", this.name, message.topic);
 		this._bindings.forEach((b: Binding): void => {
 			if (b.matchers.some((m: Matcher): boolean => m.filter(message.topic))) {
@@ -92,13 +95,18 @@ export interface Subscription {
 }
 
 export class Queue extends Node {
+	public name: string;
+	public size: number;
+
 	private queue: Message[] = [];
 
-	constructor(public name: string, public size: number = 10) {
+	constructor(name: string, size: number = 10) {
 		super(name);
+		this.name = name;
+		this.size = size;
 	}
 
-	send(message: Message): void {
+	public send(message: Message): void {
 		this.queue.push(message);
 		while (this.queue.length > this.size) {
 			this.queue.shift();
@@ -106,9 +114,9 @@ export class Queue extends Node {
 		super.send(message);
 	}
 
-	bind(dest: Destination): void;
-	bind(dest: Destination, subscription?: Subscription): void;
-	bind(dest: Destination, subscription?: Subscription): void {
+	public bind(dest: Destination): void;
+	public bind(dest: Destination, subscription?: Subscription): void;
+	public bind(dest: Destination, subscription?: Subscription): void {
 		super.bind(dest);
 		this.queue.forEach((msg: Message): void => {
 			dest.send(msg);
@@ -117,10 +125,13 @@ export class Queue extends Node {
 }
 
 export class ConsoleDestination implements Destination {
-	constructor(public name: string) {
+	public name: string;
+
+	constructor(name: string) {
+		this.name = name;
 	}
 
-	send(message: Message): void {
+	public send(message: Message): void {
 		console.log("[" + this.name + "]", message);
 	}
 }

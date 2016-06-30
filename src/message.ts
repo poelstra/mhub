@@ -21,18 +21,18 @@ export class Message {
 	 * Topic of message.
 	 * Can be used to determine routing between pubsub Nodes.
 	 */
-	topic: string;
+	public topic: string;
 
 	/**
 	 * Optional message data, can be null.
 	 * Must be JSON serializable.
 	 */
-	data: any;
+	public data: any;
 
 	/**
 	 * Optional message headers.
 	 */
-	headers: Headers;
+	public headers: Headers;
 
 	/**
 	 * Construct message object.
@@ -47,10 +47,10 @@ export class Message {
 		}
 		this.topic = topic;
 		this.data = data;
-		this.headers = headers || Object.create(null);
+		this.headers = headers || Object.create(null); // tslint:disable-line:no-null-keyword
 	}
 
-	clone(): Message {
+	public clone(): Message {
 		return new Message(this.topic, this.data, this.headers);
 	}
 }
