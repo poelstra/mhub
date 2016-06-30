@@ -33,7 +33,13 @@
     "url": "git+https://github.com/poelstra/mhub.git"
   },
   "keywords": [
-    "mhub"
+    "mhub",
+    "iot",
+    "message",
+    "bus",
+    "pubsub",
+    "publish",
+    "subscribe"
   ],
   "bugs": {
     "url": "https://github.com/poelstra/mhub/issues"
