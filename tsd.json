@@ -6,25 +6,34 @@
   "bundle": "typings/tsd.d.ts",
   "installed": {
     "mocha/mocha.d.ts": {
-      "commit": "4abbdff87f05616cfc421e0bf46c54a0ffdc06ce"
+      "commit": "33585c55fbb7cd3cfc59d18a3b87f4ae6012eaff"
     },
     "ws/ws.d.ts": {
-      "commit": "4abbdff87f05616cfc421e0bf46c54a0ffdc06ce"
+      "commit": "33585c55fbb7cd3cfc59d18a3b87f4ae6012eaff"
     },
     "express/express.d.ts": {
-      "commit": "4abbdff87f05616cfc421e0bf46c54a0ffdc06ce"
+      "commit": "33585c55fbb7cd3cfc59d18a3b87f4ae6012eaff"
     },
     "node/node.d.ts": {
-      "commit": "4abbdff87f05616cfc421e0bf46c54a0ffdc06ce"
+      "commit": "33585c55fbb7cd3cfc59d18a3b87f4ae6012eaff"
     },
     "minimatch/minimatch.d.ts": {
-      "commit": "0605ebbdbdd8183c70b4a14e1e34ecb3f2b446bf"
+      "commit": "33585c55fbb7cd3cfc59d18a3b87f4ae6012eaff"
     },
     "yargs/yargs.d.ts": {
-      "commit": "c2b4ebb74caeb379c3691646b04cb3db26b53f95"
+      "commit": "33585c55fbb7cd3cfc59d18a3b87f4ae6012eaff"
     },
     "es6-promise/es6-promise.d.ts": {
-      "commit": "fe563dff3428bac1260d1794e2c2ecf8f097535a"
+      "commit": "33585c55fbb7cd3cfc59d18a3b87f4ae6012eaff"
+    },
+    "serve-static/serve-static.d.ts": {
+      "commit": "33585c55fbb7cd3cfc59d18a3b87f4ae6012eaff"
+    },
+    "express-serve-static-core/express-serve-static-core.d.ts": {
+      "commit": "33585c55fbb7cd3cfc59d18a3b87f4ae6012eaff"
+    },
+    "mime/mime.d.ts": {
+      "commit": "33585c55fbb7cd3cfc59d18a3b87f4ae6012eaff"
     }
   }
 }

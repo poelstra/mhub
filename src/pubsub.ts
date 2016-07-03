@@ -13,7 +13,7 @@ import Message from "./message";
 
 interface Matcher {
 	pattern: string;
-	filter: (topic: string) => boolean;
+	filter: (topic: string, indexed?: number, array?: string[]) => boolean;
 }
 
 interface Binding {

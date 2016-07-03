@@ -4,3 +4,7 @@
 /// <reference path="ws/ws.d.ts" />
 /// <reference path="minimatch/minimatch.d.ts" />
 /// <reference path="yargs/yargs.d.ts" />
+/// <reference path="mocha/mocha.d.ts" />
+/// <reference path="serve-static/serve-static.d.ts" />
+/// <reference path="express-serve-static-core/express-serve-static-core.d.ts" />
+/// <reference path="mime/mime.d.ts" />
