@@ -529,6 +529,37 @@ For other editors, to get automatic compilation and live-reload, run `npm watch`
 Please run `npm test` (mainly tslint for now, other tests still pending...)
 before sending a pull-request.
 
+## Changelog
+
+The list below shows notable changes between each release.
+For details, see the version tags at GitHub.
+
+0.3.3 (2016-07-04):
+- Add TLS support
+- mhub-server: Move `port` option to `listen` option (old one still works, but is deprecated)
+- mhub-server: Add `verbose` option to config (default true)
+
+0.3.2 (2016-06-30):
+- Rename `m{client,ping,server}` to `mhub-{client,ping,server}` (old names still work, but are deprecated)
+- Publish TS sources in NPM package (for source-map-support)
+- Upgrade dependencies
+
+0.3.1 (2016-02-09):
+- Add "-v" option for version number
+- Fix sequence number logic in MClient
+- Upgrade ws to fix "invalid compressed data" errors
+
+0.3.0 (2016-01-03):
+- Update to latest TS module resolution
+- Add Message#clone()
+- Implement message ACKs
+- ES6 imports/exports
+- Move FLL-specific scripts into separate package
+- Improve Readme
+
+0.2.1 (2015-04-18):
+- First public version
+
 ## License
 
 Licensed under the MIT License, see LICENSE.txt.
