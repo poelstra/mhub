@@ -132,13 +132,21 @@ publish messages. See `mhub-client --help` for available commandline parameters:
 
 ```
 $ mhub-client --help
-Listen mode: /usr/bin/nodejs bin/mhub-client [-s <host>[:<port>]] [-n <nodename>] -l [-p <topic_pattern>] [-o <output_format>]
-Post mode: /usr/bin/nodejs bin/mhub-client [-s <host>[:<port>]] [-n <nodename>] -t <topic> [-d <json_data>] [-h <json_headers>]
-Pipe mode: /usr/bin/nodejs bin/mhub-client [-s <host>[:<port>]] [-n <nodename>] -t <topic> -i <input_format> [-h <json_headers>]
+Listen mode:
+  mhub-client [-n <nodename>] -l [-p <topic_pattern>] [-o <output_format>]
+Post mode:
+  mhub-client [-n <nodename>] -t <topic> [-d <json_data>] [-h <json_headers>]
+Pipe mode:
+  mhub-client [-n <nodename>] -t <topic> -i <input_format> [-h <json_headers>]
+
+Use -s [protocol://]<host>[:<port>] to specify a custom server/port.
+To use SSL/TLS, use e.g. -s wss://your_host.
+For self-signed certs, see --insecure.
 
 Options:
   --help         Show help                                             [boolean]
-  -s, --socket   WebSocket to connect to
+  -s, --socket   WebSocket to connect to, specify as [protocol://]host[:port],
+                 e.g. ws://localhost:13900, or wss://localhost:13900
                                 [string] [required] [default: "localhost:13900"]
   -n, --node     Node to subscribe/publish to, e.g. 'test'
                                         [string] [required] [default: "default"]
@@ -153,6 +161,17 @@ Options:
                  "foo" }'                                               [string]
   -i, --input    Read lines from stdin, post each line to server. <input_format>
                  can be: text, json                                     [string]
+  --insecure     Disable server certificate validation, useful for testing using
+                 self-signed certificates                              [boolean]
+  --key          Filename of TLS private key (in PEM format)            [string]
+  --cert         Filename of TLS certificate (in PEM format)            [string]
+  --ca           Filename of TLS certificate authority (in PEM format)  [string]
+  --passphrase   Passphrase for private key                             [string]
+  --pfx          Filename of TLS private key, certificate and CA certificates
+                 (in PFX or PKCS12 format). Mutually exclusive with --key,
+                 --cert and --ca.                                       [string]
+  --crl          Filename of certificate revocation list (in PEM format)[string]
+  --ciphers      List of ciphers to use or exclude, separated by :      [string]
   -v, --version  Show version number                                   [boolean]
 ```
 
@@ -228,7 +247,7 @@ mhub-client -t my:topic -d """some string"""
 mhub-client -t my:topic -d "{ ""key"": ""value"" }"
 ```
 
-### Publishing multiple messages
+### Publishing multiple messages / streaming from other programs
 
 It is possible to 'stream' messages to the bus by using the `-i` option.
 Available input formats are:
@@ -267,6 +286,52 @@ be forwarded.
 
 Note: don't edit the `server.conf.json` file directly, because any changes to it
 will be lost when you upgrade `mhub`. Edit a copy of the file instead.
+
+## Using TLS / SSL
+
+To enable TLS / SSL on the server (`wss://` instead of `ws://`), you can change your
+server configuration to look like:
+
+```js
+{
+    "listen": {
+        "port": 13900,
+        "key": "key.pem",
+        "cert": "cert.pem"
+    },
+    /* rest of configuration follows */
+}
+```
+
+This will still allow any client to connect. To only allow trusted clients to
+connect, use something like:
+
+```js
+{
+    "listen": {
+        "port": 13900,
+        "key": "key.pem",
+        "cert": "cert.pem",
+        "ca": "ca.pem", // Can be omitted to use system's default
+        "requestCert": true,
+        "rejectUnauthorized": true
+    },
+    /* rest of configuration follows */
+}
+```
+
+See https://nodejs.org/dist/latest-v6.x/docs/api/tls.html#tls_tls_createserver_options_secureconnectionlistener
+for details on the supported options. Options that accept a Buffer (or array of
+Buffers) need to be specified as filename(s) in the configuration file.
+
+On `mhub-client`, to enable TLS, specify a `wss://` URL.
+To use client certificates, either pass `--key`, `--cert` and `--ca` options,
+or the `--pfx` option.
+
+Note: when using a self-signed server certificate, the client will refuse to
+connect (`[Error: self signed certificate] code: 'DEPTH_ZERO_SELF_SIGNED_CERT'`).
+In that case, either pass the server's certificate to `--ca`, or (for testing
+purposes), use the `--insecure` option to ignore these errors.
 
 ## Using MHub from Javascript
 
@@ -317,8 +382,9 @@ declare class MClient extends events.EventEmitter {
     /**
      * Create new connection to MServer.
      * @param url Websocket URL of MServer, e.g. ws://localhost:13900
+     * @param tlsOptions Optional TLS settings (see https://nodejs.org/dist/latest-v6.x/docs/api/tls.html#tls_tls_connect_port_host_options_callback)
      */
-    constructor(url: string);
+    constructor(url: string, tlsOptions?: TlsOptions);
 
     /**
      * Current Websocket, if any.
@@ -371,7 +437,20 @@ declare class MClient extends events.EventEmitter {
      */
     publish(nodeName: string, message: Message): Promise<void>;
 }
-export default MClient;
+export interface TlsOptions {
+    pfx?: string | Buffer;
+    key?: string | string[] | Buffer | Buffer[];
+    passphrase?: string;
+    cert?: string | string[] | Buffer | Buffer[];
+    ca?: string | string[] | Buffer | Buffer[];
+    crl?: string | string[] | Buffer | Buffer[];
+    ciphers?: string;
+    honorCipherOrder?: boolean;
+    requestCert?: boolean;
+    rejectUnauthorized?: boolean;
+    NPNProtocols?: string[] | Buffer;
+    ALPNProtocols?: string[] | Buffer;
+}
 ```
 
 API doc for Message (implemented as a class for convenient construction):

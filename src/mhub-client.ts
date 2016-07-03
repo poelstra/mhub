@@ -8,11 +8,19 @@ import * as yargs from "yargs";
 import * as path from "path";
 import MClient from "./client";
 import Message from "./message";
+import { TlsOptions, replaceKeyFiles } from "./tls";
 
 var usage = [
-	"Listen mode: $0 [-s <host>[:<port>]] [-n <nodename>] -l [-p <topic_pattern>] [-o <output_format>]",
-	"Post mode: $0 [-s <host>[:<port>]] [-n <nodename>] -t <topic> [-d <json_data>] [-h <json_headers>]",
-	"Pipe mode: $0 [-s <host>[:<port>]] [-n <nodename>] -t <topic> -i <input_format> [-h <json_headers>]",
+	"Listen mode:",
+	"  mhub-client [-n <nodename>] -l [-p <topic_pattern>] [-o <output_format>]",
+	"Post mode:",
+	"  mhub-client [-n <nodename>] -t <topic> [-d <json_data>] [-h <json_headers>]",
+	"Pipe mode:",
+	"  mhub-client [-n <nodename>] -t <topic> -i <input_format> [-h <json_headers>]",
+	"",
+	"Use -s [protocol://]<host>[:<port>] to specify a custom server/port.",
+	"To use SSL/TLS, use e.g. -s wss://your_host.",
+	"For self-signed certs, see --insecure.",
 ].join("\n");
 
 function die(...args: any[]): void {
@@ -29,7 +37,7 @@ var args = yargs
 	.option("s", {
 		type: "string",
 		alias: "socket",
-		description: "WebSocket to connect to",
+		description: "WebSocket to connect to, specify as [protocol://]host[:port], e.g. ws://localhost:13900, or wss://localhost:13900",
 		required: true,
 		default: "localhost:13900",
 	})
@@ -76,6 +84,39 @@ var args = yargs
 		alias: "input",
 		description: "Read lines from stdin, post each line to server. <input_format> can be: text, json",
 	})
+	.option("insecure", {
+		type: "boolean",
+		description: "Disable server certificate validation, useful for testing using self-signed certificates",
+	})
+	.option("key", {
+		type: "string",
+		description: "Filename of TLS private key (in PEM format)",
+	})
+	.option("cert", {
+		type: "string",
+		description: "Filename of TLS certificate (in PEM format)",
+	})
+	.option("ca", {
+		type: "string",
+		description: "Filename of TLS certificate authority (in PEM format)",
+	})
+	.option("passphrase", {
+		type: "string",
+		description: "Passphrase for private key",
+	})
+	.option("pfx", {
+		type: "string",
+		description: "Filename of TLS private key, certificate and CA certificates " +
+			"(in PFX or PKCS12 format). Mutually exclusive with --key, --cert and --ca.",
+	})
+	.option("crl", {
+		type: "string",
+		description: "Filename of certificate revocation list (in PEM format)",
+	})
+	.option("ciphers", {
+		type: "string",
+		description: "List of ciphers to use or exclude, separated by :",
+	})
 	.strict();
 
 enum OutputFormat {
@@ -100,10 +141,24 @@ function parseOutputFormat(s: string): OutputFormat {
 	}
 }
 
+function createClient(argv: any): MClient {
+	let tlsOptions: TlsOptions = {};
+	tlsOptions.pfx = argv.pfx;
+	tlsOptions.key = argv.key;
+	tlsOptions.passphrase = argv.passphrase;
+	tlsOptions.cert = argv.cert;
+	tlsOptions.ca = argv.ca;
+	tlsOptions.crl = argv.crl;
+	tlsOptions.ciphers = argv.ciphers;
+	tlsOptions.rejectUnauthorized = !argv.insecure;
+	replaceKeyFiles(tlsOptions, process.cwd());
+	return new MClient(argv.socket, tlsOptions);
+}
+
 function listenMode(): void {
 	var argv = args.argv;
 	var format = parseOutputFormat(argv.output);
-	var client = new MClient("ws://" + argv.socket);
+	var client = createClient(argv);
 	client.on("open", (): void => {
 		client.subscribe(argv.node, argv.pattern);
 	});
@@ -153,7 +208,7 @@ function postMode(): void {
 		die("Error parsing message headers as JSON: " + e.message);
 	}
 
-	var client = new MClient("ws://" + argv.socket);
+	var client = createClient(argv);
 	client.on("open", (): void => {
 		let closer = () => client.close();
 		client.publish(argv.node, argv.topic, data, headers).then(closer, closer);
@@ -194,7 +249,7 @@ function pipeMode(): void {
 	}
 
 	var ended = false;
-	var client = new MClient("ws://" + argv.socket);
+	var client = createClient(argv);
 	var lineBuffer = "";
 	client.on("open", (): void => {
 		// Connection opened, start reading lines from stdin

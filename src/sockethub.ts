@@ -5,6 +5,7 @@
 "use strict";
 
 import * as http from "http";
+import * as https from "https";
 import * as events from "events";
 import * as ws from "ws";
 import * as assert from "assert";
@@ -145,8 +146,8 @@ class SocketHub {
 	private clients: { [index: number]: ClientConnection } = Object.create(null);
 	private clientIndex: number = 0;
 
-	constructor(server: http.Server, location: string = "/") {
-		var wss = new ws.Server({ server: server, path: location });
+	constructor(server: http.Server | https.Server, location: string = "/") {
+		var wss = new ws.Server({ server: <any>server, path: location });
 		wss.on("connection", this._handleConnection.bind(this));
 		wss.on("error", (e: Error): void => {
 			console.log("WebSocketServer error:", e);

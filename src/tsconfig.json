@@ -29,7 +29,8 @@
         "./mhub-ping.ts",
         "./mhub-server.ts",
         "./pubsub.ts",
-        "./sockethub.ts"
+        "./sockethub.ts",
+        "./tls.ts"
     ],
     "atom": {
         "rewriteTsconfig": true

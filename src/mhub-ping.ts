@@ -8,9 +8,14 @@ import * as yargs from "yargs";
 import * as path from "path";
 import MClient from "./client";
 import Message from "./message";
+import { TlsOptions, replaceKeyFiles } from "./tls";
 
 var usage = [
-	"$0 [-s <host>[:<port>]] [-n <nodename>] [-d <json_data>] [-h <json_headers>] [-c <count>]",
+	"Sends a message to the given node, waits for an answer, then sends the next etc.",
+	"Prints the round-trip time for each message.",
+	"",
+	"Make sure you have the `test` node enabled in mhub-server, or provide your own",
+	"routing to respond with `ping:response` to each `ping:request`",
 ].join("\n");
 
 function die(...args: any[]): void {
@@ -52,7 +57,55 @@ var argv = yargs
 		description: "Number of pings to send",
 		default: 10,
 	})
+	.option("insecure", {
+		type: "boolean",
+		description: "Disable server certificate validation, useful for testing using self-signed certificates",
+	})
+	.option("key", {
+		type: "string",
+		description: "Filename of TLS private key (in PEM format)",
+	})
+	.option("cert", {
+		type: "string",
+		description: "Filename of TLS certificate (in PEM format)",
+	})
+	.option("ca", {
+		type: "string",
+		description: "Filename of TLS certificate authority (in PEM format)",
+	})
+	.option("passphrase", {
+		type: "string",
+		description: "Passphrase for private key",
+	})
+	.option("pfx", {
+		type: "string",
+		description: "Filename of TLS private key, certificate and CA certificates " +
+			"(in PFX or PKCS12 format). Mutually exclusive with --key, --cert and --ca.",
+	})
+	.option("crl", {
+		type: "string",
+		description: "Filename of certificate revocation list (in PEM format)",
+	})
+	.option("ciphers", {
+		type: "string",
+		description: "List of ciphers to use or exclude, separated by :",
+	})
+	.strict()
 	.argv;
+
+function createClient(): MClient {
+	let tlsOptions: TlsOptions = {};
+	tlsOptions.pfx = argv.pfx;
+	tlsOptions.key = argv.key;
+	tlsOptions.passphrase = argv.passphrase;
+	tlsOptions.cert = argv.cert;
+	tlsOptions.ca = argv.ca;
+	tlsOptions.crl = argv.crl;
+	tlsOptions.ciphers = argv.ciphers;
+	tlsOptions.rejectUnauthorized = !argv.insecure;
+	replaceKeyFiles(tlsOptions, process.cwd());
+	return new MClient(argv.socket, tlsOptions);
+}
 
 var data: any;
 try {
@@ -74,7 +127,7 @@ try {
 
 var pingCount = argv.count;
 
-var client = new MClient("ws://" + argv.socket);
+var client = createClient();
 client.on("error", (e: Error): void => {
 	die("Socket error:", e);
 });
