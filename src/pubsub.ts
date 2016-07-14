@@ -7,8 +7,6 @@
 
 import * as minimatch from "minimatch";
 
-import log from "./log";
-
 import Message from "./message";
 
 interface Matcher {
@@ -26,12 +24,31 @@ export interface Destination {
 	send(message: Message): void;
 }
 
-export class Node implements Destination {
+export interface Source {
+	name: string;
+	bind(destination: Destination, pattern?: string): void;
+	unbind(destination: Destination, pattern?: string): void;
+}
+
+export function isDestination(node: BaseNode): node is Destination {
+	return node && typeof (<any>node).send === "function";
+}
+
+export function isSource(node: BaseNode): node is Source {
+	return node && typeof (<any>node).bind === "function" && typeof (<any>node).unbind === "function";
+}
+
+export type BaseNode = Source | Destination;
+
+export interface BaseSourceOptions {
+}
+
+export class BaseSource implements Source {
 	public name: string;
 
 	private _bindings: Binding[] = [];
 
-	constructor(name: string) {
+	constructor(name: string, options?: BaseSourceOptions) {
 		this.name = name;
 	}
 
@@ -78,60 +95,11 @@ export class Node implements Destination {
 		}
 	}
 
-	public send(message: Message): void {
-		log.push("-> %s", this.name, message.topic);
+	protected _broadcast(message: Message): void {
 		this._bindings.forEach((b: Binding): void => {
 			if (b.matchers.some((m: Matcher): boolean => m.filter(message.topic))) {
 				b.destination.send(message);
 			}
 		});
-		log.pop();
-	}
-}
-
-export interface Subscription {
-	instance: string;
-	iterator: string;
-}
-
-export class Queue extends Node {
-	public name: string;
-	public size: number;
-
-	private queue: Message[] = [];
-
-	constructor(name: string, size: number = 10) {
-		super(name);
-		this.name = name;
-		this.size = size;
-	}
-
-	public send(message: Message): void {
-		this.queue.push(message);
-		while (this.queue.length > this.size) {
-			this.queue.shift();
-		}
-		super.send(message);
-	}
-
-	public bind(dest: Destination): void;
-	public bind(dest: Destination, subscription?: Subscription): void;
-	public bind(dest: Destination, subscription?: Subscription): void {
-		super.bind(dest);
-		this.queue.forEach((msg: Message): void => {
-			dest.send(msg);
-		});
-	}
-}
-
-export class ConsoleDestination implements Destination {
-	public name: string;
-
-	constructor(name: string) {
-		this.name = name;
-	}
-
-	public send(message: Message): void {
-		console.log("[" + this.name + "]", message);
 	}
 }

@@ -8,7 +8,6 @@ import * as http from "http";
 import * as https from "https";
 import * as events from "events";
 import * as ws from "ws";
-import * as assert from "assert";
 
 import log from "./log";
 
@@ -19,7 +18,7 @@ class SubscriptionNode implements pubsub.Destination {
 	public conn: ClientConnection;
 	public name: string;
 	public id: string;
-	public nodes: pubsub.Node[] = [];
+	public nodes: pubsub.Source[] = [];
 
 	constructor(conn: ClientConnection, id: string) {
 		this.conn = conn;
@@ -39,7 +38,7 @@ class SubscriptionNode implements pubsub.Destination {
 		this.conn.send(s);
 	}
 
-	public bind(node: pubsub.Node, pattern?: string): void {
+	public bind(node: pubsub.Source, pattern?: string): void {
 		if (this.nodes.indexOf(node) < 0) {
 			this.nodes.push(node);
 		}
@@ -47,7 +46,7 @@ class SubscriptionNode implements pubsub.Destination {
 	}
 
 	public destroy(): void {
-		this.nodes.forEach((node: pubsub.Node): void => {
+		this.nodes.forEach((node: pubsub.Source): void => {
 			node.unbind(this);
 		});
 		this.nodes = [];
@@ -96,35 +95,39 @@ class ClientConnection extends events.EventEmitter {
 
 	private _handleMessage(data: string): void {
 		log.write("[ %s ] message", this.name, data);
-		var response: { type: string; [header: string]: any; };
+		let errorMessage: string;
+		let response: { type: string; [header: string]: any; };
 		try {
 			var msg = JSON.parse(data);
 			var node = this.hub.find(msg.node);
 			if (!node) {
-				log.write("[ %s ] error: unknown node '%s'", this.name, msg.node);
-				response = {
-					type: "error",
-					message: "unknown node " + msg.node,
-					seq: msg.seq,
-				};
+				errorMessage = `unknown node '${msg.node}'`;
 			} else if (msg.type === "publish") {
-				node.send(new Message(msg.topic, msg.data, msg.headers));
-				response = {
-					type: "puback",
-					seq: msg.seq,
-				};
-			} else if (msg.type === "subscribe") {
-				let id = msg.id || "default";
-				let sub = this.subscriptions[id];
-				if (!sub) {
-					sub = new SubscriptionNode(this, id);
-					this.subscriptions[id] = sub;
+				if (!pubsub.isDestination(node)) {
+					errorMessage = `node '${msg.node}' is not a Destination`;
+				} else {
+					node.send(new Message(msg.topic, msg.data, msg.headers));
+					response = {
+						type: "puback",
+						seq: msg.seq,
+					};
 				}
-				sub.bind(node, msg.pattern);
-				response = {
-					type: "suback",
-					seq: msg.seq,
-				};
+			} else if (msg.type === "subscribe") {
+				if (!pubsub.isSource(node)) {
+					errorMessage = `node '${msg.node}' is not a Source`;
+				} else {
+					const id = msg.id || "default";
+					let sub = this.subscriptions[id];
+					if (!sub) {
+						sub = new SubscriptionNode(this, id);
+						this.subscriptions[id] = sub;
+					}
+					sub.bind(node, msg.pattern);
+					response = {
+						type: "suback",
+						seq: msg.seq,
+					};
+				}
 			}
 		} catch (e) {
 			log.write("[ %s ] decode error: ", this.name, e);
@@ -134,14 +137,21 @@ class ClientConnection extends events.EventEmitter {
 				seq: msg.seq,
 			};
 		}
-		assert(response);
+		if (!response) {
+			log.write(`[ ${this.name} ] error: ${errorMessage || "unknown error"}`);
+			response = {
+				type: "error",
+				message: errorMessage,
+				seq: msg.seq,
+			};
+		}
 		this.socket.send(JSON.stringify(response));
 	}
 }
 
 class SocketHub {
 	// tslint:disable-next-line:no-null-keyword
-	private nodes: { [name: string]: pubsub.Node } = Object.create(null);
+	private nodes: { [name: string]: pubsub.BaseNode } = Object.create(null);
 	// tslint:disable-next-line:no-null-keyword
 	private clients: { [index: number]: ClientConnection } = Object.create(null);
 	private clientIndex: number = 0;
@@ -154,15 +164,25 @@ class SocketHub {
 		});
 	}
 
-	public add(node: pubsub.Node): void {
+	public add(node: pubsub.BaseNode): void {
 		if (this.find(node.name)) {
 			throw new Error("duplicate node: " + node.name);
 		}
 		this.nodes["_" + node.name] = node;
 	}
 
-	public find(nodeName: string): pubsub.Node {
+	public find(nodeName: string): pubsub.BaseNode {
 		return this.nodes["_" + nodeName];
+	}
+
+	public findSource(nodeName: string): pubsub.Source {
+		const n = this.nodes["_" + nodeName];
+		return pubsub.isSource(n) ? n : undefined;
+	}
+
+	public findDestination(nodeName: string): pubsub.Destination {
+		const n = this.nodes["_" + nodeName];
+		return pubsub.isDestination(n) ? n : undefined;
 	}
 
 	private _handleConnection(conn: ws): void {

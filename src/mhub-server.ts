@@ -16,7 +16,7 @@ import * as path from "path";
 import * as fs from "fs";
 import * as pubsub from "./pubsub";
 import SocketHub from "./sockethub";
-import Message from "./message";
+import { KeyValues } from "./types";
 import { TlsOptions, replaceKeyFiles } from "./tls";
 
 import log from "./log";
@@ -31,18 +31,52 @@ interface ListenOptions extends TlsOptions {
 	port?: number;
 }
 
+interface NodeDefinition {
+	type: string;
+	options?: { [key: string]: any; };
+}
+
 interface Config {
 	listen?: ListenOptions;
 	port?: number;
 	verbose?: boolean;
 	bindings?: Binding[];
-	nodes: string[];
+	nodes: string[] | { [nodeName: string]: string | NodeDefinition; };
 }
 
 function die(...args: any[]): void {
 	console.error.apply(this, args);
 	process.exit(1);
 }
+
+// Register known node types
+
+import ConsoleDestination from "./nodes/consoleDestination";
+import Exchange from "./nodes/exchange";
+import PingResponder from "./nodes/pingResponder";
+import Queue from "./nodes/queue";
+import TestSource from "./nodes/testSource";
+import TopicQueue from "./nodes/topicQueue";
+
+interface ConstructableNode {
+	new(name: string, options?: KeyValues<any>): pubsub.Source | pubsub.Destination;
+}
+
+const nodeClasses: ConstructableNode[] = [
+	ConsoleDestination,
+	Exchange,
+	PingResponder,
+	Queue,
+	TestSource,
+	TopicQueue,
+];
+
+const nodeClassMap: { [className: string]: ConstructableNode } = {};
+nodeClasses.forEach((c) => {
+	nodeClassMap[c.name] = c;
+});
+
+// Parse input arguments
 
 var args = yargs
 	.usage("mhub-server [-c <config_file>]")
@@ -58,6 +92,8 @@ var args = yargs
 	})
 	.strict()
 	.argv;
+
+// Parse config file
 
 var configFile: string;
 if (!args.config) {
@@ -101,6 +137,8 @@ if (!config.bindings) {
 	config.bindings = [];
 }
 
+// Instantiate websocket server
+
 var app = express();
 
 var server: http.Server | https.Server;
@@ -121,52 +159,51 @@ server.on("error", (e: Error): void => {
 
 var hub = new SocketHub(server);
 
-config.nodes.forEach((nodeName: string): void => {
-	var node = new pubsub.Node(nodeName);
+// Instantiate nodes from config file
+
+if (Array.isArray(config.nodes)) { // Backward compatibility, convert to new format
+	const oldNodes = <string[]>config.nodes;
+	config.nodes = {};
+	oldNodes.forEach((n: string) => {
+		if (typeof n !== "string") {
+			die("Invalid configuration: `nodes` is given as array, and must then contain only strings");
+		}
+		config.nodes[n] = {
+			type: "Exchange",
+		};
+	});
+}
+
+if (typeof config.nodes !== "object") {
+	die("Invalid configuration: `nodes` should be a NodeDefinition map, or an array of strings");
+}
+
+Object.keys(config.nodes).forEach((nodeName: string): void => {
+	let def = config.nodes[nodeName];
+	if (typeof def === "string") {
+		def = <NodeDefinition>{
+			type: def,
+		};
+	}
+	const typeName = def.type;
+	const nodeConstructor = nodeClassMap[typeName];
+	if (!nodeConstructor) {
+		die(`Unknown node type '${typeName}' for node '${nodeName}'`);
+	}
+	const node = new nodeConstructor(nodeName, def.options);
 	hub.add(node);
 });
 
-config.bindings.forEach((binding: Binding): void => {
-	var from = hub.find(binding.from);
+// Setup bindings between nodes
+
+config.bindings.forEach((binding: Binding, index: number): void => {
+	var from = hub.findSource(binding.from);
 	if (!from) {
-		throw new Error("Unknown node '" + binding.from + "'");
+		die(`Unknown Source node '${binding.from}' in \`binding[${index}].from\``);
 	}
-	var to = hub.find(binding.to);
+	var to = hub.findDestination(binding.to);
 	if (!to) {
-		throw new Error("Unknown node '" + binding.to + "'");
+		die(`Unknown Destination node '${binding.to}' in \`binding[${index}].to\``);
 	}
 	from.bind(to, binding.pattern);
 });
-
-class PingResponder implements pubsub.Destination {
-	public name: string;
-	private pingNode: pubsub.Node;
-
-	constructor(name: string, pingNode: pubsub.Node) {
-		this.name = name;
-		this.pingNode = pingNode;
-		this.pingNode.bind(this, "ping:request");
-	}
-
-	public send(message: Message): void {
-		log.push("-> %s", this.name, message.topic);
-		this.pingNode.send(new Message("ping:response", message.data));
-		log.pop();
-	}
-}
-
-var testNode = hub.find("test");
-if (testNode) {
-	log.write("Sending message to topic `blib` on node `test` every 5 seconds (remove `test` node to disable)");
-	// Automatically send blibs when the test node is configured, useful for testing
-	var blibCount = 0;
-	setInterval(
-		() => { testNode.send(new Message("blib", blibCount++)); },
-		5000
-	);
-
-	// Automatically respond to pings when a ping node is configured, useful for testing
-	/* tslint:disable:no-unused-variable */
-	var pingResponder = new PingResponder("pong", testNode);
-	/* tslint:enable:no-unused-variable */
-}

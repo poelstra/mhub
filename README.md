@@ -195,7 +195,7 @@ mhub-client -l -n somenode
 
 To only receive messages with a certain topic use e.g.:
 ```sh
-mhub-client -l -n test -p 'ping:*'
+mhub-client -l -n ping -p 'ping:*'
 ```
 
 (Tip: use the bundled `mhub-ping` program to do a quick round-trip time measurement.)
@@ -228,7 +228,7 @@ mhub-client -t test:something
 
 Again, the `-n` option can be used to specify a custom node.
 ```sh
-mhub-client -n test -t ping:request
+mhub-client -n ping -t ping:request
 ```
 
 To pass data (and/or headers) to a message, it needs to be specified as JSON.

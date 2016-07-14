@@ -8,3 +8,8 @@
 /// <reference path="serve-static/serve-static.d.ts" />
 /// <reference path="express-serve-static-core/express-serve-static-core.d.ts" />
 /// <reference path="mime/mime.d.ts" />
+
+// ES6 has `name` defined on Functions (including classes)
+declare interface Function {
+	name: string;
+}

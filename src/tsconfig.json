@@ -24,13 +24,21 @@
         "./index.ts",
         "./log.ts",
         "./logger.ts",
+        "./match.ts",
         "./message.ts",
         "./mhub-client.ts",
         "./mhub-ping.ts",
         "./mhub-server.ts",
+        "./nodes/consoleDestination.ts",
+        "./nodes/exchange.ts",
+        "./nodes/pingResponder.ts",
+        "./nodes/queue.ts",
+        "./nodes/testSource.ts",
+        "./nodes/topicQueue.ts",
         "./pubsub.ts",
         "./sockethub.ts",
-        "./tls.ts"
+        "./tls.ts",
+        "./types.ts"
     ],
     "atom": {
         "rewriteTsconfig": true

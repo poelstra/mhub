@@ -3,8 +3,25 @@
 		"port": 13900
 	},
 	"verbose": true,
-	"nodes": ["default", "test"],
+	"nodes": {
+		"default": "Exchange",
+		"ping": "PingResponder",
+		"blib": {
+			"type": "TestSource",
+			"options": {
+				"topic": "blib",
+				"interval": 5000
+			}
+		},
+		"test": {
+			"type": "Queue",
+			"options": {
+				"capacity": 5,
+				"pattern": ["test:*", "blib"]
+			}
+		}
+	},
 	"bindings": [
-		{ "from": "default", "to": "test", "pattern": "test:*" }
+		{ "from": "blib", "to": "test" }
 	]
 }
