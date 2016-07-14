@@ -150,13 +150,6 @@ if (useTls) {
 	server = http.createServer(app);
 }
 
-server.listen(config.listen.port, (): void => {
-	log.write("Listening on port " + config.listen.port, useTls ? "(TLS)" : "");
-});
-server.on("error", (e: Error): void => {
-	die("Webserver error:", e);
-});
-
 var hub = new SocketHub(server);
 
 // Instantiate nodes from config file
@@ -206,4 +199,14 @@ config.bindings.forEach((binding: Binding, index: number): void => {
 		die(`Unknown Destination node '${binding.to}' in \`binding[${index}].to\``);
 	}
 	from.bind(to, binding.pattern);
+});
+
+// Start server
+
+server.listen(config.listen.port, (): void => {
+	log.write("Listening on port " + config.listen.port, useTls ? "(TLS)" : "");
+});
+
+server.on("error", (e: Error): void => {
+	die("Webserver error:", e);
 });
