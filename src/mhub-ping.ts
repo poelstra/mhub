@@ -4,6 +4,8 @@
 
 "use strict";
 
+import "source-map-support/register";
+
 import * as yargs from "yargs";
 import * as path from "path";
 import MClient from "./client";

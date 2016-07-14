@@ -6,6 +6,8 @@
 
 "use strict";
 
+import "source-map-support/register";
+
 import * as express from "express";
 import * as http from "http";
 import * as https from "https";
