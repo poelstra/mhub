@@ -19,12 +19,16 @@ interface Binding {
 	destination: Destination;
 }
 
-export interface Destination {
+export interface Initializable {
+	init?(): Promise<void>;
+}
+
+export interface Destination extends Initializable {
 	name: string;
 	send(message: Message): void;
 }
 
-export interface Source {
+export interface Source extends Initializable {
 	name: string;
 	bind(destination: Destination, pattern?: string): void;
 	unbind(destination: Destination, pattern?: string): void;

@@ -15,6 +15,7 @@ import * as yargs from "yargs";
 import * as path from "path";
 import * as fs from "fs";
 import * as pubsub from "./pubsub";
+import * as storage from "./storage";
 import SocketHub from "./sockethub";
 import { KeyValues } from "./types";
 import { TlsOptions, replaceKeyFiles } from "./tls";
@@ -42,6 +43,7 @@ interface Config {
 	verbose?: boolean;
 	bindings?: Binding[];
 	nodes: string[] | { [nodeName: string]: string | NodeDefinition; };
+	storage: string;
 }
 
 function die(...args: any[]): void {
@@ -150,6 +152,12 @@ if (useTls) {
 	server = http.createServer(app);
 }
 
+// Create default storage
+
+const storageRoot = path.resolve(path.dirname(configFile), config.storage || "./storage");
+const simpleStorage = new storage.ThrottledStorage(new storage.SimpleFileStorage<any>(storageRoot));
+storage.setDefaultStorage(simpleStorage);
+
 var hub = new SocketHub(server);
 
 // Instantiate nodes from config file
@@ -201,12 +209,16 @@ config.bindings.forEach((binding: Binding, index: number): void => {
 	from.bind(to, binding.pattern);
 });
 
-// Start server
+// Initialize and start server
 
-server.listen(config.listen.port, (): void => {
-	log.write("Listening on port " + config.listen.port, useTls ? "(TLS)" : "");
-});
+hub.init().then(() => {
+	server.listen(config.listen.port, (): void => {
+		log.write("Listening on port " + config.listen.port, useTls ? "(TLS)" : "");
+	});
 
-server.on("error", (e: Error): void => {
-	die("Webserver error:", e);
+	server.on("error", (e: Error): void => {
+		die("Webserver error:", e);
+	});
+}).catch((err: Error) => {
+	die(`Failed to initialize:`, err);
 });

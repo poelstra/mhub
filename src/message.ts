@@ -53,6 +53,13 @@ export class Message {
 	public clone(): Message {
 		return new Message(this.topic, this.data, this.headers);
 	}
+
+	public static fromObject(o: any): Message {
+		if (!o || typeof o !== "object") {
+			throw new TypeError("cannot create message from object, got " + typeof o);
+		}
+		return new Message(o.topic, o.data, o.headers);
+	}
 }
 
 export default Message;

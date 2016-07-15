@@ -37,6 +37,7 @@
         "./nodes/topicQueue.ts",
         "./pubsub.ts",
         "./sockethub.ts",
+        "./storage.ts",
         "./tls.ts",
         "./types.ts"
     ],

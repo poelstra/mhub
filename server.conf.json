@@ -17,11 +17,13 @@
 			"type": "Queue",
 			"options": {
 				"capacity": 5,
-				"pattern": ["test:*", "blib"]
+				"pattern": ["test:*", "blib"],
+				"persistent": true
 			}
 		}
 	},
 	"bindings": [
 		{ "from": "blib", "to": "test" }
-	]
+	],
+	"storage": "./storage/"
 }

@@ -17,7 +17,7 @@ export class TestSource extends pubsub.BaseSource {
 		const interval: number = options && options.interval || 5000;
 		let blibCount = 0;
 		const sender = () => { this._broadcast(new Message(topic, blibCount++)); };
-		setTimeout(sender, 0); // Send one right away
+		//setTimeout(sender, 0); // Send one right away TODO make this wait for init to be complete!
 		setInterval(sender,	interval);
 	}
 }

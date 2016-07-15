@@ -164,6 +164,17 @@ class SocketHub {
 		});
 	}
 
+	public init(): Promise<void> {
+		const initPromises: Promise<void>[] = [];
+		for (const nodeName in this.nodes) { // tslint:disable-line:forin
+			const node = this.nodes[nodeName];
+			if (node.init) {
+				initPromises.push(node.init());
+			}
+		}
+		return Promise.all(initPromises).then(() => { /* nop */ });
+	}
+
 	public add(node: pubsub.BaseNode): void {
 		if (this.find(node.name)) {
 			throw new Error("duplicate node: " + node.name);

@@ -34,6 +34,9 @@
     },
     "mime/mime.d.ts": {
       "commit": "33585c55fbb7cd3cfc59d18a3b87f4ae6012eaff"
+    },
+    "mkdirp/mkdirp.d.ts": {
+      "commit": "0d501b1ff9d97a12c8b371affb64c921b6fe9832"
     }
   }
 }
