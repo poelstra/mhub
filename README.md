@@ -565,7 +565,7 @@ mail, submit an issue, etc.
 git clone https://github.com/poelstra/mhub
 cd mhub
 npm install
-npm run test
+npm test
 # or run `npm run watch` for continuous compilation+running
 ```
 
@@ -589,6 +589,10 @@ before sending a pull-request.
 
 The list below shows notable changes between each release.
 For details, see the version tags at GitHub.
+
+0.3.4 (2016-07-16):
+- mhub-server: Implement various node types (Exchange (old default), Queue, TopicQueue)
+- mhub-server: Implement optional persistent storage for queues
 
 0.3.3 (2016-07-04):
 - Add TLS support
