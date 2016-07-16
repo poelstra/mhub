@@ -287,6 +287,62 @@ be forwarded.
 Note: don't edit the `server.conf.json` file directly, because any changes to it
 will be lost when you upgrade `mhub`. Edit a copy of the file instead.
 
+### Node types
+
+MHub supports different types of nodes. When the nodes are given as an array of
+strings (legacy format), all nodes are created as `Exchange` nodes.
+
+Much more flexibility can be achieved by passing them as an object of
+{ node_name: node_definition } pairs:
+```js
+"nodes": {
+    "nodename1": "TypeWithoutOptions",
+    "nodename2": {
+        "type": "TypeWithOptions",
+        "options": {
+            /* configuration options for this type of node */
+        }
+    }
+}
+```
+
+Currently available node types and their options:
+* `Exchange`: Simplest node type. Broadcasts any incoming message to all
+  subscribed clients (taking their pattern into account, of course).
+* `Queue`: Forwards incoming messages to all subscribed clients (like an
+  Exchange), but also stores a configurable number of messages. A new subscriber
+  will receive all currently stored messages. Optionally, a pattern can be given
+  to limit which message topics will be remembered. Additionally, the queue can
+  be persisted to disk, such that it survives `mhub-server` restarts.
+  Configuration options:
+  * `capacity?: number`: Number of messages to keep (default 10)
+  * `pattern?: string | string[]`: Which messages (filtered by topic) to keep
+    (default all)
+  * `persistent?: boolean`: Whether to persist this queue to disk (default
+    false)
+* `TopicQueue`: Like Queue, but doesn't just store the last X messages, but
+  instead stores the last message per topic. New subscribers will receive the
+  'current' state (and any future state) of the topics. Again, a topic pattern
+  can be given, and the queue can be persisted to disk.
+  * `pattern?: string | string[]`: Which messages (filtered by topic) to keep
+    (default all)
+  * `persistent?: boolean`: Whether to persist this queue to disk (default
+    false)
+* `ConsoleDestination`: Debug helper that logs all messages published to it, to
+  the console.
+* `PingResponder`: Useful to measure round-trip response times. When it receives
+  a message with topic `ping:request`, it will respond with a message with topic
+  `ping:response` and the same payload as it received in the request.
+  This type of node is set up by default in the packages configuration, on a
+  node called `ping`.
+* `TestSource`: Source of periodic test messages. Configured by default in the
+  packaged configuration as node `blib`.
+  * `topic?: string`: Topic for the test messages (default "blib")
+  * `interval?: number`: Delay between messages (in ms, default 5000)
+
+You can define these in the configuration file, see the packaged
+`server.conf.json` for examples.
+
 ## Using TLS / SSL
 
 To enable TLS / SSL on the server (`wss://` instead of `ws://`), you can change your
