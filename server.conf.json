@@ -5,6 +5,12 @@
 	"verbose": true,
 	"nodes": {
 		"default": "Exchange",
+		"state": {
+			"type": "TopicState",
+			"options": {
+				"persistent": true
+			}
+		},
 		"ping": "PingResponder",
 		"blib": {
 			"type": "TestSource",
