@@ -6,18 +6,18 @@ import { Storage, getDefaultStorage } from "../storage";
 
 import log from "../log";
 
-export interface TopicQueueOptions extends pubsub.BaseSource {
+export interface TopicStateOptions extends pubsub.BaseSource {
 	pattern?: string | string[]; // Topic patterns to memorize, defaults to all topics
-	persistent?: boolean; // If true, queue will be persisted to storage (typically disk)
+	persistent?: boolean; // If true, state will be persisted to storage (typically disk)
 }
 
-const TopicQueueStorageID = "TopicQueueStorage";
-const TopicQueueStorageVersion = 1;
+const TopicStateStorageID = "TopicStateStorage";
+const TopicStateStorageVersion = 1;
 
-interface TopicQueueStorage {
+interface TopicStateStorage {
 	type: string;
 	version: number;
-	queue: KeyValues<Message>;
+	state: KeyValues<Message>;
 };
 
 /**
@@ -30,14 +30,14 @@ interface TopicQueueStorage {
  * When a new Destination binds to this, all currently remembered topics are
  * sent to it.
  */
-export class TopicQueue extends pubsub.BaseSource {
+export class TopicState extends pubsub.BaseSource {
 	public name: string;
 
-	private _queue: KeyValues<Message> = Object.create(null);
+	private _state: KeyValues<Message> = Object.create(null);
 	private _matcher: Matcher;
-	private _storage: Storage<TopicQueueStorage>;
+	private _storage: Storage<TopicStateStorage>;
 
-	constructor(name: string, options?: TopicQueueOptions) {
+	constructor(name: string, options?: TopicStateOptions) {
 		super(name, options);
 		this.name = name;
 		this._matcher = getMatcher(options && options.pattern);
@@ -50,16 +50,16 @@ export class TopicQueue extends pubsub.BaseSource {
 		if (!this._storage) {
 			return Promise.resolve(undefined);
 		}
-		return this._storage.load(this.name).then((data?: TopicQueueStorage) => {
+		return this._storage.load(this.name).then((data?: TopicStateStorage) => {
 			if (!data || typeof data !== "object") {
 				return;
 			}
-			if (data.type !== TopicQueueStorageID || data.version !== TopicQueueStorageVersion) {
+			if (data.type !== TopicStateStorageID || data.version !== TopicStateStorageVersion) {
 				console.log(`Warning: discarding invalid storage ID / version for node '${this.name}'`);
 				return;
 			}
-			for (const topic in data.queue) {
-				this._queue[topic] = Message.fromObject(data.queue[topic]);
+			for (const topic in data.state) {
+				this._state[topic] = Message.fromObject(data.state[topic]);
 			}
 		});
 	}
@@ -74,15 +74,15 @@ export class TopicQueue extends pubsub.BaseSource {
 		const topic = message.topic;
 		if (this._matcher(topic)) {
 			if (message.data === undefined) {
-				delete this._queue[topic];
+				delete this._state[topic];
 			} else {
-				this._queue[topic] = message;
+				this._state[topic] = message;
 			}
 			if (this._storage) {
 				this._storage.save(this.name, {
-					type: TopicQueueStorageID,
-					version: TopicQueueStorageVersion,
-					queue: this._queue
+					type: TopicStateStorageID,
+					version: TopicStateStorageVersion,
+					state: this._state
 				});
 			}
 		}
@@ -90,10 +90,10 @@ export class TopicQueue extends pubsub.BaseSource {
 
 	public bind(destination: pubsub.Destination, pattern?: string): void {
 		super.bind(destination, pattern);
-		for (const topic in this._queue) {
-			destination.send(this._queue[topic]);
+		for (const topic in this._state) {
+			destination.send(this._state[topic]);
 		}
 	}
 }
 
-export default TopicQueue;
+export default TopicState;

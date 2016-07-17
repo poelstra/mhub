@@ -34,7 +34,7 @@
         "./nodes/pingResponder.ts",
         "./nodes/queue.ts",
         "./nodes/testSource.ts",
-        "./nodes/topicQueue.ts",
+        "./nodes/topicState.ts",
         "./pubsub.ts",
         "./sockethub.ts",
         "./storage.ts",

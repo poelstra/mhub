@@ -58,7 +58,7 @@ import Exchange from "./nodes/exchange";
 import PingResponder from "./nodes/pingResponder";
 import Queue from "./nodes/queue";
 import TestSource from "./nodes/testSource";
-import TopicQueue from "./nodes/topicQueue";
+import TopicState from "./nodes/topicState";
 
 interface ConstructableNode {
 	new(name: string, options?: KeyValues<any>): pubsub.Source | pubsub.Destination;
@@ -70,7 +70,7 @@ const nodeClasses: ConstructableNode[] = [
 	PingResponder,
 	Queue,
 	TestSource,
-	TopicQueue,
+	TopicState,
 ];
 
 const nodeClassMap: { [className: string]: ConstructableNode } = {};
