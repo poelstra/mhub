@@ -311,19 +311,22 @@ Currently available node types and their options:
   subscribed clients (taking their pattern into account, of course).
 * `Queue`: Forwards incoming messages to all subscribed clients (like an
   Exchange), but also stores a configurable number of messages. A new subscriber
-  will receive all currently stored messages. Optionally, a pattern can be given
-  to limit which message topics will be remembered. Additionally, the queue can
-  be persisted to disk, such that it survives `mhub-server` restarts.
+  will receive all currently stored messages. Useful for e.g. chat applications,
+  list last X tweets, etc.
+  Optionally, a pattern can be given to limit which message topics will be
+  remembered. Additionally, the queue can be persisted to disk, such that it
+  survives `mhub-server` restarts.
   Configuration options:
   * `capacity?: number`: Number of messages to keep (default 10)
   * `pattern?: string | string[]`: Which messages (filtered by topic) to keep
     (default all)
   * `persistent?: boolean`: Whether to persist this queue to disk (default
     false)
-* `TopicQueue`: Like Queue, but doesn't just store the last X messages, but
-  instead stores the last message per topic. New subscribers will receive the
-  'current' state (and any future state) of the topics. Again, a topic pattern
-  can be given, and the queue can be persisted to disk.
+* `TopicState`: Forwards all messages, but also stores the last message for each
+  topic. New subscribers will receive that last message (and any future state)
+  of the topics. Useful for storing (simple) configuration data (e.g. URLs of
+  JSON APIs), initializing all connecting displays to the same state, etc.
+  Again, a topic pattern can be given, and the queue can be persisted to disk.
   * `pattern?: string | string[]`: Which messages (filtered by topic) to keep
     (default all)
   * `persistent?: boolean`: Whether to persist this queue to disk (default
