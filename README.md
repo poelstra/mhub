@@ -552,10 +552,115 @@ declare class Message {
 
 ## Wire protocol
 
-MHub internally uses JSON messages over websockets. The format of these messages
-is not formally specified yet, as it is still under development.
-If you're interested in the internals though, `src/client.ts` probably is the
-best place to get started.
+MHub internally uses JSON messages over websockets.
+
+Every 'raw' JSON WebSocket message is an object, with a `type` field to
+distinguish different commands and responses to/from MHub.
+
+The currently supported commands and responses are documented in
+`src/protocol.ts`, but here's a quick how-to on basic communication.
+
+### Minimal publish command
+
+The minimal command to publish an MHub message, is e.g.:
+```json
+{
+    "type": "publish",
+    "node": "default",
+    "topic": "myTopic"
+}
+```
+This will post a message without data (payload), and without any feedback from
+the server (except if an error occurs).
+
+To post a message with data, add the `data` field:
+```json
+{
+    "type": "publish",
+    "node": "default",
+    "topic": "clock:arm",
+    "data": {
+        "countdown": 150
+    }
+}
+```
+
+### Sequence numbers / acks
+
+You'll typically want to know whether your message was received in good order,
+so in order to do that, you can add a `seq` field (sequence number) to the
+message. Note that the sequence number should be a unique number (at least
+unique across any outstanding requests).
+
+For example, when sending:
+```json
+{
+    "type": "publish",
+    "node": "default",
+    "topic": "myTopic",
+    "seq": 0
+}
+```
+the server will respond with:
+```json
+{
+    "type": "puback",
+    "seq": 0
+}
+```
+or with e.g.
+```json
+{
+    "type": "error",
+    "message": "some error message here",
+    "seq": 0
+}
+```
+
+### Subscribing to nodes
+
+To start receiving messages, you can subscribe to a node. To simply receive all
+messages from node `test`, the minimal message would be:
+```json
+{
+    "type": "subcribe",
+    "node": "test"
+}
+```
+
+The server will then start sending you responses such as:
+```json
+{
+    "type": "message",
+    "topic": "myTopic",
+    "headers": {},
+    "subscription": "default"
+}
+```
+
+Again, it's probably best to include a sequence number in the `subscribe`
+command in order to get feedback about its success or failure.
+
+It's also possible to set a pattern, such that only matching topics will be
+forwarded to the client.
+
+Additionally, it's possible to provide an `id` in the `subscribe` command that
+will be echoed as the `subscription` field in each message response.
+This is useful if different parts of your application have different
+subscriptions, and you want to route these responses to the relevant part of
+your application. (Note: the same ID can be used for multiple subscriptions,
+e.g. to subscribe to different nodes.)
+
+For example:
+```json
+{
+    "type": "subcribe",
+    "node": "test",
+    "pattern": "my*",
+    "id": "someID",
+    "seq": 1
+}
+```
 
 ## Contributing
 

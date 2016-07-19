@@ -9,6 +9,7 @@ import * as events from "events";
 import * as ws from "ws";
 import Message from "./message";
 import { TlsOptions } from "./tls";
+import * as protocol from "./protocol";
 
 const DEFAULT_PORT = 13900;
 const MAX_SEQ = 65536;
@@ -19,32 +20,6 @@ interface Resolver<T> {
 
 interface VoidResolver extends Resolver<void> {
 	(v?: PromiseLike<void>): void;
-}
-
-interface RawMessage {
-	type: string;
-	seq?: number;
-}
-
-interface SubscribeMessage extends RawMessage {
-	node: string;
-	pattern: string;
-	id: string;
-}
-
-interface PublishMessage extends RawMessage {
-	node: string;
-	topic: string;
-	data: any;
-	headers: { [header: string]: string; };
-	subscription: string;
-}
-
-interface ErrorMessage extends RawMessage {
-	message: string;
-}
-
-interface SubAckMessage extends RawMessage {
 }
 
 /**
@@ -58,7 +33,7 @@ interface SubAckMessage extends RawMessage {
  * @event message(m: Message) Emitted when message was received (due to subscription).
  */
 class MClient extends events.EventEmitter {
-	private _transactions: { [seqNo: number]: Resolver<RawMessage> } = {};
+	private _transactions: { [seqNo: number]: Resolver<protocol.Response> } = {};
 	private _seqNo: number = 0;
 	private _socket: ws = undefined;
 	private _url: string;
@@ -117,21 +92,26 @@ class MClient extends events.EventEmitter {
 		this._socket.on("close", (): void => { this._handleSocketClose(); });
 		this._socket.on("message", (data: string): void => {
 			try {
-				var decoded: RawMessage = JSON.parse(data);
+				const decoded: protocol.Response = JSON.parse(data);
 				switch (decoded.type) {
 					case "message":
-						let msgDec = <PublishMessage>decoded;
-						this.emit("message", new Message(msgDec.topic, msgDec.data, msgDec.headers), msgDec.subscription);
+						const msgRes = <protocol.MessageResponse>decoded;
+						this.emit(
+							"message",
+							new Message(msgRes.topic, msgRes.data, msgRes.headers),
+							msgRes.subscription
+						);
 						break;
 					case "error":
-						let errDec = <ErrorMessage>decoded;
-						let err = new Error("server error: " + errDec.message);
-						this._release(errDec.seq, err, decoded);
+						const errRes = <protocol.ErrorResponse>decoded;
+						const err = new Error("server error: " + errRes.message);
+						this._release(errRes.seq, err, decoded);
 						this.emit("error", err);
 						break;
 					case "suback":
 					case "puback":
-						this._release(decoded.seq, undefined, decoded);
+						const ackDec = <protocol.PubAckResponse | protocol.SubAckResponse>decoded;
+						this._release(ackDec.seq, undefined, ackDec);
 						break;
 					default:
 						throw new Error("unknown message type: " + decoded.type);
@@ -172,7 +152,7 @@ class MClient extends events.EventEmitter {
 	 * @param id       Optional subscription ID sent back with all matching messages
 	 */
 	public subscribe(nodeName: string, pattern?: string, id?: string): Promise<void> {
-		return this._send(<SubscribeMessage>{
+		return this._send(<protocol.SubscribeCommand>{
 			type: "subscribe",
 			node: nodeName,
 			pattern: pattern,
@@ -200,7 +180,7 @@ class MClient extends events.EventEmitter {
 	public publish(nodeName: string, ...args: any[]): Promise<void> {
 		if (typeof args[0] === "object") {
 			var message: Message = args[0];
-			return this._send(<PublishMessage>{
+			return this._send(<protocol.PublishCommand>{
 				type: "publish",
 				node: nodeName,
 				topic: message.topic,
@@ -208,7 +188,7 @@ class MClient extends events.EventEmitter {
 				headers: message.headers,
 			}).then(() => undefined);
 		} else {
-			return this._send(<PublishMessage>{
+			return this._send(<protocol.PublishCommand>{
 				type: "publish",
 				node: nodeName,
 				topic: args[0],
@@ -237,8 +217,8 @@ class MClient extends events.EventEmitter {
 		this.close();
 	}
 
-	private _send(msg: RawMessage): Promise<RawMessage> {
-		return new Promise<RawMessage>((resolve: () => void, reject: (err: Error) => void) => {
+	private _send(msg: protocol.Command): Promise<protocol.Response> {
+		return new Promise<protocol.Response>((resolve: () => void, reject: (err: Error) => void) => {
 			msg.seq = this._nextSeq();
 			this._transactions[msg.seq] = resolve;
 			if (!this._socket) {
@@ -255,7 +235,7 @@ class MClient extends events.EventEmitter {
 		});
 	}
 
-	private _release(seqNr: number, err: Error|void, msg?: RawMessage): void {
+	private _release(seqNr: number, err: Error|void, msg?: protocol.Response): void {
 		let resolver = this._transactions[seqNr];
 		if (!resolver) {
 			return;

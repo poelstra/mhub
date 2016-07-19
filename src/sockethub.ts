@@ -11,6 +11,7 @@ import * as ws from "ws";
 
 import log from "./log";
 
+import * as protocol from "./protocol";
 import * as pubsub from "./pubsub";
 import Message from "./message";
 
@@ -97,55 +98,64 @@ class ClientConnection extends events.EventEmitter {
 		log.write("[ %s ] message", this.name, data);
 		let errorMessage: string;
 		let response: { type: string; [header: string]: any; };
+		let haveSeq = false;
+		let seq: number = undefined;
 		try {
-			var msg = JSON.parse(data);
-			var node = this.hub.find(msg.node);
+			const msg: protocol.Command = JSON.parse(data);
+			haveSeq = typeof msg === "object" && typeof msg.seq === "number";
+			seq = haveSeq ? msg.seq : undefined;
+
+			const node = this.hub.find(msg.node);
 			if (!node) {
 				errorMessage = `unknown node '${msg.node}'`;
 			} else if (msg.type === "publish") {
+				const pubCmd = <protocol.PublishCommand>msg;
 				if (!pubsub.isDestination(node)) {
 					errorMessage = `node '${msg.node}' is not a Destination`;
 				} else {
-					node.send(new Message(msg.topic, msg.data, msg.headers));
-					response = {
-						type: "puback",
-						seq: msg.seq,
-					};
+					node.send(new Message(pubCmd.topic, pubCmd.data, pubCmd.headers));
+					if (haveSeq) {
+						response = {
+							type: "puback",
+							seq: seq,
+						};
+					}
 				}
 			} else if (msg.type === "subscribe") {
+				const subCmd = <protocol.SubscribeCommand>msg;
 				if (!pubsub.isSource(node)) {
 					errorMessage = `node '${msg.node}' is not a Source`;
 				} else {
-					const id = msg.id || "default";
+					const id = subCmd.id || "default";
 					let sub = this.subscriptions[id];
 					if (!sub) {
 						sub = new SubscriptionNode(this, id);
 						this.subscriptions[id] = sub;
 					}
-					sub.bind(node, msg.pattern);
-					response = {
-						type: "suback",
-						seq: msg.seq,
-					};
+					sub.bind(node, subCmd.pattern);
+					if (haveSeq) {
+						response = {
+							type: "suback",
+							seq: seq,
+						};
+					}
 				}
 			}
 		} catch (e) {
 			log.write("[ %s ] decode error: ", this.name, e);
-			response = {
-				type: "error",
-				message: "decode error " + e,
-				seq: msg.seq,
-			};
+			errorMessage = "decode error: " + String(e);
 		}
-		if (!response) {
-			log.write(`[ ${this.name} ] error: ${errorMessage || "unknown error"}`);
+		if (errorMessage) {
+			log.write(`[ ${this.name} ] error: ${errorMessage}`);
 			response = {
 				type: "error",
 				message: errorMessage,
-				seq: msg.seq,
+				seq: seq,
 			};
 		}
-		this.socket.send(JSON.stringify(response));
+		if (response) {
+			this.socket.send(JSON.stringify(response));
+		}
 	}
 }
 
