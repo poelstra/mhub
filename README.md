@@ -698,6 +698,12 @@ before sending a pull-request.
 The list below shows notable changes between each release.
 For details, see the version tags at GitHub.
 
+0.4.0 (2016-07-19):
+- mhub-server: No longer send acks when no sequence number was given in the
+  request
+- Document all protocol commands/responses and their fields in `src/protocol.ts`
+  and provide quick how-to in Readme.
+
 0.3.4 (2016-07-16):
 - mhub-server: Implement various node types (Exchange (old default), Queue, TopicQueue)
 - mhub-server: Implement optional persistent storage for queues
