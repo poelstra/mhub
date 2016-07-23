@@ -11,7 +11,8 @@ import Message from "./message";
 import { TlsOptions } from "./tls";
 import * as protocol from "./protocol";
 
-const DEFAULT_PORT = 13900;
+const DEFAULT_PORT_WS = 13900;
+const DEFAULT_PORT_WSS = 13901;
 const MAX_SEQ = 65536;
 
 interface Resolver<T> {
@@ -57,7 +58,8 @@ class MClient extends events.EventEmitter {
 		}
 		// Append default port if necessary
 		if (!url.match(":\\d+$")) {
-			url = url + ":" + DEFAULT_PORT;
+			const useTls = url.indexOf("wss://") === 0;
+			url = url + ":" + (useTls ? DEFAULT_PORT_WSS : DEFAULT_PORT_WS);
 		}
 		this._url = url;
 		this._tlsOptions = tlsOptions;
