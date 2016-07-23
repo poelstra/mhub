@@ -34,11 +34,11 @@ export interface Source extends Initializable {
 	unbind(destination: Destination, pattern?: string): void;
 }
 
-export function isDestination(node: BaseNode): node is Destination {
+export function isDestination(node: BaseNode | undefined): node is Destination {
 	return node && typeof (<any>node).send === "function";
 }
 
-export function isSource(node: BaseNode): node is Source {
+export function isSource(node: BaseNode | undefined): node is Source {
 	return node && typeof (<any>node).bind === "function" && typeof (<any>node).unbind === "function";
 }
 

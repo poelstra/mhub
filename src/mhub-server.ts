@@ -14,13 +14,22 @@ import * as https from "https";
 import * as yargs from "yargs";
 import * as path from "path";
 import * as fs from "fs";
+import * as net from "net";
+import * as ws from "ws";
+import Promise from "ts-promise";
 import * as pubsub from "./pubsub";
 import * as storage from "./storage";
-import SocketHub from "./sockethub";
+import Hub from "./hub";
+import WSConnection from "./transports/wsconnection";
+import TcpConnection from "./transports/tcpconnection";
 import { KeyValues } from "./types";
 import { TlsOptions, replaceKeyFiles } from "./tls";
 
 import log from "./log";
+
+const DEFAULT_PORT_WS = 13900;
+const DEFAULT_PORT_WSS = 13901;
+const DEFAULT_PORT_TCP = 13902;
 
 interface Binding {
 	from: string;
@@ -28,8 +37,16 @@ interface Binding {
 	pattern?: string;
 }
 
-interface ListenOptions extends TlsOptions {
-	port?: number;
+interface WSServerOptions extends TlsOptions {
+	type: "websocket";
+	port?: number; // default 13900 (ws) or 13901 (wss)
+}
+
+interface TcpServerOptions {
+	type: "tcp";
+	host?: string; // NodeJS default (note: will default to IPv6 if available!)
+	port?: number; // default 13902
+	backlog?: number; // NodeJS default, typically 511
 }
 
 interface NodeDefinition {
@@ -37,8 +54,10 @@ interface NodeDefinition {
 	options?: { [key: string]: any; };
 }
 
+type ListenOptions = WSServerOptions | TcpServerOptions;
+
 interface Config {
-	listen?: ListenOptions;
+	listen?: ListenOptions | ListenOptions[];
 	port?: number;
 	verbose?: boolean;
 	bindings?: Binding[];
@@ -122,34 +141,36 @@ log.write("Using config file " + configFile);
 if (!config.nodes) {
 	die("Invalid configuration: missing `nodes`");
 }
+
 if (config.port) {
 	if (config.listen) {
 		die("Invalid configuration: specify either `port` or `listen`");
 	}
 	config.listen = {
+		type: "websocket",
 		port: config.port,
 	};
 	delete config.port;
 }
-if (config.listen) {
-	// Read TLS key, cert, etc
-	replaceKeyFiles(config.listen, path.dirname(configFile));
+if (!config.listen) {
+	die("Invalid configuration: `port` or `listen` missing");
 }
+if (!Array.isArray(config.listen)) {
+	config.listen = [config.listen];
+}
+config.listen.forEach((listen: ListenOptions) => {
+	if (!listen.type) {
+		// Default to WebSocket, for backward compatibility
+		listen.type = "websocket";
+	}
+	if (listen.type === "websocket") {
+		// Read TLS key, cert, etc
+		replaceKeyFiles(listen, path.dirname(configFile));
+	}
+});
+
 if (!config.bindings) {
 	config.bindings = [];
-}
-
-// Instantiate websocket server
-
-var app = express();
-
-var server: http.Server | https.Server;
-const useTls = !!(config.listen.key || config.listen.pfx);
-
-if (useTls) {
-	server = https.createServer(config.listen, app);
-} else {
-	server = http.createServer(app);
 }
 
 // Create default storage
@@ -158,7 +179,7 @@ const storageRoot = path.resolve(path.dirname(configFile), config.storage || "./
 const simpleStorage = new storage.ThrottledStorage(new storage.SimpleFileStorage<any>(storageRoot));
 storage.setDefaultStorage(simpleStorage);
 
-var hub = new SocketHub(server);
+var hub = new Hub();
 
 // Instantiate nodes from config file
 
@@ -211,14 +232,83 @@ config.bindings.forEach((binding: Binding, index: number): void => {
 
 // Initialize and start server
 
-hub.init().then(() => {
-	server.listen(config.listen.port, (): void => {
-		log.write("Listening on port " + config.listen.port, useTls ? "(TLS)" : "");
-	});
+let connectionId = 0;
 
-	server.on("error", (e: Error): void => {
-		die("Webserver error:", e);
+function startWebSocketServer(options: WSServerOptions): Promise<void> {
+	return new Promise<void>((resolve, reject) => {
+		options = Object.create(options);
+		const app = express();
+
+		let server: http.Server | https.Server;
+		const useTls = !!(options.key || options.pfx);
+
+		options.port = options.port || (useTls ? DEFAULT_PORT_WS : DEFAULT_PORT_WSS);
+
+		if (useTls) {
+			server = https.createServer(options, app);
+		} else {
+			server = http.createServer(app);
+		}
+
+		const wss = new ws.Server({ server: <any>server, path: "/" });
+		wss.on("connection", (conn: ws) => {
+			new WSConnection(hub, conn, "websocket" + connectionId++);
+		});
+
+		server.listen(options.port, (): void => {
+			log.write("WebSocket Server started on port " + options.port, useTls ? "(TLS)" : "");
+			resolve(undefined);
+		});
+
+		server.on("error", (e: Error): void => {
+			reject(e);
+		});
 	});
-}).catch((err: Error) => {
+}
+
+function startTcpServer(options: TcpServerOptions): Promise<void> {
+	return new Promise<void>((resolve, reject) => {
+		options = Object.create(options);
+		options.port = options.port || DEFAULT_PORT_TCP;
+
+		const server = net.createServer((socket: net.Socket) => {
+			new TcpConnection(hub, socket, "tcp" + connectionId++);
+		});
+
+		server.listen(
+			{
+				port: options.port,
+				host: options.host,
+				backlog: options.backlog,
+			},
+			(): void => {
+				log.write("TCP Server started on port " + options.port);
+				resolve(undefined);
+			}
+		);
+
+		server.on("error", (e: Error): void => {
+			reject(e);
+		});
+	});
+}
+
+function startTransports(): Promise<void> {
+	const serverOptions = Array.isArray(config.listen) ? config.listen : [config.listen];
+	return Promise.all(
+		serverOptions.map((options: ListenOptions) => {
+			switch (options.type) {
+				case "websocket":
+					return startWebSocketServer(<WSServerOptions>options);
+				case "tcp":
+					return startTcpServer(<TcpServerOptions>options);
+				default:
+					throw new Error(`unsupported transport '${options!.type}'`);
+			}
+		})
+	).return();
+}
+
+hub.init().then(startTransports).catch((err: Error) => {
 	die(`Failed to initialize:`, err);
 });

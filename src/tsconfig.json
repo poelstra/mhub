@@ -21,6 +21,9 @@
     "files": [
         "../typings/tsd.d.ts",
         "./client.ts",
+        "./dict.ts",
+        "./hub.ts",
+        "./hubclient.ts",
         "./index.ts",
         "./log.ts",
         "./logger.ts",
@@ -37,9 +40,10 @@
         "./nodes/topicState.ts",
         "./protocol.ts",
         "./pubsub.ts",
-        "./sockethub.ts",
         "./storage.ts",
         "./tls.ts",
+        "./transports/tcpconnection.ts",
+        "./transports/wsconnection.ts",
         "./types.ts"
     ],
     "atom": {

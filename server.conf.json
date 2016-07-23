@@ -1,7 +1,14 @@
 {
-	"listen": {
-		"port": 13900
-	},
+	"listen": [
+		{
+			"type": "websocket",
+			"port": 13900
+		},
+		{
+			"type": "tcp",
+			"port": 13902
+		}
+	],
 	"verbose": true,
 	"nodes": {
 		"default": "Exchange",

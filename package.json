@@ -49,13 +49,14 @@
     "mocha": "^2.5.3",
     "parallelshell": "^2.0.0",
     "tslint": "^3.12.1",
-    "typescript": "^1.8.10"
+    "typescript": "^2.0.0"
   },
   "dependencies": {
     "express": "^4.14.0",
     "minimatch": "^3.0.2",
     "mkdirp": "^0.5.1",
     "source-map-support": "^0.4.1",
+    "ts-promise": "^0.3.0",
     "ws": "^1.1.1",
     "yargs": "^4.7.1"
   },

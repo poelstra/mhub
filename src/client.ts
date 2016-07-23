@@ -114,7 +114,7 @@ class MClient extends events.EventEmitter {
 						this._release(ackDec.seq, undefined, ackDec);
 						break;
 					default:
-						throw new Error("unknown message type: " + decoded.type);
+						throw new Error("unknown message type: " + decoded!.type);
 				}
 			} catch (e) {
 				this.emit("error", new Error("message decode error: " + e.message));
