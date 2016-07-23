@@ -295,14 +295,17 @@ strings (legacy format), all nodes are created as `Exchange` nodes.
 Much more flexibility can be achieved by passing them as an object of
 { node_name: node_definition } pairs:
 ```js
-"nodes": {
-    "nodename1": "TypeWithoutOptions",
-    "nodename2": {
-        "type": "TypeWithOptions",
-        "options": {
-            /* configuration options for this type of node */
+{
+    "nodes": {
+        "nodename1": "TypeWithoutOptions",
+        "nodename2": {
+            "type": "TypeWithOptions",
+            "options": {
+                /* configuration options for this type of node */
+            }
         }
-    }
+    },
+    /* rest of configuration file */
 }
 ```
 
@@ -346,6 +349,24 @@ Currently available node types and their options:
 You can define these in the configuration file, see the packaged
 `server.conf.json` for examples.
 
+## Configuring transports (protocols / ports)
+
+`mhub-server` natively supports a JSON-based protocol, which is by default
+served over WebSockets (port 13900). It can also be configured for websockets
+over https on port 13901.
+
+Additionally, the same JSON-based protocol is also available on a 'raw' TCP
+(by default on port 13902), where each protocol command/response is transferred
+as one UTF-8 encoded JSON string per line, each line terminated by a newline
+(`\n`, ASCII code 10).
+This allows easy integration with platforms that don't support WebSockets.
+
+To configure which ports and transports `mhub-server` uses, use the `listen`
+field in `server.conf.json`. It accepts either a single object or an array of
+objects that describe one or more transports to be used.
+
+See the configuration file and the next section for examples on setting it up.
+
 ## Using TLS / SSL
 
 To enable TLS / SSL on the server (`wss://` instead of `ws://`), you can change your
@@ -353,28 +374,38 @@ server configuration to look like:
 
 ```js
 {
-    "listen": {
-        "port": 13900,
-        "key": "key.pem",
-        "cert": "cert.pem"
-    },
+    "listen": [
+        {
+            "type": "websocket",
+            "port": 13901,
+            "key": "key.pem",
+            "cert": "cert.pem"
+        }
+    ],
     /* rest of configuration follows */
 }
 ```
+
+Note that the recommended port for MHub over secure websockets is 13901.
+Also note that it is possible to enable both transports simultaneously by passing
+more than one configuration object to the `listen` array.
 
 This will still allow any client to connect. To only allow trusted clients to
 connect, use something like:
 
 ```js
 {
-    "listen": {
-        "port": 13900,
-        "key": "key.pem",
-        "cert": "cert.pem",
-        "ca": "ca.pem", // Can be omitted to use system's default
-        "requestCert": true,
-        "rejectUnauthorized": true
-    },
+    "listen": [
+        {
+            "type": "websocket",
+            "port": 13901,
+            "key": "key.pem",
+            "cert": "cert.pem",
+            "ca": "ca.pem", // Can be omitted to use system's default
+            "requestCert": true,
+            "rejectUnauthorized": true
+        }
+    ],
     /* rest of configuration follows */
 }
 ```
@@ -552,10 +583,15 @@ declare class Message {
 
 ## Wire protocol
 
-MHub internally uses JSON messages over websockets.
+MHub typically uses JSON messages over websockets, or a line-based TCP socket.
 
-Every 'raw' JSON WebSocket message is an object, with a `type` field to
-distinguish different commands and responses to/from MHub.
+Both transports transfer UTF-8 encoded JSON strings. In the case of WebSockets,
+these are already packetized by the WebSocket protocol. In case of 'raw' TCP
+sockets, each string is sent or received per line, separated by newlines (`\n`,
+ASCII code 10).
+
+Every 'raw' JSON message is an object, with a `type` field to distinguish
+different commands and responses to/from MHub.
 
 The currently supported commands and responses are documented in
 `src/protocol.ts`, but here's a quick how-to on basic communication.
