@@ -734,6 +734,14 @@ before sending a pull-request.
 The list below shows notable changes between each release.
 For details, see the version tags at GitHub.
 
+0.5.0 (2016-07-23):
+- mhub-server: 'Raw' TCP support added (line-based JSON), default on port 13902
+- mhub-server: Multi-transport support added (e.g. websockets + secure
+  websockets + raw TCP)
+- Default / recommended port for secure websockets changed to 13901
+- mhub-server: `TopicState` renamed (again) to `TopicStore`, old name still
+  works
+
 0.4.0 (2016-07-19):
 - mhub-server: `TopicQueue` was renamed to `TopicState` to better reflect its
   meaning
