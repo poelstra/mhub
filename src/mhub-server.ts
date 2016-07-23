@@ -77,7 +77,7 @@ import Exchange from "./nodes/exchange";
 import PingResponder from "./nodes/pingResponder";
 import Queue from "./nodes/queue";
 import TestSource from "./nodes/testSource";
-import TopicState from "./nodes/topicState";
+import TopicStore from "./nodes/topicStore";
 
 interface ConstructableNode {
 	new(name: string, options?: KeyValues<any>): pubsub.Source | pubsub.Destination;
@@ -89,13 +89,19 @@ const nodeClasses: ConstructableNode[] = [
 	PingResponder,
 	Queue,
 	TestSource,
-	TopicState,
+	TopicStore,
 ];
 
 const nodeClassMap: { [className: string]: ConstructableNode } = {};
 nodeClasses.forEach((c) => {
 	nodeClassMap[c.name] = c;
 });
+
+// For backward compatibility
+/* tslint:disable:no-string-literal */
+nodeClasses["TopicQueue"] = TopicStore;
+nodeClasses["TopicState"] = TopicStore;
+/* tslint:enable:no-string-literal */
 
 // Parse input arguments
 

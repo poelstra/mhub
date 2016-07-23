@@ -13,7 +13,7 @@
 	"nodes": {
 		"default": "Exchange",
 		"state": {
-			"type": "TopicState",
+			"type": "TopicStore",
 			"options": {
 				"persistent": true
 			}

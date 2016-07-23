@@ -6,15 +6,15 @@ import { Storage, getDefaultStorage } from "../storage";
 
 import log from "../log";
 
-export interface TopicStateOptions extends pubsub.BaseSource {
+export interface TopicStoreOptions extends pubsub.BaseSource {
 	pattern?: string | string[]; // Topic patterns to memorize, defaults to all topics
 	persistent?: boolean; // If true, state will be persisted to storage (typically disk)
 }
 
-const TopicStateStorageID = "TopicStateStorage";
-const TopicStateStorageVersion = 1;
+const TopicStoreStorageID = "TopicStoreStorage";
+const TopicStoreStorageVersion = 1;
 
-interface TopicStateStorage {
+interface TopicStoreStorage {
 	type: string;
 	version: number;
 	state: KeyValues<Message>;
@@ -30,14 +30,14 @@ interface TopicStateStorage {
  * When a new Destination binds to this, all currently remembered topics are
  * sent to it.
  */
-export class TopicState extends pubsub.BaseSource {
+export class TopicStore extends pubsub.BaseSource {
 	public name: string;
 
 	private _state: KeyValues<Message> = Object.create(null);
 	private _matcher: Matcher;
-	private _storage: Storage<TopicStateStorage>;
+	private _storage: Storage<TopicStoreStorage>;
 
-	constructor(name: string, options?: TopicStateOptions) {
+	constructor(name: string, options?: TopicStoreOptions) {
 		super(name, options);
 		this.name = name;
 		this._matcher = getMatcher(options && options.pattern);
@@ -50,11 +50,14 @@ export class TopicState extends pubsub.BaseSource {
 		if (!this._storage) {
 			return Promise.resolve(undefined);
 		}
-		return this._storage.load(this.name).then((data?: TopicStateStorage) => {
+		return this._storage.load(this.name).then((data?: TopicStoreStorage) => {
 			if (!data || typeof data !== "object") {
 				return;
 			}
-			if (data.type !== TopicStateStorageID || data.version !== TopicStateStorageVersion) {
+			if (
+					(data.type !== TopicStoreStorageID && data.type !== "TopicStateStorage") ||
+					data.version !== TopicStoreStorageVersion
+				) {
 				console.log(`Warning: discarding invalid storage ID / version for node '${this.name}'`);
 				return;
 			}
@@ -80,8 +83,8 @@ export class TopicState extends pubsub.BaseSource {
 			}
 			if (this._storage) {
 				this._storage.save(this.name, {
-					type: TopicStateStorageID,
-					version: TopicStateStorageVersion,
+					type: TopicStoreStorageID,
+					version: TopicStoreStorageVersion,
 					state: this._state
 				});
 			}
@@ -96,4 +99,4 @@ export class TopicState extends pubsub.BaseSource {
 	}
 }
 
-export default TopicState;
+export default TopicStore;

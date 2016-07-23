@@ -325,7 +325,7 @@ Currently available node types and their options:
     (default all)
   * `persistent?: boolean`: Whether to persist this queue to disk (default
     false)
-* `TopicState`: Forwards all messages, but also stores the last message for each
+* `TopicStore`: Forwards all messages, but also stores the last message for each
   topic. New subscribers will receive that last message (and any future state)
   of the topics. Useful for storing (simple) configuration data (e.g. URLs of
   JSON APIs), initializing all connecting displays to the same state, etc.
