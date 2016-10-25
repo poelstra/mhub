@@ -6,6 +6,7 @@
 
 import * as fs from "fs";
 import * as path from "path";
+import Promise from "ts-promise";
 import { sync as mkdirpSync } from "mkdirp";
 
 import { KeyValues } from "./types";
@@ -56,7 +57,7 @@ export class SimpleFileStorage<T> implements Storage<T> {
 					if (err) {
 						reject(err);
 					} else {
-						resolve();
+						resolve(undefined);
 					}
 				}
 			);
@@ -66,7 +67,7 @@ export class SimpleFileStorage<T> implements Storage<T> {
 					if (err) {
 						reject(err);
 					} else {
-						resolve();
+						resolve(undefined);
 					}
 				});
 			});
@@ -132,7 +133,7 @@ export class ThrottledStorage<T> implements Storage<T> {
 					if (latestItem) {
 						resolve(this._slave.save(key, latestItem.lastValue));
 					} else {
-						resolve(); // already saved...
+						resolve(undefined); // already saved...
 					}
 				},
 				this._delay

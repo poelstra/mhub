@@ -1,3 +1,5 @@
+import Promise from "ts-promise";
+
 import { KeyValues } from "../types";
 import * as pubsub from "../pubsub";
 import Message from "../message";

@@ -6,6 +6,7 @@
 "use strict";
 
 import * as minimatch from "minimatch";
+import Promise from "ts-promise";
 
 import Message from "./message";
 

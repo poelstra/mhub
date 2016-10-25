@@ -8,6 +8,8 @@
 
 "use strict";
 
+import Promise from "ts-promise";
+
 import Dict from "./dict";
 import * as pubsub from "./pubsub";
 

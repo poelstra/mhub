@@ -1,3 +1,5 @@
+import Promise from "ts-promise";
+
 import * as pubsub from "../pubsub";
 import Message from "../message";
 import { Matcher, getMatcher } from "../match";

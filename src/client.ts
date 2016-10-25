@@ -7,6 +7,7 @@
 import * as assert from "assert";
 import * as events from "events";
 import * as ws from "ws";
+import Promise, { Thenable } from "ts-promise";
 import Message from "./message";
 import { TlsOptions } from "./tls";
 import * as protocol from "./protocol";
@@ -16,11 +17,11 @@ const DEFAULT_PORT_WSS = 13901;
 const MAX_SEQ = 65536;
 
 interface Resolver<T> {
-	(v: T|PromiseLike<T>): void;
+	(v: T|Thenable<T>): void;
 }
 
 interface VoidResolver extends Resolver<void> {
-	(v?: PromiseLike<void>): void;
+	(v?: Thenable<void>): void;
 }
 
 /**
@@ -135,7 +136,7 @@ class MClient extends events.EventEmitter {
 			this._socket.close();
 			this._socket = undefined;
 		}
-		let closedRejection = Promise.reject(new Error("connection closed"));
+		let closedRejection = Promise.reject<never>(new Error("connection closed"));
 		for (let t in this._transactions) {
 			if (!this._transactions[t]) {
 				continue;
@@ -244,7 +245,7 @@ class MClient extends events.EventEmitter {
 		}
 		delete this._transactions[seqNr];
 		if (err) {
-			resolver(Promise.reject(err));
+			resolver(Promise.reject<never>(err));
 		} else {
 			resolver(msg);
 		}

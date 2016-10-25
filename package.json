@@ -56,7 +56,7 @@
     "minimatch": "^3.0.2",
     "mkdirp": "^0.5.1",
     "source-map-support": "^0.4.1",
-    "ts-promise": "^0.3.0",
+    "ts-promise": "^0.3.4",
     "ws": "^1.1.1",
     "yargs": "^4.7.1"
   },
