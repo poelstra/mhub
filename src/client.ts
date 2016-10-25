@@ -50,7 +50,7 @@ class MClient extends events.EventEmitter {
 		super();
 		// Prefix URL with "ws://" or "wss://" if needed
 		if (url.indexOf("://") < 0) {
-			if (tlsOptions.key || tlsOptions.pfx) {
+			if (tlsOptions && (tlsOptions.key || tlsOptions.pfx)) {
 				url = "wss://" + url;
 			} else {
 				url = "ws://" + url;
