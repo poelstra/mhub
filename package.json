@@ -12,7 +12,7 @@
     "mserver": "./bin/mhub-server"
   },
   "scripts": {
-    "test": "npm run lint && npm run mocha",
+    "test": "npm run -s lint && npm run -s mocha",
     "mocha": "mocha -R spec dist/test/",
     "start": "node ./bin/mhub-server",
     "lint": "tslint --format=verbose src/*.ts test/*.ts",
@@ -20,11 +20,11 @@
     "watch:src": "tsc -p src/ --watch",
     "build:test": "tsc -p test/",
     "watch:test": "tsc -p test/ --watch",
-    "build": "npm run build:src && npm run build:test",
+    "build": "npm run -s build:src && npm run -s build:test",
     "watch:start": "mkdir -p dist/src/ && touch dist/src/mhub-server.js && nodemon ./bin/mhub-server --delay 1 --watch src/",
-    "watch": "parallelshell 'npm run watch:src' 'npm run watch:test' 'npm run watch:start'",
+    "watch": "parallelshell 'npm run -s watch:src' 'npm run -s watch:test' 'npm run -s watch:start'",
     "clean": "rimraf -rf dist",
-    "prepublish": "npm run lint && npm run build && npm run test"
+    "prepublish": "npm run -s lint && npm run -s build && npm run -s test"
   },
   "author": "Martin Poelstra <martin@beryllium.net>",
   "license": "MIT",
