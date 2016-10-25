@@ -10,3 +10,4 @@
 /.npmignore
 /.travis.yml
 /todo.txt
+/npm-debug.log
