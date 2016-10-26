@@ -108,8 +108,11 @@ class MClient extends events.EventEmitter {
 					case "error":
 						const errRes = <protocol.ErrorResponse>decoded;
 						const err = new Error("server error: " + errRes.message);
-						this._release(errRes.seq, err, decoded);
-						this.emit("error", err);
+						if (errRes.seq === undefined || !this._release(errRes.seq, err, decoded)) {
+							// Emit as a generic error when it could not be attributed to
+							// a specific request
+							this.emit("error", err);
+						}
 						break;
 					case "suback":
 					case "puback":
@@ -225,9 +228,7 @@ class MClient extends events.EventEmitter {
 			msg.seq = this._nextSeq();
 			this._transactions[msg.seq] = resolve;
 			if (!this._socket) {
-				var e = new Error("not connected");
-				this.emit("error", e);
-				throw e;
+				throw new Error("not connected");
 			}
 			this._socket.send(JSON.stringify(msg), (err?: Error) => {
 				if (err) {
@@ -238,10 +239,14 @@ class MClient extends events.EventEmitter {
 		});
 	}
 
-	private _release(seqNr: number, err: Error|void, msg?: protocol.Response): void {
+	/**
+	 * Resolve pending transaction promise (either fulfill or reject with error).
+	 * Returns true when the given sequence number was actually found.
+	 */
+	private _release(seqNr: number, err: Error|void, msg?: protocol.Response): boolean {
 		let resolver = this._transactions[seqNr];
 		if (!resolver) {
-			return;
+			return false;
 		}
 		delete this._transactions[seqNr];
 		if (err) {
@@ -249,6 +254,7 @@ class MClient extends events.EventEmitter {
 		} else {
 			resolver(msg);
 		}
+		return true;
 	}
 
 	private _nextSeq(): number {
