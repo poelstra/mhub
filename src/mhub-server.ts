@@ -94,7 +94,7 @@ const nodeClasses: ConstructableNode[] = [
 
 const nodeClassMap: { [className: string]: ConstructableNode } = {};
 nodeClasses.forEach((c) => {
-	nodeClassMap[c.name] = c;
+	nodeClassMap[(<any>c).name] = c;
 });
 
 // For backward compatibility

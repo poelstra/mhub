@@ -1,5 +1,4 @@
 {
-    "version": "1.7.5",
     "compilerOptions": {
         "target": "es5",
         "module": "commonjs",
@@ -11,42 +10,9 @@
         "preserveConstEnums": true,
         "suppressImplicitAnyIndexErrors": true,
         "sourceMap": true,
-        "outDir": "../dist/src/"
-    },
-    "filesGlob": [
-        "../typings/tsd.d.ts",
-        "./**/*.ts",
-        "./**/*.tsx"
-    ],
-    "files": [
-        "../typings/tsd.d.ts",
-        "./client.ts",
-        "./dict.ts",
-        "./hub.ts",
-        "./hubclient.ts",
-        "./index.ts",
-        "./log.ts",
-        "./logger.ts",
-        "./match.ts",
-        "./message.ts",
-        "./mhub-client.ts",
-        "./mhub-ping.ts",
-        "./mhub-server.ts",
-        "./nodes/consoleDestination.ts",
-        "./nodes/exchange.ts",
-        "./nodes/pingResponder.ts",
-        "./nodes/queue.ts",
-        "./nodes/testSource.ts",
-        "./nodes/topicStore.ts",
-        "./protocol.ts",
-        "./pubsub.ts",
-        "./storage.ts",
-        "./tls.ts",
-        "./transports/tcpconnection.ts",
-        "./transports/wsconnection.ts",
-        "./types.ts"
-    ],
-    "atom": {
-        "rewriteTsconfig": true
+        "outDir": "../dist/src/",
+        "types": [
+            "node"
+        ]
     }
 }

@@ -1,5 +1,4 @@
 {
-    "version": "1.7.5",
     "compilerOptions": {
         "target": "es5",
         "module": "commonjs",
@@ -11,18 +10,9 @@
         "preserveConstEnums": true,
         "suppressImplicitAnyIndexErrors": true,
         "sourceMap": true,
-        "outDir": "../dist/test/"
-    },
-    "filesGlob": [
-        "../typings/tsd-test.d.ts",
-        "./**/*.ts",
-        "./**/*.tsx"
-    ],
-    "files": [
-        "../typings/tsd-test.d.ts",
-        "./test-index.ts"
-    ],
-    "atom": {
-        "rewriteTsconfig": true
+        "outDir": "../dist/test/",
+        "types": [
+            "node", "mocha"
+        ]
     }
 }
