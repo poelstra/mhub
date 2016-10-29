@@ -754,6 +754,14 @@ before sending a pull-request.
 The list below shows notable changes between each release.
 For details, see the version tags at GitHub.
 
+0.6.0 (2016-10-29):
+- mhub-server: Add `logging` option to config file, defaults to `info`, deprecates `verbose`
+- mhub-server: Add `-l <level>` commandline option to override log level
+- MClient: Fix crash when tlsOptions object isn't given
+- MClient: Only emit generic error event when it's not specific to a certain
+  request, allows to gracefully handle e.g. subscription to non-existing node
+- MClient: Use ts-promise instead of native Promises
+
 0.5.0 (2016-07-23):
 - mhub-server: 'Raw' TCP support added (line-based JSON), default on port 13902
 - mhub-server: Multi-transport support added (e.g. websockets + secure
