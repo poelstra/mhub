@@ -31,7 +31,7 @@ export class TcpConnection {
 		socket.on("error", this._handleSocketError.bind(this));
 		socket.on("data", this._handleSocketData.bind(this));
 
-		log.write("[ %s ] connected", this._name);
+		log.info("[ %s ] connected", this._name);
 	}
 
 	private _handleClientResponse(response: protocol.Response): void {
@@ -40,11 +40,11 @@ export class TcpConnection {
 
 	private _handleSocketClose(): void {
 		this._client.close();
-		log.write(`[ ${this._name} ] disconnected`);
+		log.info(`[ ${this._name} ] disconnected`);
 	}
 
 	private _handleSocketError(e: Error): void {
-		log.write(`[ ${this._name} ] socket error ${e}`);
+		log.error(`[ ${this._name} ] socket error ${e}`);
 		this._socket.destroy(); // will cause close event, which causes client close
 	}
 
@@ -63,12 +63,12 @@ export class TcpConnection {
 			return;
 		}
 		// Process received line
-		log.write(`[ ${this._name} ] command ${line}`);
+		log.debug(`[ ${this._name} ] command ${line}`);
 		try {
 			const cmd: protocol.Command = JSON.parse(line);
 			this._client.processCommand(cmd);
 		} catch (e) {
-			log.write(`[ ${this._name} ] protocol error ${e}`);
+			log.error(`[ ${this._name} ] protocol error ${e}`);
 			this._handleClientResponse({
 				type: "error",
 				message: `protocol error: ${e}`

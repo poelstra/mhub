@@ -287,6 +287,26 @@ be forwarded.
 Note: don't edit the `server.conf.json` file directly, because any changes to it
 will be lost when you upgrade `mhub`. Edit a copy of the file instead.
 
+### Debug logging
+
+To assist in debugging message routing, start the server as:
+```sh
+mhub-server -l debug
+```
+
+Or set the `logging` option in the config file to `"debug"`:
+```js
+{
+    "logging": "debug" // or: none, fatal, error, warning, info (default)
+}
+```
+
+This will show incoming commands, message routing and outgoing commands,
+and adds timestamps to each line.
+
+Note: enabling debug mode will slow down message processing, especially
+on a Windows console. Don't expect your 60fps mouse tracking to work then.
+
 ### Node types
 
 MHub supports different types of nodes. When the nodes are given as an array of

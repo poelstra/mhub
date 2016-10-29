@@ -9,7 +9,7 @@
 			"port": 13902
 		}
 	],
-	"verbose": true,
+	"logging": "info",
 	"nodes": {
 		"default": "Exchange",
 		"state": {

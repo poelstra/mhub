@@ -7,7 +7,24 @@
 
 import * as util from "util";
 
-class Logger {
+export enum LogLevel {
+	None,
+	Fatal,
+	Error,
+	Warning,
+	Info,
+	Debug
+}
+
+export class Logger {
+	/**
+	 * Which level of messages to log.
+	 */
+	public logLevel: LogLevel = LogLevel.Info;
+
+	/**
+	 * Indentation for certain debug messages (message tracing).
+	 */
 	private indent: string = "";
 
 	/**
@@ -20,17 +37,44 @@ class Logger {
 		console.log(msg);
 	};
 
-	public write(fmt: string, ...args: any[]): void;
-	public write(...args: any[]): void {
-		if (this.onMessage) {
-			var msg = this.indent + util.format.apply(undefined, args);
-			this.onMessage(msg);
+	public fatal(fmt: string, ...args: any[]): void {
+		this.write(LogLevel.Fatal, fmt, ...args);
+	}
+
+	public error(fmt: string, ...args: any[]): void {
+		this.write(LogLevel.Error, fmt, ...args);
+	}
+
+	public warning(fmt: string, ...args: any[]): void {
+		this.write(LogLevel.Warning, fmt, ...args);
+	}
+
+	public info(fmt: string, ...args: any[]): void {
+		this.write(LogLevel.Info, fmt, ...args);
+	}
+
+	public debug(fmt: string, ...args: any[]): void {
+		this.write(LogLevel.Debug, this.indent + fmt, ...args);
+	}
+
+	public write(level: LogLevel, fmt: string, ...args: any[]): void;
+	public write(level: LogLevel, ...args: any[]): void {
+		if (!this.onMessage || level > this.logLevel) {
+			return;
 		}
+		// Prefix log level character (e.g. [E])
+		args[0] = `[${LogLevel[level][0]}] ${args[0]}`;
+		// In debug mode, prefix timestamp before that
+		if (this.logLevel === LogLevel.Debug) {
+			args[0] = `${new Date().toISOString()} ${args[0]}`;
+		}
+		var msg = util.format.apply(undefined, args);
+		this.onMessage(msg);
 	}
 
 	public push(fmt: string, ...args: any[]): void;
 	public push(...args: any[]): void {
-		this.write.apply(this, args);
+		this.debug.apply(this, args);
 		this.indent += "  ";
 	}
 

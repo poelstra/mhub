@@ -32,7 +32,7 @@ class SubscriptionNode implements pubsub.Destination {
 	}
 
 	public send(message: Message): void {
-		log.write("-> %s", this.name, message.topic);
+		log.debug("-> %s", this.name, message.topic);
 		const response: protocol.MessageResponse = {
 			type: "message",
 			topic: message.topic,
@@ -120,11 +120,11 @@ export class HubClient extends events.EventEmitter {
 				}
 			}
 		} catch (e) {
-			log.write("[ %s ] decode error: ", this.name, e);
+			log.error("[ %s ] decode error: ", this.name, e);
 			errorMessage = "decode error: " + String(e);
 		}
 		if (errorMessage) {
-			log.write(`[ ${this.name} ] error: ${errorMessage}`);
+			log.error(`[ ${this.name} ] error: ${errorMessage}`);
 			response = {
 				type: "error",
 				message: errorMessage,

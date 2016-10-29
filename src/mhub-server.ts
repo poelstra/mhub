@@ -24,6 +24,7 @@ import WSConnection from "./transports/wsconnection";
 import TcpConnection from "./transports/tcpconnection";
 import { KeyValues } from "./types";
 import { TlsOptions, replaceKeyFiles } from "./tls";
+import { LogLevel } from "./logger";
 
 import log from "./log";
 
@@ -60,13 +61,14 @@ interface Config {
 	listen?: ListenOptions | ListenOptions[];
 	port?: number;
 	verbose?: boolean;
+	logging?: "none" | "fatal" | "error" | "warning" | "info" | "debug";
 	bindings?: Binding[];
 	nodes: string[] | { [nodeName: string]: string | NodeDefinition; };
 	storage: string;
 }
 
 function die(...args: any[]): void {
-	console.error.apply(this, args);
+	log.fatal.apply(log, args);
 	process.exit(1);
 }
 
@@ -103,6 +105,9 @@ nodeClasses["TopicQueue"] = TopicStore;
 nodeClasses["TopicState"] = TopicStore;
 /* tslint:enable:no-string-literal */
 
+// Build list of valid log level names (e.g. none, fatal, error, ...)
+const logLevelNames = Object.keys(LogLevel).filter(s => !/\d+/.test(s)).map(s => s.toLowerCase());
+
 // Parse input arguments
 
 var args = yargs
@@ -116,6 +121,11 @@ var args = yargs
 		type: "string",
 		alias: "config",
 		description: "Filename of config, uses mhub's server.conf.json by default",
+	})
+	.option("l", {
+		type: "string",
+		alias: "loglevel",
+		description: "Override log level in config file. Valid options: " + logLevelNames.join(", "),
 	})
 	.strict()
 	.argv;
@@ -135,13 +145,29 @@ try {
 	die(`Cannot parse config file '${configFile}':`, e);
 }
 
-// Enable verbose logging by default, can be explicitly set to enabled/disabled
-// in the config file
-if (config.verbose !== undefined && !config.verbose) {
-	log.onMessage = undefined;
+// Historically, verbose logging was the default.
+// Then, the config.verbose option was introduced, again kept as the default.
+// Now, we have the config.logging option which is more flexible and is used
+// whenever available.
+// This can then be overriden using the commandline.
+const logLevelName = args.loglevel || config.logging;
+if (config.logging) {
+	// Convert config.logging to a LogLevel
+	const found = Object.keys(LogLevel).some((s) => {
+		if (s.toLowerCase() === logLevelName) {
+			log.logLevel = LogLevel[s];
+			return true;
+		}
+		return false;
+	});
+	if (!found) {
+		die(`Invalid log level '${logLevelName}', expected one of: ${logLevelNames.join(", ")}`);
+	}
+} else if (config.verbose === undefined || config.verbose) {
+	log.logLevel = LogLevel.Debug;
 }
 
-log.write("Using config file " + configFile);
+log.info("Using config file " + configFile);
 
 // 'Normalize' config and convert paths to their contents
 if (!config.nodes) {
@@ -262,7 +288,7 @@ function startWebSocketServer(options: WSServerOptions): Promise<void> {
 		});
 
 		server.listen(options.port, (): void => {
-			log.write("WebSocket Server started on port " + options.port, useTls ? "(TLS)" : "");
+			log.info("WebSocket Server started on port " + options.port, useTls ? "(TLS)" : "");
 			resolve(undefined);
 		});
 
@@ -288,7 +314,7 @@ function startTcpServer(options: TcpServerOptions): Promise<void> {
 				backlog: options.backlog,
 			},
 			(): void => {
-				log.write("TCP Server started on port " + options.port);
+				log.info("TCP Server started on port " + options.port);
 				resolve(undefined);
 			}
 		);
