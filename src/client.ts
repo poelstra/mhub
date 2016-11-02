@@ -172,21 +172,32 @@ class MClient extends events.EventEmitter {
 		}
 	}
 
+	/**
+	 * Defer calling of events to next tick, to prevent e.g. errors
+	 * in handlers from interfering with client state, and to
+	 * prevent hard-to-debug async weirdness.
+	 */
+	private _asyncEmit(event: string, ...args: any[]): void {
+		Promise.resolve().then(() => {
+			this.emit(event, ...args);
+		});
+	}
+
 	private _handleSocketOpen(): void {
-		this.emit("open");
+		this._asyncEmit("open");
 	}
 
 	private _handleSocketError(err: any): void {
 		if (!(err instanceof Error)) {
 			err = new Error("WebSocket error: " + err);
 		}
-		this.emit("error", err);
+		this._asyncEmit("error", err);
 	}
 
 	private _handleSocketClose(): void {
 		// Emit `close` event when socket is closed (i.e. not just when
 		// `close()` is called without being connected yet)
-		this.emit("close");
+		this._asyncEmit("close");
 		// Discard socket, abort pending transactions
 		this.close();
 	}
@@ -197,7 +208,7 @@ class MClient extends events.EventEmitter {
 			switch (decoded.type) {
 				case "message":
 					const msgRes = <protocol.MessageResponse>decoded;
-					this.emit(
+					this._asyncEmit(
 						"message",
 						new Message(msgRes.topic, msgRes.data, msgRes.headers),
 						msgRes.subscription
@@ -209,7 +220,7 @@ class MClient extends events.EventEmitter {
 					if (errRes.seq === undefined || !this._release(errRes.seq, err, decoded)) {
 						// Emit as a generic error when it could not be attributed to
 						// a specific request
-						this.emit("error", err);
+						this._asyncEmit("error", err);
 					}
 					break;
 				case "suback":
@@ -221,7 +232,7 @@ class MClient extends events.EventEmitter {
 					throw new Error("unknown message type: " + decoded!.type);
 			}
 		} catch (e) {
-			this.emit("error", new Error("message decode error: " + e.message));
+			this._asyncEmit("error", new Error("message decode error: " + e.message));
 		}
 	}
 
