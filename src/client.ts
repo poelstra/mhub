@@ -93,39 +93,7 @@ class MClient extends events.EventEmitter {
 		this._socket.on("error", (e: any): void => { this._handleSocketError(e); });
 		this._socket.on("open", (): void => { this._handleSocketOpen(); });
 		this._socket.on("close", (): void => { this._handleSocketClose(); });
-		this._socket.on("message", (data: string): void => {
-			try {
-				const decoded: protocol.Response = JSON.parse(data);
-				switch (decoded.type) {
-					case "message":
-						const msgRes = <protocol.MessageResponse>decoded;
-						this.emit(
-							"message",
-							new Message(msgRes.topic, msgRes.data, msgRes.headers),
-							msgRes.subscription
-						);
-						break;
-					case "error":
-						const errRes = <protocol.ErrorResponse>decoded;
-						const err = new Error("server error: " + errRes.message);
-						if (errRes.seq === undefined || !this._release(errRes.seq, err, decoded)) {
-							// Emit as a generic error when it could not be attributed to
-							// a specific request
-							this.emit("error", err);
-						}
-						break;
-					case "suback":
-					case "puback":
-						const ackDec = <protocol.PubAckResponse | protocol.SubAckResponse>decoded;
-						this._release(ackDec.seq, undefined, ackDec);
-						break;
-					default:
-						throw new Error("unknown message type: " + decoded!.type);
-				}
-			} catch (e) {
-				this.emit("error", new Error("message decode error: " + e.message));
-			}
-		});
+		this._socket.on("message", (data: string): void => { this._handleSocketMessage(data); });
 	}
 
 	/**
@@ -221,6 +189,40 @@ class MClient extends events.EventEmitter {
 		this.emit("close");
 		// Discard socket, abort pending transactions
 		this.close();
+	}
+
+	private _handleSocketMessage(data: string): void {
+		try {
+			const decoded: protocol.Response = JSON.parse(data);
+			switch (decoded.type) {
+				case "message":
+					const msgRes = <protocol.MessageResponse>decoded;
+					this.emit(
+						"message",
+						new Message(msgRes.topic, msgRes.data, msgRes.headers),
+						msgRes.subscription
+					);
+					break;
+				case "error":
+					const errRes = <protocol.ErrorResponse>decoded;
+					const err = new Error("server error: " + errRes.message);
+					if (errRes.seq === undefined || !this._release(errRes.seq, err, decoded)) {
+						// Emit as a generic error when it could not be attributed to
+						// a specific request
+						this.emit("error", err);
+					}
+					break;
+				case "suback":
+				case "puback":
+					const ackDec = <protocol.PubAckResponse | protocol.SubAckResponse>decoded;
+					this._release(ackDec.seq, undefined, ackDec);
+					break;
+				default:
+					throw new Error("unknown message type: " + decoded!.type);
+			}
+		} catch (e) {
+			this.emit("error", new Error("message decode error: " + e.message));
+		}
 	}
 
 	private _send(msg: protocol.Command): Promise<protocol.Response> {
