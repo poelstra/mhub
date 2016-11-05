@@ -178,7 +178,7 @@ class MClient extends events.EventEmitter {
 	 * prevent hard-to-debug async weirdness.
 	 */
 	private _asyncEmit(event: string, ...args: any[]): void {
-		Promise.resolve().then(() => {
+		Promise.resolve().done(() => {
 			this.emit(event, ...args);
 		});
 	}
