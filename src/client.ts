@@ -34,9 +34,18 @@ export interface MClientOptions extends TlsOptions {
 	 * constructor. Connect explicitly using `#connect()`.
 	 */
 	noImplicitConnect?: boolean;
+
+	/**
+	 * Number of milliseconds of idleness (i.e. no data
+	 * transmitted or received) before sending a ping to
+	 * the server. If it doesn't respond within that same
+	 * interval, the connection is closed with an error.
+	 */
+	keepalive?: number;
 }
 
 export const defaultClientOptions: MClientOptions = {
+	keepalive: 30000, // milliseconds
 };
 
 /**
@@ -55,6 +64,7 @@ class MClient extends events.EventEmitter {
 	private _socket: ws = undefined;
 	private _url: string;
 	private _options: MClientOptions;
+	private _idleTimer: any = undefined;
 	private _connected: boolean = false; // Prevent emitting `close` when not connected
 
 	/**
@@ -121,16 +131,32 @@ class MClient extends events.EventEmitter {
 
 	/**
 	 * Disconnect from MServer.
+	 * Pending requests will be rejected with an error.
 	 * If already disconnected, this becomes a no-op.
 	 *
 	 * Note: any existing subscriptions will be lost.
+	 *
+	 * Optionally pass an error to signal abrupt failure,
+	 * forcefully terminating the connection.
+	 * The same error will be used to reject any pending
+	 * requests.
+	 * @param error (optional) Error to emit, reject transactions with, and
+	 *              forcefully close connection.
 	 */
-	public close(): void {
+	public close(error?: Error): void {
 		if (this._socket) {
-			this._socket.close();
+			if (error) {
+				this._socket.terminate();
+			} else {
+				this._socket.close();
+			}
 			this._socket = undefined;
 		}
-		let closedRejection = Promise.reject<never>(new Error("connection closed"));
+		if (error) {
+			this._asyncEmit("error", error);
+		}
+		error = error || new Error("connection closed");
+		const closedRejection = Promise.reject<never>(error);
 		for (let t in this._transactions) {
 			if (!this._transactions[t]) {
 				continue;
@@ -233,6 +259,7 @@ class MClient extends events.EventEmitter {
 	private _handleSocketOpen(): void {
 		this._connected = true;
 		this._asyncEmit("open");
+		this._restartIdleTimer();
 	}
 
 	private _handleSocketError(err: any): void {
@@ -251,9 +278,11 @@ class MClient extends events.EventEmitter {
 		}
 		// Discard socket, abort pending transactions
 		this.close();
+		this._stopIdleTimer();
 	}
 
 	private _handleSocketMessage(data: string): void {
+		this._restartIdleTimer();
 		if (data === "") {
 			// Ignore empty lines
 			return;
@@ -297,6 +326,47 @@ class MClient extends events.EventEmitter {
 		}
 	}
 
+	/**
+	 * (Re-)start idle timer and send pings when connection is idle
+	 * for too long.
+	 */
+	private _restartIdleTimer(): void {
+		this._stopIdleTimer();
+		if (!this._socket) {
+			return;
+		}
+		this._idleTimer = setTimeout(
+			() => { this._idleTimer = undefined; this._handleIdleTimeout(); },
+			this._options.keepalive
+		);
+	}
+
+	private _stopIdleTimer(): void {
+		if (this._idleTimer !== undefined) {
+			clearTimeout(this._idleTimer);
+			this._idleTimer = undefined;
+		}
+	}
+
+	private _handleIdleTimeout(): void {
+		this.ping(this._options.keepalive)
+			.catch((e) => {
+				if (e && e.message === "server error: unknown node 'undefined'") {
+					// Older MHub didn't support ping, so ignore this error.
+					// (Additionally, all then-existing commands had to refer to a node.)
+					// TCP machinery will terminate the connection if needed.
+					// (Only doesn't work if this goes through proxies, and the
+					// connection after that is dead.)
+					return;
+				}
+				if (this._socket && this._socket.readyState === ws.OPEN) {
+					// Only close (and emit an error) when we (seemed to be)
+					// succesfully connected (i.e. prevent multiple errors).
+					this.close(e);
+				}
+			});
+	}
+
 	private _send(msg: protocol.Command): Promise<protocol.Response> {
 		return new Promise<protocol.Response>((resolve: () => void, reject: (err: Error) => void) => {
 			msg.seq = this._nextSeq();
@@ -304,6 +374,7 @@ class MClient extends events.EventEmitter {
 			if (!this._socket) {
 				throw new Error("not connected");
 			}
+			this._restartIdleTimer();
 			this._socket.send(JSON.stringify(msg), (err?: Error) => {
 				if (err) {
 					this._release(msg.seq, err);
