@@ -1,5 +1,5 @@
 /**
-* Connect TCP socket to an MServer hub.
+ * Connect TCP socket to an MServer hub.
  */
 
 "use strict";
@@ -71,7 +71,7 @@ export class TcpConnection {
 			log.error(`[ ${this._name} ] protocol error ${e}`);
 			this._handleClientResponse({
 				type: "error",
-				message: `protocol error: ${e}`
+				message: `protocol error: ${e}`,
 			});
 			this._socket.destroy();
 		}

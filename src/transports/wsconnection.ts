@@ -59,7 +59,7 @@ export class WSConnection {
 			log.error(`[ ${this._name} ] protocol error ${e}`);
 			this._handleClientResponse({
 				type: "error",
-				message: `protocol error: ${e}`
+				message: `protocol error: ${e}`,
 			});
 		}
 	}
