@@ -83,41 +83,45 @@ export class HubClient extends events.EventEmitter {
 			haveSeq = typeof msg === "object" && typeof msg.seq === "number";
 			seq = haveSeq ? msg.seq : undefined;
 
-			const node = this._hub.find(msg.node);
-			if (!node) {
-				errorMessage = `unknown node '${msg.node}'`;
-			} else if (msg.type === "publish") {
-				const pubCmd = <protocol.PublishCommand>msg;
-				if (!pubsub.isDestination(node)) {
-					errorMessage = `node '${msg.node}' is not a Destination`;
-				} else {
-					node.send(new Message(pubCmd.topic, pubCmd.data, pubCmd.headers));
-					if (haveSeq) {
-						response = {
-							type: "puback",
-							seq: seq,
-						};
+			if (msg.type === "publish" || msg.type === "subscribe") {
+				const node = this._hub.find(msg.node);
+				if (!node) {
+					errorMessage = `unknown node '${msg.node}'`;
+				} else if (msg.type === "publish") {
+					const pubCmd = <protocol.PublishCommand>msg;
+					if (!pubsub.isDestination(node)) {
+						errorMessage = `node '${msg.node}' is not a Destination`;
+					} else {
+						node.send(new Message(pubCmd.topic, pubCmd.data, pubCmd.headers));
+						if (haveSeq) {
+							response = {
+								type: "puback",
+								seq: seq,
+							};
+						}
+					}
+				} else { // msg.type === "subscribe"
+					const subCmd = <protocol.SubscribeCommand>msg;
+					if (!pubsub.isSource(node)) {
+						errorMessage = `node '${msg.node}' is not a Source`;
+					} else {
+						const id = subCmd.id || "default";
+						let sub = this._subscriptions.get(id);
+						if (!sub) {
+							sub = new SubscriptionNode(this, id, this._onResponseHandler);
+							this._subscriptions.set(id, sub);
+						}
+						sub.bind(node, subCmd.pattern);
+						if (haveSeq) {
+							response = {
+								type: "suback",
+								seq: seq,
+							};
+						}
 					}
 				}
-			} else if (msg.type === "subscribe") {
-				const subCmd = <protocol.SubscribeCommand>msg;
-				if (!pubsub.isSource(node)) {
-					errorMessage = `node '${msg.node}' is not a Source`;
-				} else {
-					const id = subCmd.id || "default";
-					let sub = this._subscriptions.get(id);
-					if (!sub) {
-						sub = new SubscriptionNode(this, id, this._onResponseHandler);
-						this._subscriptions.set(id, sub);
-					}
-					sub.bind(node, subCmd.pattern);
-					if (haveSeq) {
-						response = {
-							type: "suback",
-							seq: seq,
-						};
-					}
-				}
+			} else {
+				errorMessage = `unknown command '${msg!.type}'`;
 			}
 		} catch (e) {
 			log.error("[ %s ] decode error: ", this.name, e);
