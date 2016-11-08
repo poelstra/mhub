@@ -40,6 +40,7 @@ class MClient extends events.EventEmitter {
 	private _socket: ws = undefined;
 	private _url: string;
 	private _tlsOptions: TlsOptions;
+	private _connected: boolean = false; // Prevent emitting `close` when not connected
 
 	/**
 	 * Create new connection to MServer.
@@ -208,6 +209,7 @@ class MClient extends events.EventEmitter {
 	}
 
 	private _handleSocketOpen(): void {
+		this._connected = true;
 		this._asyncEmit("open");
 	}
 
@@ -219,9 +221,12 @@ class MClient extends events.EventEmitter {
 	}
 
 	private _handleSocketClose(): void {
-		// Emit `close` event when socket is closed (i.e. not just when
-		// `close()` is called without being connected yet)
-		this._asyncEmit("close");
+		if (this._connected) {
+			this._connected = false;
+			// Emit `close` event when socket is closed (i.e. not just when
+			// `close()` is called without being connected yet)
+			this._asyncEmit("close");
+		}
 		// Discard socket, abort pending transactions
 		this.close();
 	}
