@@ -47,6 +47,10 @@ export class WSConnection {
 	}
 
 	private _handleSocketMessage(data: string): void {
+		if (data === "") {
+			// Ignore empty lines
+			return;
+		}
 		log.debug(`[ ${this._name} ] command ${data}`);
 		try {
 			const cmd: protocol.Command = JSON.parse(data);

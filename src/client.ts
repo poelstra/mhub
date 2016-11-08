@@ -203,6 +203,10 @@ class MClient extends events.EventEmitter {
 	}
 
 	private _handleSocketMessage(data: string): void {
+		if (data === "") {
+			// Ignore empty lines
+			return;
+		}
 		try {
 			const decoded: protocol.Response = JSON.parse(data);
 			switch (decoded.type) {
