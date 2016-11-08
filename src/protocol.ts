@@ -103,6 +103,24 @@ export interface PublishCommand {
 }
 
 /**
+ * Check whether connection is still alive.
+ */
+export interface PingCommand {
+	/**
+	 * Type of command.
+	 */
+	type: "ping";
+	/**
+	 * Optional sequence number.
+	 * If a sequence number is given, a `PingResponse` will
+	 * be returned with the same sequence number.
+	 * If no sequence number is given, a `PingResponse` will
+	 * be returned without a sequence number.
+	 */
+	seq?: number;
+}
+
+/**
  * Inform client that a new message arrived at one of its subscriptions.
  * The `id` field of the `subscribe` command (or `"default"`, if it wasn't
  * specified) is echoed back in this message's `subscription` field.
@@ -165,6 +183,24 @@ export interface PubAckResponse {
 }
 
 /**
+ * Response to a `PingCommand`.
+ * Note: a server may also spontaneously send a PingAckResponse
+ * without a sequence number to check whether the (TCP-)connection
+ * is still alive. A client should ignore PingAckResponses
+ * without a sequence number.
+ */
+export interface PingAckResponse {
+	/**
+	 * Type of response.
+	 */
+	type: "pingack";
+	/**
+	 * Sequence number of original `PingCommand.seq`.
+	 */
+	seq?: number;
+}
+
+/**
  * Response to a failed command or other server error.
  * In case of a failed command, the sequence number of that command is given in
  * the `ErrorResponse`. If no sequence number was given in the command, or a
@@ -191,9 +227,9 @@ export interface ErrorResponse {
 /**
  * All supported commands (i.e. client to server).
  */
-export type Command = SubscribeCommand | PublishCommand;
+export type Command = SubscribeCommand | PublishCommand | PingCommand;
 
 /**
  * All supported responses (i.e. server to client)
  */
-export type Response = MessageResponse | SubAckResponse | PubAckResponse | ErrorResponse;
+export type Response = MessageResponse | SubAckResponse | PubAckResponse | PingAckResponse | ErrorResponse;

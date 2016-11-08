@@ -173,6 +173,30 @@ class MClient extends events.EventEmitter {
 	}
 
 	/**
+	 * Ping server.
+	 * Mostly used to check whether connection is still alive.
+	 * Note that the client will automatically send pings in the
+	 * absence of other communication, so there should be no need to
+	 * manually send pings.
+	 *
+	 * @param timeout (optional) Timeout in milliseconds before rejecting
+	 *                the promise with an error, or infinite if not given.
+	 */
+	public ping(timeout?: number): Promise<void> {
+		const pingResult = this._send(<protocol.PingCommand>{
+			type: "ping",
+		}).return();
+		if (timeout) {
+			return Promise.race([
+				Promise.delay(timeout).throw(new Error("ping timeout")),
+				pingResult,
+			]);
+		} else {
+			return pingResult;
+		}
+	}
+
+	/**
 	 * Defer calling of events to next tick, to prevent e.g. errors
 	 * in handlers from interfering with client state, and to
 	 * prevent hard-to-debug async weirdness.
@@ -231,6 +255,12 @@ class MClient extends events.EventEmitter {
 				case "puback":
 					const ackDec = <protocol.PubAckResponse | protocol.SubAckResponse>decoded;
 					this._release(ackDec.seq, undefined, ackDec);
+					break;
+				case "pingack":
+					const pingDec = <protocol.PingAckResponse>decoded;
+					if (pingDec.seq) { // ignore 'gratuitous' pings from the server
+						this._release(pingDec.seq, undefined, pingDec);
+					}
 					break;
 				default:
 					throw new Error("unknown message type: " + decoded!.type);

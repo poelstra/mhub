@@ -120,6 +120,11 @@ export class HubClient extends events.EventEmitter {
 						}
 					}
 				}
+			} else if (msg.type === "ping") {
+				response = <protocol.PingAckResponse>{
+					type: "pingack",
+					seq: seq,
+				};
 			} else {
 				errorMessage = `unknown command '${msg!.type}'`;
 			}
