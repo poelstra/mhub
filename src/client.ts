@@ -8,6 +8,7 @@ import * as assert from "assert";
 import * as events from "events";
 import * as ws from "ws";
 import Promise, { Thenable } from "ts-promise";
+import * as assign from "object-assign";
 import Message from "./message";
 import { TlsOptions } from "./tls";
 import * as protocol from "./protocol";
@@ -25,6 +26,20 @@ interface VoidResolver extends Resolver<void> {
 }
 
 /**
+ * Options to be passed to MClient constructor.
+ */
+export interface MClientOptions extends TlsOptions {
+	/**
+	 * When true, will not automatically connect in the
+	 * constructor. Connect explicitly using `#connect()`.
+	 */
+	noImplicitConnect?: boolean;
+}
+
+export const defaultClientOptions: MClientOptions = {
+};
+
+/**
  * MHub client.
  *
  * Allows subscribing and publishing to MHub server nodes.
@@ -39,20 +54,25 @@ class MClient extends events.EventEmitter {
 	private _seqNo: number = 0;
 	private _socket: ws = undefined;
 	private _url: string;
-	private _tlsOptions: TlsOptions;
+	private _options: MClientOptions;
 	private _connected: boolean = false; // Prevent emitting `close` when not connected
 
 	/**
 	 * Create new connection to MServer.
 	 * @param url Websocket URL of MServer, e.g. ws://localhost:13900
-	 * @param tlsOptions Optional TLS settings (see
-	 *        https://nodejs.org/dist/latest-v6.x/docs/api/tls.html#tls_tls_connect_port_host_options_callback)
+	 * @param options Optional TLS settings and other options (see
+	 *        https://nodejs.org/dist/latest-v6.x/docs/api/tls.html#tls_tls_connect_port_host_options_callback
+	 *        for the TLS settings, and `MClientOptions` for other options)
 	 */
-	constructor(url: string, tlsOptions?: TlsOptions) {
+	constructor(url: string, options?: MClientOptions) {
 		super();
+
+		// Ensure options is an object and fill in defaults
+		options = assign({}, defaultClientOptions, options);
+
 		// Prefix URL with "ws://" or "wss://" if needed
 		if (url.indexOf("://") < 0) {
-			if (tlsOptions && (tlsOptions.key || tlsOptions.pfx)) {
+			if (options.key || options.pfx) {
 				url = "wss://" + url;
 			} else {
 				url = "ws://" + url;
@@ -64,8 +84,10 @@ class MClient extends events.EventEmitter {
 			url = url + ":" + (useTls ? DEFAULT_PORT_WSS : DEFAULT_PORT_WS);
 		}
 		this._url = url;
-		this._tlsOptions = tlsOptions;
-		this.connect();
+		this._options = options;
+		if (!this._options.noImplicitConnect) {
+			this.connect();
+		}
 	}
 
 	/**
@@ -90,7 +112,7 @@ class MClient extends events.EventEmitter {
 			return;
 		}
 
-		this._socket = new ws(this._url, <any>this._tlsOptions);
+		this._socket = new ws(this._url, <any>this._options);
 		this._socket.on("error", (e: any): void => { this._handleSocketError(e); });
 		this._socket.on("open", (): void => { this._handleSocketOpen(); });
 		this._socket.on("close", (): void => { this._handleSocketClose(); });
