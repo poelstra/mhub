@@ -5,7 +5,7 @@
 "use strict";
 
 import MClient from "./client";
-export { MClient };
 export default MClient;
+export * from "./client";
 
 export { default as Message } from "./message";

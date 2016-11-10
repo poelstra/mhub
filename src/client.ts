@@ -59,7 +59,7 @@ export const defaultClientOptions: MClientOptions = {
  * @event error(e: Error) Emitted when there was a connection, server or protocol error.
  * @event message(m: Message) Emitted when message was received (due to subscription).
  */
-class MClient extends events.EventEmitter {
+export class MClient extends events.EventEmitter {
 	private _transactions: { [seqNo: number]: Resolver<protocol.Response> } = {};
 	private _seqNo: number = 0;
 	private _socket: ws = undefined;
