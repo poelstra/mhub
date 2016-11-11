@@ -40,6 +40,7 @@ export interface MClientOptions extends TlsOptions {
 	 * transmitted or received) before sending a ping to
 	 * the server. If it doesn't respond within that same
 	 * interval, the connection is closed with an error.
+	 * Use 0 to disable.
 	 */
 	keepalive?: number;
 }
@@ -333,6 +334,9 @@ class MClient extends events.EventEmitter {
 	private _restartIdleTimer(): void {
 		this._stopIdleTimer();
 		if (!this._socket) {
+			return;
+		}
+		if (typeof this._options.keepalive !== "number" || this._options.keepalive <= 0) {
 			return;
 		}
 		this._idleTimer = setTimeout(
