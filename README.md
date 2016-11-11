@@ -754,6 +754,15 @@ before sending a pull-request.
 The list below shows notable changes between each release.
 For details, see the version tags at GitHub.
 
+0.7.0 (2016-11-11):
+- mhub-server / MClient: implement ping command
+- mhub-server: better handling of unknown messages
+- MClient: Events now emitted asynchronously
+- MClient: unhandled errors in event handlers will crash your program
+- MClient: automatic (configurable) keep-alive checking (e.g. for network disconnects)
+- MClient: don't emit close when connection was never established (e.g. on connection failure)
+- MClient: option to not start connecting in constructor
+
 0.6.0 (2016-10-29):
 - mhub-server: Add `logging` option to config file, defaults to `info`, deprecates `verbose`
 - mhub-server: Add `-l <level>` commandline option to override log level
