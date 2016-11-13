@@ -1,6 +1,7 @@
 /storage
 /support
 /test
+/dist/test
 /typings
 /tsd.json
 /tslint.json
