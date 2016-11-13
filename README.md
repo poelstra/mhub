@@ -2,17 +2,30 @@
 
 ## Introduction
 
-This project provides:
-* a simple message broker (`mhub-server`) for loosely coupling software components
-* accompanying command-line tools (`mhub-client`) for interacting with the server and
-* a library for communicating with the server using Javascript.
+[MHub](https://github.com/poelstra/mhub) is a simple, flexible message bus
+using a JSON-based protocol.
+It natively supports websockets, but also 'plain' TCP ports.
+
+Because both the protocol and the messages use JSON, this makes it very
+powerful, yet still simple enough to be directly implemented in e.g. a
+microcontroller.
 
 It can be used as a lightweight Javascript-only alternative to e.g. RabbitMQ or
 MQTT.
 
-Specifically, it was built to support the use-cases of FIRST Lego League
-tournaments. It's supported by the [Display System](https://github.com/FirstLegoLeague/displaySystem),
-and more components are coming.
+This project provides:
+* a message broker (`mhub-server`) for loosely coupling software components
+* accompanying command-line tools (`mhub-client`) for interacting with the server and
+* a library for communicating with the server using Javascript.
+
+## Packages using MHub
+
+* [MHub for Node-RED](https://github.com/poelstra/node-red-contrib-mhub): MHub publish/subscribe nodes for [Node-RED](https://nodered.org/)
+* [MHub Relay](https://github.com/poelstra/mhub-relay): advanced message routing/transformation between MHub servers (see below)
+* FIRST Lego League tournament software
+  * [Display System](https://github.com/FirstLegoLeague/displaySystem)
+  * [Scoring](https://github.com/FirstLegoLeague/fllscoring)
+* Arduino library (not published yet, contact [me](martin@beryllium.net) if interested)
 
 ## Concepts
 
@@ -267,11 +280,10 @@ tweet stream some_topic --json | mhub-client -t twitter:add -i json
 The above examples all use the bundled commandline tools to achieve simple
 message routing.
 
-For more advanced scenario's you can use  [mhub-relay](https://github.com/poelstra/mhub-relay).
-
-This allows you to connect to one or more MHub servers, subscribe to nodes,
-optionally transform messages (using simple JavaScript functions), and publish
-them to other nodes.
+For more advanced scenario's you can use e.g.:
+* [MHub for Node-RED](https://github.com/poelstra/node-red-contrib-mhub): a visual programming tool for the Internet of Things
+* [mhub-relay](https://github.com/poelstra/mhub-relay): allows you to connect to one or more MHub servers, subscribe to nodes,
+  optionally transform messages (using simple JavaScript functions), and publish them to other nodes.
 
 ## Customizing server nodes and bindings
 
@@ -434,6 +446,9 @@ See https://nodejs.org/dist/latest-v6.x/docs/api/tls.html#tls_tls_createserver_o
 for details on the supported options. Options that accept a Buffer (or array of
 Buffers) need to be specified as filename(s) in the configuration file.
 
+For testing purposes, it can be useful to look at [certificates for localhost](https://github.com/Daplie/localhost.daplie.com-certificates).
+When using these, use `{ "type": "websocket", "port": 13901, "key": "privkey.pem", "cert": "fullchain.pem" }`.
+
 On `mhub-client`, to enable TLS, specify a `wss://` URL.
 To use client certificates, either pass `--key`, `--cert` and `--ca` options,
 or the `--pfx` option.
@@ -474,7 +489,7 @@ It is possible (and advisable) to also listen for the `close` event to reconnect
 (after some time) to the server in case the connection is lost. Note: any
 subscriptions will have to be recreated upon reconnection.
 
-For use in the browser, [browserify](http://browserify.org/) is recommended.
+For use in the browser, use e.g. [browserify](http://browserify.org/) or [webpack](https://webpack.github.io/),
 
 API doc for MClient:
 ```ts
@@ -738,11 +753,8 @@ adds strong typing on top of plain Javascript. It should mostly be familiar to
 Javascript developers.
 
 You can edit the `.ts` files with any editor you like, but to profit from things
-like code-completion ('IntelliSense'), I recommend using e.g. GitHub's
-[Atom Editor](https://atom.io/) using the awesome
-[Atom Typescript](https://github.com/TypeStrong/atom-typescript) plugin.
-In SublimeText, use e.g.
-[Microsoft's Typescript plugin](https://packagecontrol.io/packages/TypeScript).
+like code-completion and inline documentation, I recommend using [Visual Studio Code](https://code.visualstudio.com/).
+If you like SublimeText, use e.g. [Microsoft's Typescript plugin](https://packagecontrol.io/packages/TypeScript).
 
 For other editors, to get automatic compilation and live-reload, run `npm watch`.
 
