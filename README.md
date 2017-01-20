@@ -766,6 +766,9 @@ before sending a pull-request.
 The list below shows notable changes between each release.
 For details, see the version tags at GitHub.
 
+0.7.1 (2017-01-20):
+- mhub-server: Handle multiple simultaneous lines received on raw tcp socket
+
 0.7.0 (2016-11-11):
 - mhub-server / MClient: implement ping command
 - mhub-server: better handling of unknown messages
