@@ -49,31 +49,36 @@ export class TcpConnection {
 	}
 
 	private _handleSocketData(chunk: string): void {
-		// Split into complete lines
+		// Add new chunk to buffer, start looking for lines
+		// in buffer
 		this._buffer += chunk;
-		const p = this._buffer.indexOf("\n");
-		if (p < 0) {
-			// No complete line received yet
-			return;
-		}
-		const line = this._buffer.substr(0, p - 1).trim();
-		this._buffer = this._buffer.substr(p + 1);
-		if (!line) {
-			// Ignore empty lines
-			return;
-		}
-		// Process received line
-		log.debug(`[ ${this._name} ] command ${line}`);
-		try {
-			const cmd: protocol.Command = JSON.parse(line);
-			this._client.processCommand(cmd);
-		} catch (e) {
-			log.error(`[ ${this._name} ] protocol error ${e}`);
-			this._handleClientResponse({
-				type: "error",
-				message: `protocol error: ${e}`,
-			});
-			this._socket.destroy();
+		while (this._buffer.length > 0) {
+			const p = this._buffer.indexOf("\n");
+			if (p < 0) {
+				// Incomplete line, keep it in buffer for now
+				break;
+			}
+			// Strip first line from buffer
+			const line = this._buffer.substr(0, p).trim();
+			this._buffer = this._buffer.substr(p + 1);
+			if (!line) {
+				// Ignore empty lines
+				continue;
+			}
+			// Process line
+			log.debug(`[ ${this._name} ] command ${line}`);
+			try {
+				const cmd: protocol.Command = JSON.parse(line);
+				this._client.processCommand(cmd);
+			} catch (e) {
+				log.error(`[ ${this._name} ] protocol error ${e}`);
+				this._handleClientResponse({
+					type: "error",
+					message: `protocol error: ${e}`,
+				});
+				this._socket.destroy();
+				break;
+			}
 		}
 	}
 }
