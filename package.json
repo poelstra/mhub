@@ -21,7 +21,7 @@
     "build:test": "tsc -p test/",
     "watch:test": "tsc -p test/ --watch",
     "build": "npm run -s build:src && npm run -s build:test",
-    "watch:start": "mkdir -p dist/src/ && touch dist/src/mhub-server.js && nodemon ./bin/mhub-server --delay 1 --watch src/",
+    "watch:start": "mkdir -p dist/src/ && touch dist/src/mhub-server.js && nodemon ./bin/mhub-server --delay 1 --watch dist/",
     "watch": "parallelshell 'npm run -s watch:src' 'npm run -s watch:test' 'npm run -s watch:start'",
     "clean": "rimraf -rf dist",
     "prepublish": "npm run -s lint && npm run -s build && npm run -s test"
