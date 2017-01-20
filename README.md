@@ -25,7 +25,7 @@ This project provides:
 * FIRST Lego League tournament software
   * [Display System](https://github.com/FirstLegoLeague/displaySystem)
   * [Scoring](https://github.com/FirstLegoLeague/fllscoring)
-* Arduino library (not published yet, contact [me](martin@beryllium.net) if interested)
+* Arduino library (not published yet, contact [me](https://github.com/poelstra) if interested)
 
 ## Concepts
 
