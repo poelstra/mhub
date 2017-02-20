@@ -118,16 +118,23 @@ export class MClient extends events.EventEmitter {
 	 * If connection is already active or pending, this is a no-op.
 	 * Note: a connection is already initiated when the constructor is called.
 	 */
-	public connect(): void {
-		if (this._socket) {
-			return;
+	public connect(): Promise<void> {
+		if (this._connected) {
+			return Promise.resolve();
 		}
 
-		this._socket = new ws(this._url, <any>this._options);
-		this._socket.on("error", (e: any): void => { this._handleSocketError(e); });
-		this._socket.on("open", (): void => { this._handleSocketOpen(); });
-		this._socket.on("close", (): void => { this._handleSocketClose(); });
-		this._socket.on("message", (data: string): void => { this._handleSocketMessage(data); });
+		return new Promise<void>((resolve, reject) => {
+			if (!this._socket) {
+				this._socket = new ws(this._url, <any>this._options);
+				this._socket.on("error", (e: any): void => { this._handleSocketError(e); });
+				this._socket.on("open", (): void => { this._handleSocketOpen(); });
+				this._socket.on("close", (): void => { this._handleSocketClose(); });
+				this._socket.on("message", (data: string): void => { this._handleSocketMessage(data); });
+			}
+
+			this._socket.once("open", resolve);
+			this._socket.once("error", reject);
+		});
 	}
 
 	/**
@@ -144,7 +151,7 @@ export class MClient extends events.EventEmitter {
 	 * @param error (optional) Error to emit, reject transactions with, and
 	 *              forcefully close connection.
 	 */
-	public close(error?: Error): void {
+	public close(error?: Error): Promise<void> {
 		if (this._socket) {
 			if (error) {
 				this._socket.terminate();
@@ -165,6 +172,14 @@ export class MClient extends events.EventEmitter {
 			this._transactions[t](closedRejection);
 		}
 		this._transactions = {};
+
+		if (!this._connected) {
+			return Promise.resolve();
+		} else {
+			return new Promise<void>((resolve) => {
+				this.once("close", resolve);
+			});
+		}
 	}
 
 	/**
