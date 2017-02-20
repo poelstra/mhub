@@ -196,7 +196,7 @@ export class MClient extends events.EventEmitter {
 			type: "login",
 			username,
 			password,
-		}).then(() => undefined);
+		}).return();
 	}
 
 	/**
@@ -213,7 +213,7 @@ export class MClient extends events.EventEmitter {
 			node: nodeName,
 			pattern: pattern,
 			id: id,
-		}).then(() => undefined);
+		}).return();
 	}
 
 	/**
@@ -242,7 +242,7 @@ export class MClient extends events.EventEmitter {
 				topic: message.topic,
 				data: message.data,
 				headers: message.headers,
-			}).then(() => undefined);
+			}).return();
 		} else {
 			return this._send(<protocol.PublishCommand>{
 				type: "publish",
@@ -250,7 +250,7 @@ export class MClient extends events.EventEmitter {
 				topic: args[0],
 				data: args[1],
 				headers: args[2],
-			}).then(() => undefined);
+			}).return();
 		}
 	}
 

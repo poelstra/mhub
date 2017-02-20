@@ -29,7 +29,7 @@ class Hub {
 				initPromises.push(node.init());
 			}
 		});
-		return Promise.all(initPromises).then(() => { /* nop */ });
+		return Promise.all(initPromises).return();
 	}
 
 	public add(node: pubsub.BaseNode): void {
