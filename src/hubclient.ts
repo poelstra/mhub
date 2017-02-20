@@ -62,6 +62,7 @@ export class HubClient extends events.EventEmitter {
 	public name: string; // TODO move this to higher layer?
 	private _hub: Hub;
 	private _subscriptions: Dict<SubscriptionNode> = new Dict<SubscriptionNode>();
+	private _username: string;
 
 	constructor(hub: Hub, name: string) {
 		super();
@@ -72,6 +73,10 @@ export class HubClient extends events.EventEmitter {
 	public close(): void {
 		this._subscriptions.forEach((subscription) => subscription.destroy());
 		this._subscriptions.clear();
+	}
+
+	public setUsername(username: string): void {
+		this._username = username;
 	}
 
 	public processCommand(msg: protocol.Command): void {
@@ -125,6 +130,26 @@ export class HubClient extends events.EventEmitter {
 					type: "pingack",
 					seq: seq,
 				};
+			} else if (msg.type === "login") {
+				if (this._username !== undefined) {
+					// Wouldn't really be a problem for now, but may be in
+					// the future if e.g. different users have different quota
+					// etc.
+					errorMessage = "already logged in";
+				} else {
+					const authenticated = this._hub.authenticate(msg.username, msg.password);
+					if (!authenticated) {
+						errorMessage = "authentication failed";
+					} else {
+						this.setUsername(msg.username);
+						if (haveSeq) {
+							response = <protocol.LoginAckResponse>{
+								type: "loginack",
+								seq: seq,
+							};
+						}
+					}
+				}
 			} else {
 				errorMessage = `unknown command '${msg!.type}'`;
 			}

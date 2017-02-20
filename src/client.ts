@@ -168,6 +168,23 @@ export class MClient extends events.EventEmitter {
 	}
 
 	/**
+	 * Login to server using username/password.
+	 *
+	 * Warning: the username and password are sent in plain text.
+	 * Only use this on secure connections such as wss://.
+	 *
+	 * @param username Username.
+	 * @param password Password.
+	 */
+	public login(username: string, password: string): Promise<void> {
+		return this._send(<protocol.LoginCommand>{
+			type: "login",
+			username,
+			password,
+		}).then(() => undefined);
+	}
+
+	/**
 	 * Subscribe to a node. Emits the "message" event when a message is received for this
 	 * subscription.
 	 *
@@ -310,7 +327,8 @@ export class MClient extends events.EventEmitter {
 					break;
 				case "suback":
 				case "puback":
-					const ackDec = <protocol.PubAckResponse | protocol.SubAckResponse>decoded;
+				case "loginack":
+					const ackDec = <protocol.PubAckResponse | protocol.SubAckResponse | protocol.LoginAckResponse>decoded;
 					this._release(ackDec.seq, undefined, ackDec);
 					break;
 				case "pingack":

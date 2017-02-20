@@ -121,6 +121,38 @@ export interface PingCommand {
 }
 
 /**
+ * Authenticate using basic username/password.
+ * Because the username and password are sent in plain-text,
+ * it is recommended to only use these across SSL links.
+ *
+ * If login succeeds, and a sequence number is given, a
+ * `LoginAckResponse` will be returned with the same sequence
+ * number.
+ * If login succeeds, and no sequence number is given,
+ * nothing will be returned.
+ * If login fails, ErrorResponse will be returned, with the
+ * sequence number if given.
+ */
+export interface LoginCommand {
+	/**
+	 * Type of command.
+	 */
+	type: "login";
+	/**
+	 * Optional sequence number.
+	 */
+	seq?: number;
+	/**
+	 * Username.
+	 */
+	username: string;
+	/**
+	 * Password.
+	 */
+	password: string;
+}
+
+/**
  * Inform client that a new message arrived at one of its subscriptions.
  * The `id` field of the `subscribe` command (or `"default"`, if it wasn't
  * specified) is echoed back in this message's `subscription` field.
@@ -201,6 +233,21 @@ export interface PingAckResponse {
 }
 
 /**
+ * Response to a successful `LoginCommand`.
+ * Only sent if the `LoginCommand` included a `seq` number.
+ */
+export interface LoginAckResponse {
+	/**
+	 * Type of response.
+	 */
+	type: "loginack";
+	/**
+	 * Sequence number of original `LoginCommand.seq`.
+	 */
+	seq?: number;
+}
+
+/**
  * Response to a failed command or other server error.
  * In case of a failed command, the sequence number of that command is given in
  * the `ErrorResponse`. If no sequence number was given in the command, or a
@@ -227,9 +274,9 @@ export interface ErrorResponse {
 /**
  * All supported commands (i.e. client to server).
  */
-export type Command = SubscribeCommand | PublishCommand | PingCommand;
+export type Command = SubscribeCommand | PublishCommand | PingCommand | LoginCommand;
 
 /**
  * All supported responses (i.e. server to client)
  */
-export type Response = MessageResponse | SubAckResponse | PubAckResponse | PingAckResponse | ErrorResponse;
+export type Response = MessageResponse | SubAckResponse | PubAckResponse | PingAckResponse | LoginAckResponse | ErrorResponse;

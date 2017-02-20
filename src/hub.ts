@@ -10,11 +10,17 @@
 
 import Promise from "ts-promise";
 
+import { Authenticator } from "./authenticator";
 import Dict from "./dict";
 import * as pubsub from "./pubsub";
 
 class Hub {
 	private _nodes: Dict<pubsub.BaseNode> = new Dict<pubsub.BaseNode>();
+	private _authenticator: Authenticator;
+
+	public setAuthenticator(authenticator: Authenticator): void {
+		this._authenticator = authenticator;
+	}
 
 	public init(): Promise<void> {
 		const initPromises: Promise<void>[] = [];
@@ -45,6 +51,13 @@ class Hub {
 	public findDestination(nodeName: string): pubsub.Destination | undefined {
 		const n = this.find(nodeName);
 		return pubsub.isDestination(n) ? n : undefined;
+	}
+
+	public authenticate(username: string, password: string): boolean {
+		if (!this._authenticator) {
+			throw new Error("missing authenticator");
+		}
+		return this._authenticator.authenticate(username, password);
 	}
 }
 
