@@ -19,6 +19,7 @@ import * as ws from "ws";
 import Promise from "ts-promise";
 import * as pubsub from "./pubsub";
 import * as storage from "./storage";
+import { PlainAuthenticator } from "./authenticator";
 import Hub from "./hub";
 import WSConnection from "./transports/wsconnection";
 import TcpConnection from "./transports/tcpconnection";
@@ -65,6 +66,7 @@ interface Config {
 	bindings?: Binding[];
 	nodes: string[] | { [nodeName: string]: string | NodeDefinition; };
 	storage?: string;
+	users?: string | { [username: string]: string };
 }
 
 function die(...args: any[]): void {
@@ -211,7 +213,30 @@ const storageRoot = path.resolve(path.dirname(configFile), config.storage || "./
 const simpleStorage = new storage.ThrottledStorage(new storage.SimpleFileStorage<any>(storageRoot));
 storage.setDefaultStorage(simpleStorage);
 
+// Create hub
+
 var hub = new Hub();
+
+// Initialize users
+
+const authenticator = new PlainAuthenticator();
+if (typeof config.users === "string") {
+	const usersFile = path.resolve(path.dirname(configFile), config.users);
+	try {
+		config.users = JSON.parse(fs.readFileSync(usersFile, "utf8"));
+	} catch (e) {
+		die(`Cannot parse users file '${configFile}':`, e);
+	}
+}
+if (config.users !== undefined) {
+	if (typeof config.users !== "object") {
+		die("Invalid configuration: `users` should be or point to an object containting username -> password pairs");
+	}
+	Object.keys(config.users).forEach((username: string) => {
+		authenticator.setUser(username, config.users[username]);
+	});
+}
+hub.setAuthenticator(authenticator);
 
 // Instantiate nodes from config file
 

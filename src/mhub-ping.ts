@@ -8,6 +8,7 @@ import "source-map-support/register";
 
 import * as yargs from "yargs";
 import * as path from "path";
+import Promise from "ts-promise";
 import MClient from "./client";
 import Message from "./message";
 import { TlsOptions, replaceKeyFiles } from "./tls";
@@ -92,10 +93,20 @@ var argv = yargs
 		type: "string",
 		description: "List of ciphers to use or exclude, separated by :",
 	})
+	.option("U", {
+		type: "string",
+		alias: "username",
+		description: "Username",
+	})
+	.option("P", {
+		type: "string",
+		alias: "password",
+		description: "Password. Note: sent in plain-text, so only use on secure connection. Also note it may appear in e.g. `ps` output.",
+	})
 	.strict()
 	.argv;
 
-function createClient(): MClient {
+function createClient(): Promise<MClient> {
 	let tlsOptions: TlsOptions = {};
 	tlsOptions.pfx = argv.pfx;
 	tlsOptions.key = argv.key;
@@ -106,7 +117,17 @@ function createClient(): MClient {
 	tlsOptions.ciphers = argv.ciphers;
 	tlsOptions.rejectUnauthorized = !argv.insecure;
 	replaceKeyFiles(tlsOptions, process.cwd());
-	return new MClient(argv.socket, tlsOptions);
+
+	const client = new MClient(argv.socket, tlsOptions);
+	client.on("error", (e: Error): void => {
+		die("Client error:", e);
+	});
+
+	return client.connect().then(() => {
+		if (argv.username) {
+			return client.login(argv.username, argv.password || "");
+		}
+	}).return(client);
 }
 
 var data: any;
@@ -129,28 +150,25 @@ try {
 
 var pingCount = argv.count;
 
-var client = createClient();
-client.on("error", (e: Error): void => {
-	die("Socket error:", e);
-});
-client.on("open", (): void => {
+createClient().then((client) => {
+	client.on("message", (msg: Message): void => {
+		var reply = JSON.stringify(msg.data);
+		if (argv.data === reply) {
+			console.timeEnd("pong"); // tslint:disable-line:no-console
+			if (pingCount > 0) {
+				ping();
+			} else {
+				client.close();
+			}
+		}
+	});
+
+	function ping(): void {
+		pingCount--;
+		console.time("pong"); // tslint:disable-line:no-console
+		client.publish(argv.node, "ping:request", data, headers);
+	}
+
 	client.subscribe(argv.node, "ping:response");
 	ping();
-});
-client.on("message", (msg: Message): void => {
-	var reply = JSON.stringify(msg.data);
-	if (argv.data === reply) {
-		console.timeEnd("pong"); // tslint:disable-line:no-console
-		if (pingCount > 0) {
-			ping();
-		} else {
-			client.close();
-		}
-	}
-});
-
-function ping(): void {
-	pingCount--;
-	console.time("pong"); // tslint:disable-line:no-console
-	client.publish(argv.node, "ping:request", data, headers);
-}
+}).catch(die);

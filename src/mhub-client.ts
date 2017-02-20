@@ -8,6 +8,7 @@ import "source-map-support/register";
 
 import * as yargs from "yargs";
 import * as path from "path";
+import Promise from "ts-promise";
 import MClient from "./client";
 import Message from "./message";
 import { TlsOptions, replaceKeyFiles } from "./tls";
@@ -119,6 +120,16 @@ var args = yargs
 		type: "string",
 		description: "List of ciphers to use or exclude, separated by :",
 	})
+	.option("U", {
+		type: "string",
+		alias: "username",
+		description: "Username",
+	})
+	.option("P", {
+		type: "string",
+		alias: "password",
+		description: "Password. Note: sent in plain-text, so only use on secure connection. Also note it may appear in e.g. `ps` output.",
+	})
 	.strict();
 
 enum OutputFormat {
@@ -143,7 +154,7 @@ function parseOutputFormat(s: string): OutputFormat {
 	}
 }
 
-function createClient(argv: any): MClient {
+function createClient(argv: any): Promise<MClient> {
 	let tlsOptions: TlsOptions = {};
 	tlsOptions.pfx = argv.pfx;
 	tlsOptions.key = argv.key;
@@ -154,37 +165,43 @@ function createClient(argv: any): MClient {
 	tlsOptions.ciphers = argv.ciphers;
 	tlsOptions.rejectUnauthorized = !argv.insecure;
 	replaceKeyFiles(tlsOptions, process.cwd());
-	return new MClient(argv.socket, tlsOptions);
+
+	const client = new MClient(argv.socket, tlsOptions);
+	client.on("error", (e: Error): void => {
+		die("Client error:", e);
+	});
+
+	return client.connect().then(() => {
+		if (argv.username) {
+			return client.login(argv.username, argv.password || "");
+		}
+	}).return(client);
 }
 
 function listenMode(): void {
 	var argv = args.argv;
 	var format = parseOutputFormat(argv.output);
-	var client = createClient(argv);
-	client.on("open", (): void => {
-		client.subscribe(argv.node, argv.pattern);
-	});
-	client.on("message", (msg: Message): void => {
-		switch (format) {
-			case OutputFormat.Human:
-				console.log(msg);
-				break;
-			case OutputFormat.Text:
-				console.log(msg.data);
-				break;
-			case OutputFormat.JsonData:
-				console.log(JSON.stringify(msg.data));
-				break;
-			case OutputFormat.Json:
-				console.log(JSON.stringify(msg));
-				break;
-			default:
-				die("Unknown output format:", format);
-		}
-	});
-	client.on("error", (e: Error): void => {
-		die("Client error:", e);
-	});
+	createClient(argv).then((client) => {
+		client.on("message", (msg: Message): void => {
+			switch (format) {
+				case OutputFormat.Human:
+					console.log(msg);
+					break;
+				case OutputFormat.Text:
+					console.log(msg.data);
+					break;
+				case OutputFormat.JsonData:
+					console.log(JSON.stringify(msg.data));
+					break;
+				case OutputFormat.Json:
+					console.log(JSON.stringify(msg));
+					break;
+				default:
+					die("Unknown output format:", format);
+			}
+		});
+		return client.subscribe(argv.node, argv.pattern);
+	}).catch(die);
 }
 
 function postMode(): void {
@@ -210,14 +227,10 @@ function postMode(): void {
 		die("Error parsing message headers as JSON: " + e.message);
 	}
 
-	var client = createClient(argv);
-	client.on("open", (): void => {
+	createClient(argv).then((client) => {
 		let closer = () => client.close();
-		client.publish(argv.node, argv.topic, data, headers).then(closer, closer);
-	});
-	client.on("error", (e: Error): void => {
-		die("Client error:", e);
-	});
+		return client.publish(argv.node, argv.topic, data, headers).then(closer, closer);
+	}).catch(die);
 }
 
 enum InputFormat {
@@ -251,69 +264,65 @@ function pipeMode(): void {
 	}
 
 	var ended = false;
-	var client = createClient(argv);
-	var lineBuffer = "";
-	client.on("open", (): void => {
+	createClient(argv).then((client) => {
 		// Connection opened, start reading lines from stdin
 		process.stdin.setEncoding("utf8");
 		process.stdin.on("readable", onRead);
 		process.stdin.on("end", onEnd);
 
-	});
-	client.on("error", (e: Error): void => {
-		die("Client error:", e);
-	});
+		var lineBuffer = "";
 
-	function onRead(): void {
-		var chunk = process.stdin.read();
-		if (chunk === null) { // tslint:disable-line:no-null-keyword
-			return;
-		}
-		lineBuffer += chunk;
-		while (true) {
-			var p = lineBuffer.indexOf("\n");
-			if (p < 0) {
-				break;
+		function onRead(): void {
+			var chunk = process.stdin.read();
+			if (chunk === null) { // tslint:disable-line:no-null-keyword
+				return;
 			}
-			handleLine(lineBuffer.slice(0, p));
-			lineBuffer = lineBuffer.slice(p + 1);
-		}
-	}
-
-	function onEnd(): void {
-		ended = true;
-		if (lineBuffer !== "") {
-			// Make sure to post remaining line, if non-empty
-			handleLine(lineBuffer);
-		} else {
-			// Otherwise, we're done
-			client.close();
-		}
-	}
-
-	function handleLine(line: string): void {
-		// Strip trailing \r if necessary
-		if (line[line.length - 1] === "\r") {
-			line = line.slice(0, -1);
-		}
-		var data: any;
-		if (format === InputFormat.Json) {
-			try {
-				data = JSON.parse(line);
-			} catch (e) {
-				die("Error parsing line as JSON: " + e.message);
+			lineBuffer += chunk;
+			while (true) {
+				var p = lineBuffer.indexOf("\n");
+				if (p < 0) {
+					break;
+				}
+				handleLine(lineBuffer.slice(0, p));
+				lineBuffer = lineBuffer.slice(p + 1);
 			}
-		} else {
-			data = line;
 		}
 
-		let closer = () => {
-			if (ended) {
+		function onEnd(): void {
+			ended = true;
+			if (lineBuffer !== "") {
+				// Make sure to post remaining line, if non-empty
+				handleLine(lineBuffer);
+			} else {
+				// Otherwise, we're done
 				client.close();
 			}
-		};
-		client.publish(argv.node, argv.topic, data, headers).then(closer, closer);
-	}
+		}
+
+		function handleLine(line: string): void {
+			// Strip trailing \r if necessary
+			if (line[line.length - 1] === "\r") {
+				line = line.slice(0, -1);
+			}
+			var data: any;
+			if (format === InputFormat.Json) {
+				try {
+					data = JSON.parse(line);
+				} catch (e) {
+					die("Error parsing line as JSON: " + e.message);
+				}
+			} else {
+				data = line;
+			}
+
+			let closer = () => {
+				if (ended) {
+					client.close();
+				}
+			};
+			client.publish(argv.node, argv.topic, data, headers).then(closer, closer);
+		}
+	}).catch(die);
 }
 
 var argv = args.argv;
