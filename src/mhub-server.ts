@@ -64,7 +64,7 @@ interface Config {
 	logging?: "none" | "fatal" | "error" | "warning" | "info" | "debug";
 	bindings?: Binding[];
 	nodes: string[] | { [nodeName: string]: string | NodeDefinition; };
-	storage: string;
+	storage?: string;
 }
 
 function die(...args: any[]): void {
