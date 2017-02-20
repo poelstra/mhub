@@ -10,7 +10,7 @@
         "preserveConstEnums": true,
         "suppressImplicitAnyIndexErrors": true,
         "sourceMap": true,
-        "outDir": "../dist/test/",
+        "outDir": "../dist/",
         "types": [
             "node", "mocha"
         ]

@@ -48,6 +48,7 @@
   "devDependencies": {
     "@types/chai": "^3.4.34",
     "@types/mocha": "^2.2.32",
+    "chai": "^3.5.0",
     "mocha": "^2.5.3",
     "parallelshell": "^2.0.0",
     "tslint": "^3.12.1",
