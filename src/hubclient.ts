@@ -154,7 +154,6 @@ export class HubClient extends events.EventEmitter {
 				errorMessage = `unknown command '${msg!.type}'`;
 			}
 		} catch (e) {
-			log.error("[ %s ] decode error: ", this.name, e);
 			errorMessage = "decode error: " + String(e);
 		}
 		if (errorMessage) {
