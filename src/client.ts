@@ -408,7 +408,7 @@ export class MClient extends events.EventEmitter {
 		return new Promise<protocol.Response>((resolve: () => void, reject: (err: Error) => void) => {
 			msg.seq = this._nextSeq();
 			this._transactions[msg.seq] = resolve;
-			if (!this._socket) {
+			if (!this._socket || !this._connected) {
 				throw new Error("not connected");
 			}
 			this._restartIdleTimer();
