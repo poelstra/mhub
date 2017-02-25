@@ -8,7 +8,6 @@ import * as assert from "assert";
 import * as events from "events";
 import * as ws from "ws";
 import Promise, { Thenable } from "ts-promise";
-import * as assign from "object-assign";
 import Message from "./message";
 import { TlsOptions } from "./tls";
 import * as protocol from "./protocol";
@@ -79,7 +78,7 @@ export class MClient extends events.EventEmitter {
 		super();
 
 		// Ensure options is an object and fill in defaults
-		options = assign({}, defaultClientOptions, options);
+		options = {...defaultClientOptions, ...options};
 
 		// Prefix URL with "ws://" or "wss://" if needed
 		if (url.indexOf("://") < 0) {
