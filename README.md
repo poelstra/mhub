@@ -525,11 +525,11 @@ Example usage of subscribing to a node and sending a message:
 var MClient = require("mhub").MClient;
 var client = new MClient("ws://localhost:13900");
 client.on("message", function(message) {
-	console.log(message.topic, message.data, message.headers);
+    console.log(message.topic, message.data, message.headers);
 });
 client.on("open", function() {
-	client.subscribe("blib"); // or e.g. client.subscribe("blib", "my:*");
-	client.publish("blib", "my:topic", 42, { some: "header" });
+    client.subscribe("blib"); // or e.g. client.subscribe("blib", "my:*");
+    client.publish("blib", "my:topic", 42, { some: "header" });
 });
 ```
 
@@ -554,37 +554,59 @@ API doc for MClient:
  * @event error(e: Error) Emitted when there was a connection, server or protocol error.
  * @event message(m: Message) Emitted when message was received (due to subscription).
  */
-declare class MClient extends events.EventEmitter {
+export declare class MClient extends events.EventEmitter {
+    private _transactions;
+    private _seqNo;
+    private _socket;
+    private _url;
+    private _options;
+    private _idleTimer;
+    private _connected;
     /**
      * Create new connection to MServer.
      * @param url Websocket URL of MServer, e.g. ws://localhost:13900
-     * @param tlsOptions Optional TLS settings (see https://nodejs.org/dist/latest-v6.x/docs/api/tls.html#tls_tls_connect_port_host_options_callback)
+     * @param options Optional TLS settings and other options (see
+     *        https://nodejs.org/dist/latest-v6.x/docs/api/tls.html#tls_tls_connect_port_host_options_callback
+     *        for the TLS settings, and `MClientOptions` for other options)
      */
-    constructor(url: string, tlsOptions?: TlsOptions);
-
+    constructor(url: string, options?: MClientOptions);
     /**
      * Current Websocket, if any.
      * @return {ws} Websocket or `undefined`
      */
     readonly socket: ws;
-
     readonly url: string;
-
     /**
      * Connect to the MServer.
      * If connection is already active or pending, this is a no-op.
      * Note: a connection is already initiated when the constructor is called.
      */
-    connect(): void;
-
+    connect(): Promise<void>;
     /**
      * Disconnect from MServer.
+     * Pending requests will be rejected with an error.
      * If already disconnected, this becomes a no-op.
      *
      * Note: any existing subscriptions will be lost.
+     *
+     * Optionally pass an error to signal abrupt failure,
+     * forcefully terminating the connection.
+     * The same error will be used to reject any pending
+     * requests.
+     * @param error (optional) Error to emit, reject transactions with, and
+     *              forcefully close connection.
      */
-    close(): void;
-
+    close(error?: Error): Promise<void>;
+    /**
+     * Login to server using username/password.
+     *
+     * Warning: the username and password are sent in plain text.
+     * Only use this on secure connections such as wss://.
+     *
+     * @param username Username.
+     * @param password Password.
+     */
+    login(username: string, password: string): Promise<void>;
     /**
      * Subscribe to a node. Emits the "message" event when a message is received for this
      * subscription.
@@ -594,7 +616,6 @@ declare class MClient extends events.EventEmitter {
      * @param id       Optional subscription ID sent back with all matching messages
      */
     subscribe(nodeName: string, pattern?: string, id?: string): Promise<void>;
-
     /**
      * Publish message to a node.
      *
@@ -603,8 +624,9 @@ declare class MClient extends events.EventEmitter {
      * @param data  Message data
      * @param headers Message headers
      */
-    publish(nodeName: string, topic: string, data?: any, headers?: { [name: string]: string; }): Promise<void>;
-
+    publish(nodeName: string, topic: string, data?: any, headers?: {
+        [name: string]: string;
+    }): Promise<void>;
     /**
      * Publish message to a node.
      *
@@ -612,6 +634,35 @@ declare class MClient extends events.EventEmitter {
      * @param message Message object
      */
     publish(nodeName: string, message: Message): Promise<void>;
+    /**
+     * Ping server.
+     * Mostly used to check whether connection is still alive.
+     * Note that the client will automatically send pings in the
+     * absence of other communication, so there should be no need to
+     * manually send pings.
+     *
+     * @param timeout (optional) Timeout in milliseconds before rejecting
+     *                the promise with an error, or infinite if not given.
+     */
+    ping(timeout?: number): Promise<void>;
+}
+/**
+ * Options to be passed to MClient constructor.
+ */
+export interface MClientOptions extends TlsOptions {
+    /**
+     * When true, will not automatically connect in the
+     * constructor. Connect explicitly using `#connect()`.
+     */
+    noImplicitConnect?: boolean;
+    /**
+     * Number of milliseconds of idleness (i.e. no data
+     * transmitted or received) before sending a ping to
+     * the server. If it doesn't respond within that same
+     * interval, the connection is closed with an error.
+     * Use 0 to disable.
+     */
+    keepalive?: number;
 }
 export interface TlsOptions {
     pfx?: string | Buffer;
