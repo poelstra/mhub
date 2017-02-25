@@ -10,5 +10,6 @@
 /.gitignore
 /.npmignore
 /.travis.yml
+/.vscode/
 /todo.txt
 /npm-debug.log
