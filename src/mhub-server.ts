@@ -8,7 +8,6 @@
 
 import "source-map-support/register";
 
-import * as express from "express";
 import * as http from "http";
 import * as https from "https";
 import * as yargs from "yargs";
@@ -309,7 +308,6 @@ let connectionId = 0;
 function startWebSocketServer(options: WSServerOptions): Promise<void> {
 	return new Promise<void>((resolve, reject) => {
 		options = Object.create(options);
-		const app = express();
 
 		let server: http.Server | https.Server;
 		const useTls = !!(options.key || options.pfx);
@@ -317,9 +315,9 @@ function startWebSocketServer(options: WSServerOptions): Promise<void> {
 		options.port = options.port || (useTls ? DEFAULT_PORT_WS : DEFAULT_PORT_WSS);
 
 		if (useTls) {
-			server = https.createServer(options, app);
+			server = https.createServer(options);
 		} else {
-			server = http.createServer(app);
+			server = http.createServer();
 		}
 
 		const wss = new ws.Server({ server: <any>server, path: "/" });
