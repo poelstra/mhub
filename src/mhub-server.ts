@@ -20,7 +20,7 @@ import Promise from "ts-promise";
 import * as pubsub from "./pubsub";
 import * as storage from "./storage";
 import { PlainAuthenticator } from "./authenticator";
-import Hub from "./hub";
+import Hub, { UserRights } from "./hub";
 import WSConnection from "./transports/wsconnection";
 import TcpConnection from "./transports/tcpconnection";
 import { KeyValues } from "./types";
@@ -67,6 +67,7 @@ interface Config {
 	nodes: string[] | { [nodeName: string]: string | NodeDefinition; };
 	storage?: string;
 	users?: string | { [username: string]: string };
+	rights: UserRights;
 }
 
 function die(...args: any[]): void {
@@ -237,6 +238,20 @@ if (config.users !== undefined) {
 	});
 }
 hub.setAuthenticator(authenticator);
+
+// Set up user permissions
+
+if (config.rights === undefined && config.users === undefined) {
+	// Default rights: allow everyone to publish/subscribe.
+	hub.setRights({
+		"": {
+			publish: true,
+			subscribe: true,
+		},
+	});
+} else {
+	hub.setRights(config.rights || {});
+}
 
 // Instantiate nodes from config file
 

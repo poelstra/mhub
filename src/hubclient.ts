@@ -9,7 +9,7 @@ import * as events from "events";
 
 import log from "./log";
 
-import Hub from "./hub";
+import Hub, { Permissions } from "./hub";
 import * as protocol from "./protocol";
 import * as pubsub from "./pubsub";
 import Message from "./message";
@@ -63,11 +63,13 @@ export class HubClient extends events.EventEmitter {
 	private _hub: Hub;
 	private _subscriptions: Dict<SubscriptionNode> = new Dict<SubscriptionNode>();
 	private _username: string;
+	private _permissions: Permissions;
 
 	constructor(hub: Hub, name: string) {
 		super();
 		this._hub = hub;
 		this.name = name;
+		this._permissions = this._hub.getUserPermissions(""); // permissions for anonymous user
 	}
 
 	public close(): void {
@@ -77,6 +79,7 @@ export class HubClient extends events.EventEmitter {
 
 	public setUsername(username: string): void {
 		this._username = username;
+		this._permissions = this._hub.getUserPermissions(this._username);
 	}
 
 	public processCommand(msg: protocol.Command): void {
@@ -90,7 +93,9 @@ export class HubClient extends events.EventEmitter {
 
 			if (msg.type === "publish" || msg.type === "subscribe") {
 				const node = this._hub.find(msg.node);
-				if (!node) {
+				if (!this._permissions[msg.type]) {
+					errorMessage = "permission denied";
+				} else if (!node) {
 					errorMessage = `unknown node '${msg.node}'`;
 				} else if (msg.type === "publish") {
 					const pubCmd = <protocol.PublishCommand>msg;

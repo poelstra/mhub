@@ -14,12 +14,41 @@ import { Authenticator } from "./authenticator";
 import Dict from "./dict";
 import * as pubsub from "./pubsub";
 
-class Hub {
+export interface Permissions {
+	publish: boolean;
+	subscribe: boolean;
+}
+
+export type PartialPermissions = Partial<Permissions>;
+
+export interface UserRights {
+	[username: string]: PartialPermissions;
+}
+
+export const defaultPermissions: Permissions = {
+	publish: false,
+	subscribe: false,
+};
+
+export class Hub {
 	private _nodes: Dict<pubsub.BaseNode> = new Dict<pubsub.BaseNode>();
 	private _authenticator: Authenticator;
+	private _rights: Dict<PartialPermissions> = new Dict<PartialPermissions>();
 
 	public setAuthenticator(authenticator: Authenticator): void {
 		this._authenticator = authenticator;
+	}
+
+	public setRights(rights: UserRights): void {
+		this._rights.clear();
+		Object.keys(rights).forEach((user) => {
+			this._rights.set(user, rights[user]);
+		});
+	}
+
+	public getUserPermissions(username: string): Permissions {
+		const partialPermissions = this._rights.get(username);
+		return {...defaultPermissions, ...partialPermissions};
 	}
 
 	public init(): Promise<void> {

@@ -458,6 +458,57 @@ connect (`[Error: self signed certificate] code: 'DEPTH_ZERO_SELF_SIGNED_CERT'`)
 In that case, either pass the server's certificate to `--ca`, or (for testing
 purposes), use the `--insecure` option to ignore these errors.
 
+## User authentication
+
+By default, everyone is allowed to connect, publish and subscribe to all
+available MHub nodes and topics.
+
+MHub supports simple username/password authentication to lock this down.
+
+It is advised to only use these on secure (e.g. `wss://`) connections, as
+the username and password are sent in plain text.
+
+To configure users, add a `users` key to `server.conf.json`. It can either be
+a string which points to a JSON file (relative paths resolved to the location
+of the config file) containing an object of `{ "username": "password" }` pairs,
+or such an object can be directly given in the config file itself.
+
+Then, add a `rights` section to `server.conf.json` that specifies the rights
+(publish, subscribe) for each user, and the anonymous user (denoted by the
+empty string).
+
+For example:
+```js
+{
+    // Either specify the users 'inline' as such:
+    "users": {
+        "martin": "somePassword"
+    },
+
+    // Or, put that object in a file, and reference it like:
+    // "users": "users.json",
+
+    "rights": {
+        "": { // Anonymous/guest
+            "subscribe": true,
+            "publish": false
+        },
+        "martin": {
+            "subscribe": true,
+            "publish": true
+        }
+    }
+}
+```
+
+Note: if `users` and `rights` are omitted, everyone will have publish and
+subscribe rights. If only `users` is given, no-one will have any rights at
+all.
+
+The commandline tools support `-U` and `-P` options to pass a username and
+password. Be advised that the commandline (and thus password) may be visible
+to other users on the system through e.g. `ps`.
+
 ## Using MHub from Javascript
 
 Simply `npm install --save mhub` in your package, then require the client
