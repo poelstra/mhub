@@ -868,6 +868,12 @@ before sending a pull-request.
 The list below shows notable changes between each release.
 For details, see the version tags at GitHub.
 
+0.8.0 (2017-02-25):
+- protocol: Add plaintext username/password authentication
+- mhub-server: Add users and publish/subscribe permissions
+- MClient: connect() and close() now return promises
+- MClient: fix closing while DNS lookup still in progress
+
 0.7.1 (2017-01-20):
 - mhub-server: Handle multiple simultaneous lines received on raw tcp socket
 
