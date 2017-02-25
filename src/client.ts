@@ -65,6 +65,7 @@ export class MClient extends events.EventEmitter {
 	private _url: string;
 	private _options: MClientOptions;
 	private _idleTimer: any = undefined;
+	private _connecting: Promise<void>;
 	private _connected: boolean = false; // Prevent emitting `close` when not connected
 
 	/**
@@ -125,18 +126,22 @@ export class MClient extends events.EventEmitter {
 			return Promise.resolve();
 		}
 
-		return new Promise<void>((resolve, reject) => {
-			if (!this._socket) {
-				this._socket = new ws(this._url, <any>this._options);
-				this._socket.on("error", (e: any): void => { this._handleSocketError(e); });
-				this._socket.on("open", (): void => { this._handleSocketOpen(); });
-				this._socket.on("close", (): void => { this._handleSocketClose(); });
-				this._socket.on("message", (data: string): void => { this._handleSocketMessage(data); });
-			}
+		if (!this._connecting) {
+			this._connecting = new Promise<void>((resolve, reject) => {
+				if (!this._socket) {
+					this._socket = new ws(this._url, <any>this._options);
+					this._socket.on("error", (e: any): void => { this._handleSocketError(e); });
+					this._socket.on("open", (): void => { this._handleSocketOpen(); });
+					this._socket.on("close", (): void => { this._handleSocketClose(); });
+					this._socket.on("message", (data: string): void => { this._handleSocketMessage(data); });
+				}
 
-			this._socket.once("open", resolve);
-			this._socket.once("error", reject);
-		});
+				this._socket.once("open", resolve);
+				this._socket.once("error", reject);
+			}).finally(() => { this._connecting = undefined; });
+		}
+
+		return this._connecting;
 	}
 
 	/**
