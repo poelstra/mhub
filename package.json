@@ -23,7 +23,7 @@
     "build": "npm run -s build:src && npm run -s build:test",
     "watch:start": "mkdir -p dist/src/ && touch dist/src/mhub-server.js && nodemon ./bin/mhub-server --delay 1 --watch dist/",
     "watch": "parallelshell 'npm run -s watch:src' 'npm run -s watch:test' 'npm run -s watch:start'",
-    "clean": "rimraf -rf dist",
+    "clean": "rimraf dist",
     "prepublish": "npm run -s lint && npm run -s build && npm run -s test"
   },
   "author": "Martin Poelstra <martin@beryllium.net>",
@@ -51,6 +51,7 @@
     "chai": "^3.5.0",
     "mocha": "^2.5.3",
     "parallelshell": "^2.0.0",
+    "rimraf": "^2.6.1",
     "tslint": "^3.12.1",
     "typescript": "2.1.6"
   },
