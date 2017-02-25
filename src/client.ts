@@ -160,7 +160,7 @@ export class MClient extends events.EventEmitter {
 	 */
 	public close(error?: Error): Promise<void> {
 		if (this._socket) {
-			if (error) {
+			if (error || !this._connected) {
 				this._socket.terminate();
 			} else {
 				this._socket.close();
