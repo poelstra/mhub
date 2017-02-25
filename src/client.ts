@@ -108,6 +108,9 @@ export class MClient extends events.EventEmitter {
 		return this._socket;
 	}
 
+	/**
+	 * Full URL of MHub connection.
+	 */
 	public get url(): string {
 		return this._url;
 	}
