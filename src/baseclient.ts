@@ -1,19 +1,17 @@
 /**
- * MHub client library.
+ * Base-class for any MHub client.
+ *
+ * Derived classes add actual transport logic to connect to
+ * e.g. a Node.JS websocket API, a browser version, or a version
+ * specifically for testing.
  */
-
-"use strict";
 
 import * as assert from "assert";
 import * as events from "events";
-import * as ws from "ws";
 import Promise, { Thenable } from "ts-promise";
 import Message from "./message";
-import { TlsOptions } from "./tls";
 import * as protocol from "./protocol";
 
-const DEFAULT_PORT_WS = 13900;
-const DEFAULT_PORT_WSS = 13901;
 const MAX_SEQ = 65536;
 
 interface Resolver<T> {
@@ -25,15 +23,9 @@ interface VoidResolver extends Resolver<void> {
 }
 
 /**
- * Options to be passed to MClient constructor.
+ * Options to be passed to constructor.
  */
-export interface MClientOptions extends TlsOptions {
-	/**
-	 * When true, will not automatically connect in the
-	 * constructor. Connect explicitly using `#connect()`.
-	 */
-	noImplicitConnect?: boolean;
-
+export interface BaseClientOptions {
 	/**
 	 * Number of milliseconds of idleness (i.e. no data
 	 * transmitted or received) before sending a ping to
@@ -44,76 +36,76 @@ export interface MClientOptions extends TlsOptions {
 	keepalive?: number;
 }
 
-export const defaultClientOptions: MClientOptions = {
+export const defaultClientOptions: BaseClientOptions = {
 	keepalive: 30000, // milliseconds
 };
 
 /**
- * MHub client.
+ * Interface for coupling of MHub client to transport protocol
+ * such as a WebSocket or raw TCP stream.
  *
- * Allows subscribing and publishing to MHub server nodes.
+ * Events expected from the interface:
+ * @event open() Emitted when connection was established.
+ * @event close() Emitted when connection was closed.
+ * @event error(e: Error) Emitted when there was a connection, server or protocol error.
+ * @event message(data: object) Emitted when a message (object) was received.
+ *            Note: object needs to be deserialized already. Don't pass a string.
+ */
+export interface Connection extends events.EventEmitter {
+	/**
+	 * Transmit data object.
+	 * @return Promise that resolves when transmit is accepted (i.e. not necessarily
+	 * arrived at other side, can be e.g. queued).
+	 */
+	send(data: object): Promise<void>;
+
+	/**
+	 * Gracefully close connection, i.e. allow pending transmissions
+	 * to be completed.
+	 * @return Promise that resolves when connection is succesfully closed.
+	 */
+	close(): Promise<void>;
+
+	/**
+	 * Forcefully close connection.
+	 * @return Promise that resolves when connection is succesfully closed.
+	 */
+	terminate(): Promise<void>;
+}
+
+/**
+ * Abstract MHub client.
+ *
+ * Implements MHub client protocol, but does not implement the transport layer
+ * such as WebSocket, raw TCP, etc.
  *
  * @event open() Emitted when connection was established.
  * @event close() Emitted when connection was closed.
  * @event error(e: Error) Emitted when there was a connection, server or protocol error.
  * @event message(m: Message) Emitted when message was received (due to subscription).
  */
-export class MClient extends events.EventEmitter {
+export abstract class BaseClient extends events.EventEmitter {
+	private _options: BaseClientOptions;
+	private _socket: Connection;
 	private _transactions: { [seqNo: number]: Resolver<protocol.Response> } = {};
 	private _seqNo: number = 0;
-	private _socket: ws = undefined;
-	private _url: string;
-	private _options: MClientOptions;
 	private _idleTimer: any = undefined;
 	private _connecting: Promise<void>;
+	private _closing: Promise<void>;
+	private _socketConstructor: () => Connection;
 	private _connected: boolean = false; // Prevent emitting `close` when not connected
 
 	/**
-	 * Create new connection to MServer.
-	 * @param url Websocket URL of MServer, e.g. ws://localhost:13900
-	 * @param options Optional TLS settings and other options (see
-	 *        https://nodejs.org/dist/latest-v6.x/docs/api/tls.html#tls_tls_connect_port_host_options_callback
-	 *        for the TLS settings, and `MClientOptions` for other options)
+	 * Create new BaseClient.
+	 * @param options Protocol settings
 	 */
-	constructor(url: string, options?: MClientOptions) {
+	constructor(socketConstructor: () => Connection, options?: BaseClientOptions) {
 		super();
 
 		// Ensure options is an object and fill in defaults
 		options = {...defaultClientOptions, ...options};
-
-		// Prefix URL with "ws://" or "wss://" if needed
-		if (url.indexOf("://") < 0) {
-			if (options.key || options.pfx) {
-				url = "wss://" + url;
-			} else {
-				url = "ws://" + url;
-			}
-		}
-		// Append default port if necessary
-		if (!url.match(":\\d+$")) {
-			const useTls = url.indexOf("wss://") === 0;
-			url = url + ":" + (useTls ? DEFAULT_PORT_WSS : DEFAULT_PORT_WS);
-		}
-		this._url = url;
 		this._options = options;
-		if (!this._options.noImplicitConnect) {
-			this.connect();
-		}
-	}
-
-	/**
-	 * Current Websocket, if any.
-	 * @return {ws} Websocket or `undefined`
-	 */
-	public get socket(): ws {
-		return this._socket;
-	}
-
-	/**
-	 * Full URL of MHub connection.
-	 */
-	public get url(): string {
-		return this._url;
+		this._socketConstructor = socketConstructor;
 	}
 
 	/**
@@ -125,20 +117,26 @@ export class MClient extends events.EventEmitter {
 		if (this._connected) {
 			return Promise.resolve();
 		}
+		if (this._closing) {
+			return this.close().then(() => this.connect());
+		}
 
 		if (!this._connecting) {
 			this._connecting = new Promise<void>((resolve, reject) => {
 				if (!this._socket) {
-					this._socket = new ws(this._url, <any>this._options);
+					const socketConstructor = this._socketConstructor;
+					this._socket = socketConstructor(); // call it without a `this`
 					this._socket.on("error", (e: any): void => { this._handleSocketError(e); });
 					this._socket.on("open", (): void => { this._handleSocketOpen(); });
 					this._socket.on("close", (): void => { this._handleSocketClose(); });
-					this._socket.on("message", (data: string): void => { this._handleSocketMessage(data); });
+					this._socket.on("message", (data: object): void => { this._handleSocketMessage(data); });
 				}
 
 				this._socket.once("open", resolve);
 				this._socket.once("error", reject);
-			}).finally(() => { this._connecting = undefined; });
+			}).finally(() => {
+				this._connecting = undefined;
+			});
 		}
 
 		return this._connecting;
@@ -159,34 +157,45 @@ export class MClient extends events.EventEmitter {
 	 *              forcefully close connection.
 	 */
 	public close(error?: Error): Promise<void> {
-		if (this._socket) {
-			if (error || !this._connected) {
-				this._socket.terminate();
-			} else {
-				this._socket.close();
-			}
-			this._socket = undefined;
-		}
-		if (error) {
-			this._asyncEmit("error", error);
-		}
-		error = error || new Error("connection closed");
-		const closedRejection = Promise.reject<never>(error);
-		for (let t in this._transactions) {
-			if (!this._transactions[t]) {
-				continue;
-			}
-			this._transactions[t](closedRejection);
-		}
-		this._transactions = {};
+		if (!this._closing) {
+			this._closing = new Promise<void>((resolve, reject) => {
+				// Announce error if necessary
+				if (error) {
+					this._asyncEmit("error", error);
+				}
 
-		if (!this._connected) {
-			return Promise.resolve();
-		} else {
-			return new Promise<void>((resolve) => {
-				this.once("close", resolve);
+				// Abort pending transactions
+				const transactionError = error || new Error("connection closed");
+				const closedRejection = Promise.reject<never>(transactionError);
+				for (let t in this._transactions) {
+					if (!this._transactions[t]) {
+						continue;
+					}
+					this._transactions[t](closedRejection);
+				}
+				this._transactions = {};
+
+				if (this._socket) {
+					if (error || !this._connected) {
+						// Forcefully close in case of an error, or when
+						// not connected yet (otherwise we may have to wait
+						// until the connect times out).
+						return resolve(this._socket.terminate());
+					} else {
+						// Gracefully close in normal cases, meaning any
+						// in-progress writes will be completed first.
+						return resolve(this._socket.close());
+					}
+				} else {
+					resolve(undefined);
+				}
+			}).finally(() => {
+				this._socket = undefined;
+				this._closing = undefined;
 			});
 		}
+
+		return this._closing;
 	}
 
 	/**
@@ -321,17 +330,18 @@ export class MClient extends events.EventEmitter {
 		this._stopIdleTimer();
 	}
 
-	private _handleSocketMessage(data: string): void {
-		this._restartIdleTimer();
-		if (data === "") {
-			// Ignore empty lines
-			return;
-		}
+	private _handleSocketMessage(data: object): void {
 		try {
-			const decoded: protocol.Response = JSON.parse(data);
-			switch (decoded.type) {
+			if (!data || typeof data !== "object") {
+				throw new Error("missing or invalid data received");
+			}
+			const response = <protocol.Response>data;
+			if (typeof response.type !== "string") {
+				throw new Error("missing type property on received data");
+			}
+			switch (response.type) {
 				case "message":
-					const msgRes = <protocol.MessageResponse>decoded;
+					const msgRes = <protocol.MessageResponse>response;
 					this._asyncEmit(
 						"message",
 						new Message(msgRes.topic, msgRes.data, msgRes.headers),
@@ -339,9 +349,9 @@ export class MClient extends events.EventEmitter {
 					);
 					break;
 				case "error":
-					const errRes = <protocol.ErrorResponse>decoded;
+					const errRes = <protocol.ErrorResponse>response;
 					const err = new Error("server error: " + errRes.message);
-					if (errRes.seq === undefined || !this._release(errRes.seq, err, decoded)) {
+					if (errRes.seq === undefined || !this._release(errRes.seq, err, response)) {
 						// Emit as a generic error when it could not be attributed to
 						// a specific request
 						this._asyncEmit("error", err);
@@ -350,18 +360,19 @@ export class MClient extends events.EventEmitter {
 				case "suback":
 				case "puback":
 				case "loginack":
-					const ackDec = <protocol.PubAckResponse | protocol.SubAckResponse | protocol.LoginAckResponse>decoded;
+					const ackDec = <protocol.PubAckResponse | protocol.SubAckResponse | protocol.LoginAckResponse>response;
 					this._release(ackDec.seq, undefined, ackDec);
 					break;
 				case "pingack":
-					const pingDec = <protocol.PingAckResponse>decoded;
+					const pingDec = <protocol.PingAckResponse>response;
 					if (pingDec.seq) { // ignore 'gratuitous' pings from the server
 						this._release(pingDec.seq, undefined, pingDec);
 					}
 					break;
 				default:
-					throw new Error("unknown message type: " + decoded!.type);
+					throw new Error("unknown message type: " + response!.type);
 			}
+			this._restartIdleTimer();
 		} catch (e) {
 			this._asyncEmit("error", new Error("message decode error: " + e.message));
 		}
@@ -380,7 +391,10 @@ export class MClient extends events.EventEmitter {
 			return;
 		}
 		this._idleTimer = setTimeout(
-			() => { this._idleTimer = undefined; this._handleIdleTimeout(); },
+			() => {
+				this._idleTimer = undefined;
+				this._handleIdleTimeout();
+			},
 			this._options.keepalive
 		);
 	}
@@ -393,6 +407,9 @@ export class MClient extends events.EventEmitter {
 	}
 
 	private _handleIdleTimeout(): void {
+		if (!this._socket || !this._connected) {
+			return;
+		}
 		this.ping(this._options.keepalive)
 			.catch((e) => {
 				if (e && e.message === "server error: unknown node 'undefined'") {
@@ -403,7 +420,7 @@ export class MClient extends events.EventEmitter {
 					// connection after that is dead.)
 					return;
 				}
-				if (this._socket && this._socket.readyState === ws.OPEN) {
+				if (this._connected) {
 					// Only close (and emit an error) when we (seemed to be)
 					// succesfully connected (i.e. prevent multiple errors).
 					this.close(e);
@@ -419,7 +436,7 @@ export class MClient extends events.EventEmitter {
 				throw new Error("not connected");
 			}
 			this._restartIdleTimer();
-			this._socket.send(JSON.stringify(msg), (err?: Error) => {
+			this._socket.send(msg).catch((err: Error) => {
 				if (err) {
 					this._release(msg.seq, err);
 					return reject(err);
@@ -446,6 +463,11 @@ export class MClient extends events.EventEmitter {
 		return true;
 	}
 
+	/**
+	 * Compute next available sequence number.
+	 * Throws an error when no sequence number is available (too many
+	 * pending transactions).
+	 */
 	private _nextSeq(): number {
 		let maxIteration = MAX_SEQ;
 		while (--maxIteration > 0 && this._transactions[this._seqNo]) {
@@ -458,4 +480,4 @@ export class MClient extends events.EventEmitter {
 	}
 }
 
-export default MClient;
+export default BaseClient;

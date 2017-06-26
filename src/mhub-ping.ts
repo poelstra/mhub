@@ -9,7 +9,7 @@ import "source-map-support/register";
 import * as yargs from "yargs";
 import * as path from "path";
 import Promise from "ts-promise";
-import MClient from "./client";
+import MClient from "./nodeclient";
 import Message from "./message";
 import { TlsOptions, replaceKeyFiles } from "./tls";
 

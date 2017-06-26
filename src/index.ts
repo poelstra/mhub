@@ -4,8 +4,8 @@
 
 "use strict";
 
-import MClient from "./client";
+import MClient from "./nodeclient";
 export default MClient;
-export * from "./client";
+export * from "./nodeclient";
 
 export { default as Message } from "./message";
