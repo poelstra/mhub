@@ -65,7 +65,7 @@
     "mkdirp": "^0.5.1",
     "source-map-support": "^0.4.1",
     "ts-promise": "^0.3.4",
-    "ws": "^1.1.1",
+    "ws": "^1.1.4",
     "yargs": "^4.7.1"
   },
   "typings": "./dist/src/index.d.ts",
