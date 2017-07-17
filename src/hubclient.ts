@@ -83,6 +83,12 @@ export class HubClient extends events.EventEmitter {
 	public processCommand(msg: protocol.Command): void {
 		let response: protocol.Response | undefined;
 		try {
+			if (typeof msg !== "object") {
+				throw new Error("invalid message, object expected");
+			}
+			if (typeof msg.type !== "string") {
+				throw new Error("invalid message, missing or invalid type");
+			}
 			switch (msg.type) {
 				case "publish":
 					response = this._handlePublish(msg);
@@ -106,7 +112,7 @@ export class HubClient extends events.EventEmitter {
 				response = {
 					type: "error",
 					message: errorMessage,
-					seq: msg.seq,
+					seq: typeof msg === "object" ? msg.seq : undefined,
 				};
 			}
 		}

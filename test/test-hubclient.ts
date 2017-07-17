@@ -32,6 +32,40 @@ describe("HubClient", (): void => {
 		client = new HubClient(hub, "testclient");
 	});
 
+	describe("#processCommand", () => {
+		it("handles invalid input (undefined)", (done: MochaDone) => {
+			client.once("response", (res: protocol.Response) => {
+				expect(res.type).to.equal("error");
+				done();
+			});
+			client.processCommand(undefined);
+		});
+
+		it("handles invalid input (not an object)", (done: MochaDone) => {
+			client.once("response", (res: protocol.Response) => {
+				expect(res.type).to.equal("error");
+				done();
+			});
+			client.processCommand(<any>true);
+		});
+
+		it("handles invalid input (missing type)", (done: MochaDone) => {
+			client.once("response", (res: protocol.Response) => {
+				expect(res.type).to.equal("error");
+				done();
+			});
+			client.processCommand(<any>{});
+		});
+
+		it("handles invalid input (invalid type)", (done: MochaDone) => {
+			client.once("response", (res: protocol.Response) => {
+				expect(res.type).to.equal("error");
+				done();
+			});
+			client.processCommand(<any>{ type: "foo" });
+		});
+	});
+
 	describe("#login", () => {
 		it("allows plain login", (done: MochaDone): void => {
 			client.once("response", (res: protocol.Response) => {
