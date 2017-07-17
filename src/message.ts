@@ -2,8 +2,6 @@
  * MHub Message class.
  */
 
-"use strict";
-
 /*
  TODO remove Message.headers in favour of simply adding more optional properties
       directly on Message?

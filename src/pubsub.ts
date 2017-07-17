@@ -3,8 +3,6 @@
  * Provides the basic routing infrastructure to send and receive messages.
  */
 
-"use strict";
-
 import * as minimatch from "minimatch";
 import Promise from "ts-promise";
 

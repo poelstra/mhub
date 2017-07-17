@@ -2,8 +2,6 @@
  * Simple dictionary, safe for arbitrary string keys.
  */
 
-"use strict";
-
 export class Dict<T> {
 	// tslint:disable-next-line:no-null-keyword
 	private _items: { [key: string]: T } = Object.create(null);

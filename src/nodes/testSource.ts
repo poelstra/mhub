@@ -1,5 +1,3 @@
-"use strict";
-
 import * as pubsub from "../pubsub";
 import Message from "../message";
 import log from "../log";

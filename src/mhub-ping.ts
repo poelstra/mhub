@@ -2,8 +2,6 @@
  * Commandline tool for determining latency.
  */
 
-"use strict";
-
 import "source-map-support/register";
 
 import * as yargs from "yargs";

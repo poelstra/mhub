@@ -7,8 +7,6 @@
  * Most notably, adding a version identifier to the protocol is on the TODO...
  */
 
-"use strict";
-
 /**
  * Subscribe to `node` using `pattern`.
  *

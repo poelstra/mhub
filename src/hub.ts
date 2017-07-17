@@ -6,8 +6,6 @@
  * Use e.g. a HubClient to actually connect something to a Hub.
  */
 
-"use strict";
-
 import Promise from "ts-promise";
 
 import { Authenticator } from "./authenticator";

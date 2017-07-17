@@ -2,8 +2,6 @@
  * Commandline tool for sending/receiving MHub messages to/from an mserver.
  */
 
-"use strict";
-
 import "source-map-support/register";
 
 import * as yargs from "yargs";

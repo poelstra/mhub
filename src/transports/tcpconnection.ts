@@ -2,8 +2,6 @@
  * Connect TCP socket to an MServer hub.
  */
 
-"use strict";
-
 import * as net from "net";
 
 import log from "../log";

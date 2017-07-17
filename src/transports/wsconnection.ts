@@ -2,8 +2,6 @@
  * Connect WebSocket to an MServer hub.
  */
 
-"use strict";
-
 import * as ws from "ws";
 
 import log from "../log";

@@ -2,8 +2,6 @@
  * Simple file storage.
  */
 
-"use strict";
-
 import * as fs from "fs";
 import * as path from "path";
 import Promise from "ts-promise";

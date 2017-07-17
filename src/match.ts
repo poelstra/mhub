@@ -1,5 +1,3 @@
-"use strict";
-
 import * as minimatch from "minimatch";
 
 export type Matcher = (value: string) => boolean;

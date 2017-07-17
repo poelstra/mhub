@@ -3,8 +3,6 @@
  * internal Hub.
  */
 
-"use strict";
-
 import * as events from "events";
 
 import log from "./log";

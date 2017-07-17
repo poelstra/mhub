@@ -3,8 +3,6 @@
  * See log.ts for a convenient singleton instance of this.
  */
 
-"use strict";
-
 import * as util from "util";
 
 export enum LogLevel {

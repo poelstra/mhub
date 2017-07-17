@@ -4,8 +4,6 @@
  * Makes MHub pubsub Nodes available through WebSockets.
  */
 
-"use strict";
-
 import "source-map-support/register";
 
 import * as http from "http";
