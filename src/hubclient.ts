@@ -81,94 +81,124 @@ export class HubClient extends events.EventEmitter {
 	}
 
 	public processCommand(msg: protocol.Command): void {
-		let errorMessage: string;
-		let response: protocol.Response;
-		let haveSeq = false;
-		let seq: number = undefined;
+		let response: protocol.Response | undefined;
 		try {
-			haveSeq = typeof msg === "object" && typeof msg.seq === "number";
-			seq = haveSeq ? msg.seq : undefined;
-
-			if (msg.type === "publish" || msg.type === "subscribe") {
-				const node = this._hub.find(msg.node);
-				if (!this._permissions[msg.type]) {
-					errorMessage = "permission denied";
-				} else if (!node) {
-					errorMessage = `unknown node '${msg.node}'`;
-				} else if (msg.type === "publish") {
-					const pubCmd = <protocol.PublishCommand>msg;
-					if (!pubsub.isDestination(node)) {
-						errorMessage = `node '${msg.node}' is not a Destination`;
-					} else {
-						node.send(new Message(pubCmd.topic, pubCmd.data, pubCmd.headers));
-						if (haveSeq) {
-							response = {
-								type: "puback",
-								seq: seq,
-							};
-						}
-					}
-				} else { // msg.type === "subscribe"
-					const subCmd = <protocol.SubscribeCommand>msg;
-					if (!pubsub.isSource(node)) {
-						errorMessage = `node '${msg.node}' is not a Source`;
-					} else {
-						const id = subCmd.id || "default";
-						let sub = this._subscriptions.get(id);
-						if (!sub) {
-							sub = new SubscriptionNode(this, id, this._onResponseHandler);
-							this._subscriptions.set(id, sub);
-						}
-						sub.bind(node, subCmd.pattern);
-						if (haveSeq) {
-							response = {
-								type: "suback",
-								seq: seq,
-							};
-						}
-					}
-				}
-			} else if (msg.type === "ping") {
-				response = <protocol.PingAckResponse>{
-					type: "pingack",
-					seq: seq,
-				};
-			} else if (msg.type === "login") {
-				if (this._username !== undefined) {
-					// Wouldn't really be a problem for now, but may be in
-					// the future if e.g. different users have different quota
-					// etc.
-					errorMessage = "already logged in";
-				} else {
-					const authenticated = this._hub.authenticate(msg.username, msg.password);
-					if (!authenticated) {
-						errorMessage = "authentication failed";
-					} else {
-						this.setUsername(msg.username);
-						if (haveSeq) {
-							response = <protocol.LoginAckResponse>{
-								type: "loginack",
-								seq: seq,
-							};
-						}
-					}
-				}
-			} else {
-				errorMessage = `unknown command '${msg!.type}'`;
+			switch (msg.type) {
+				case "publish":
+					response = this._handlePublish(msg);
+					break;
+				case "subscribe":
+					response = this._handleSubscribe(msg);
+					break;
+				case "ping":
+					response = this._handlePing(msg);
+					break;
+				case "login":
+					response = this._handleLogin(msg);
+					break;
+				default:
+					throw new Error(`unknown command '${msg!.type}'`);
 			}
 		} catch (e) {
-			errorMessage = "decode error: " + String(e);
-		}
-		if (errorMessage) {
-			log.error(`[ ${this.name} ] error: ${errorMessage}`);
-			response = {
-				type: "error",
-				message: errorMessage,
-				seq: seq,
-			};
+			const errorMessage = String(e);
+			if (errorMessage) {
+				log.error(`[ ${this.name} ] error: ${errorMessage}`);
+				response = {
+					type: "error",
+					message: errorMessage,
+					seq: msg.seq,
+				};
+			}
 		}
 		if (response) {
 			this._onResponseHandler(response);
+		}
+	}
+
+	private _hasSequenceNumber(msg: protocol.Command): boolean {
+		return typeof msg === "object" && typeof msg.seq === "number";
+	}
+
+	private _handlePublish(msg: protocol.PublishCommand): protocol.PubAckResponse | undefined {
+		const node = this._hub.find(msg.node);
+		if (!node) {
+			throw new Error(`unknown node '${msg.node}'`);
+		}
+
+		if (!this._permissions[msg.type]) {
+			throw new Error("permission denied");
+		}
+
+		if (!pubsub.isDestination(node)) {
+			throw new Error(`node '${msg.node}' is not a Destination`);
+		}
+
+		node.send(new Message(msg.topic, msg.data, msg.headers));
+
+		if (this._hasSequenceNumber(msg)) {
+			return {
+				type: "puback",
+				seq: msg.seq,
+			};
+		}
+	}
+
+	private _handleSubscribe(msg: protocol.SubscribeCommand): protocol.SubAckResponse | undefined {
+		const node = this._hub.find(msg.node);
+		if (!node) {
+			throw new Error(`unknown node '${msg.node}'`);
+		}
+
+		if (!this._permissions[msg.type]) {
+			throw new Error("permission denied");
+		}
+
+		if (!pubsub.isSource(node)) {
+			throw new Error(`node '${msg.node}' is not a Source`);
+		}
+
+		const id = msg.id || "default";
+		let sub = this._subscriptions.get(id);
+		if (!sub) {
+			sub = new SubscriptionNode(this, id, this._onResponseHandler);
+			this._subscriptions.set(id, sub);
+		}
+		sub.bind(node, msg.pattern);
+
+		if (this._hasSequenceNumber(msg)) {
+			return {
+				type: "suback",
+				seq: msg.seq,
+			};
+		}
+	}
+
+	private _handlePing(msg: protocol.PingCommand): protocol.PingAckResponse {
+		return {
+			type: "pingack",
+			seq: msg.seq,
+		};
+	}
+
+	private _handleLogin(msg: protocol.LoginCommand): protocol.LoginAckResponse | undefined {
+		if (this._username !== undefined) {
+			// Wouldn't really be a problem for now, but may be in
+			// the future if e.g. different users have different quota
+			// etc.
+			throw new Error("already logged in");
+		}
+
+		const authenticated = this._hub.authenticate(msg.username, msg.password);
+		if (!authenticated) {
+			throw new Error("authentication failed");
+		}
+		this.setUsername(msg.username);
+
+		if (this._hasSequenceNumber(msg)) {
+			return {
+				type: "loginack",
+				seq: msg.seq,
+			};
 		}
 	}
 
