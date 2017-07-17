@@ -9,8 +9,22 @@
       directly on Message?
  */
 
+/**
+ * Headers are key-value pairs that carry meta-information
+ * about a message.
+ */
 export interface Headers {
 	[name: string]: string;
+}
+
+/**
+ * Interface describing what a 'raw' object should look like
+ * if it is to be converted to a Message using `Message.fromObject()`.
+ */
+export interface MessageLike {
+	topic: string;
+	data?: any;
+	headers?: Headers;
 }
 
 /**
@@ -50,15 +64,38 @@ export class Message {
 		this.headers = headers || Object.create(null); // tslint:disable-line:no-null-keyword
 	}
 
+	/**
+	 * Perform a shallow clone of the message.
+	 *
+	 * I.e. the new message will share the same `data` as the source message,
+	 * so be careful when the data is an object: making changes to it will be
+	 * reflected in the old and new message.
+	 *
+	 * The headers (if any) will be cloned into a new headers object.
+	 *
+	 * @return New message with same topic, same data and shallow clone of headers.
+	 */
 	public clone(): Message {
-		return new Message(this.topic, this.data, this.headers);
+		return new Message(this.topic, this.data, { ...this.headers });
 	}
 
-	public static fromObject(o: any): Message {
+	/**
+	 * Create a Message object from a plain object, by taking its topic, data and
+	 * headers properties.
+	 *
+	 * Note that the data is not deep-cloned.
+	 *
+	 * @param o Input object. Must at least contain a `.topic` property.
+	 * @return New `Message` instance, with given topic, same data, and clone of headers.
+	 */
+	public static fromObject(o: MessageLike): Message {
 		if (!o || typeof o !== "object") {
 			throw new TypeError("cannot create message from object, got " + typeof o);
 		}
-		return new Message(o.topic, o.data, o.headers);
+		if (typeof o.topic !== "string") {
+			throw new TypeError("cannot create message from object, missing or invalid topic");
+		}
+		return new Message(o.topic, o.data, { ...o.headers });
 	}
 }
 
