@@ -2,11 +2,6 @@
  * MHub Message class.
  */
 
-/*
- TODO remove Message.headers in favour of simply adding more optional properties
-      directly on Message?
- */
-
 /**
  * Headers are key-value pairs that carry meta-information
  * about a message.
