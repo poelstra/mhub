@@ -56,6 +56,17 @@ class SubscriptionNode implements pubsub.Destination {
 	}
 }
 
+/**
+ * Link of one client to the hub.
+ * Every transport (tcp, websocket, etc.) and the LocalClient use this to
+ * connect to the hub, passing it raw JSON objects received over the wire
+ * to `processCommand()` and receiving responses from it by listing to
+ * the `response` event.
+ *
+ * Events emitted from HubClient:
+ * @event response(data: protocol.Response) Emitted whenever a response to
+ *        a command, or new data to a subscription, is sent to this client.
+ */
 export class HubClient extends events.EventEmitter {
 	public name: string; // TODO move this to higher layer?
 	private _hub: Hub;
@@ -70,16 +81,39 @@ export class HubClient extends events.EventEmitter {
 		this._permissions = this._hub.getUserPermissions(""); // permissions for anonymous user
 	}
 
+	/**
+	 * Disconnect from Hub.
+	 */
 	public close(): void {
 		this._subscriptions.forEach((subscription) => subscription.destroy());
 		this._subscriptions.clear();
 	}
 
+	/**
+	 * Set username.
+	 * The MHub protocol provides a login command, which can be used
+	 * to allow authentication across transports that otherwise don't
+	 * natively support it (e.g. raw tcp).
+	 * Some transports may deduce the authentication user using other
+	 * means (e.g. in SSL client certificate).
+	 *
+	 * Note: using this will make a subsequent login command fail.
+	 *
+	 * @param username Username to assume.
+	 */
 	public setUsername(username: string): void {
 		this._username = username;
 		this._permissions = this._hub.getUserPermissions(this._username);
 	}
 
+	/**
+	 * Validate and execute command against hub (e.g. login, publish,
+	 * subscribe, etc.).
+	 * Any response to the command (including errors) will be
+	 * passed back using the `response` event.
+	 *
+	 * @param msg Command to process.
+	 */
 	public processCommand(msg: protocol.Command): void {
 		let response: protocol.Response | undefined;
 		try {
