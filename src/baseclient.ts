@@ -48,7 +48,7 @@ export const defaultClientOptions: BaseClientOptions = {
  * @event open() Emitted when connection was established.
  * @event close() Emitted when connection was closed.
  * @event error(e: Error) Emitted when there was a connection, server or protocol error.
- * @event message(data: object) Emitted when a message (object) was received.
+ * @event message(data: protocol.Response) Emitted when a message (object) was received.
  *            Note: object needs to be deserialized already. Don't pass a string.
  */
 export interface Connection extends events.EventEmitter {
@@ -57,7 +57,7 @@ export interface Connection extends events.EventEmitter {
 	 * @return Promise that resolves when transmit is accepted (i.e. not necessarily
 	 * arrived at other side, can be e.g. queued).
 	 */
-	send(data: object): Promise<void>;
+	send(data: protocol.Command): Promise<void>;
 
 	/**
 	 * Gracefully close connection, i.e. allow pending transmissions
@@ -82,7 +82,7 @@ export interface Connection extends events.EventEmitter {
  * @event open() Emitted when connection was established.
  * @event close() Emitted when connection was closed.
  * @event error(e: Error) Emitted when there was a connection, server or protocol error.
- * @event message(m: Message) Emitted when message was received (due to subscription).
+ * @event message(m: Message, subscriptionId: string) Emitted when message was received (due to subscription).
  */
 export abstract class BaseClient extends events.EventEmitter {
 	private _options: BaseClientOptions;

@@ -5,6 +5,7 @@
 import * as events from "events";
 import Promise from "ts-promise";
 import { BaseClientOptions, BaseClient, Connection } from "./baseclient";
+import * as protocol from "./protocol";
 
 const DEFAULT_PORT_WS = 13900;
 const DEFAULT_PORT_WSS = 13901;
@@ -49,7 +50,7 @@ class WebSocketConnection extends events.EventEmitter implements Connection {
 	 * @return Promise that resolves when transmit is accepted (i.e. not necessarily
 	 * arrived at other side, can be e.g. queued).
 	 */
-	public send(data: object): Promise<void> {
+	public send(data: protocol.Command): Promise<void> {
 		return new Promise<void>((resolve, reject) => {
 			this._socket.send(JSON.stringify(data));
 			resolve(undefined);
