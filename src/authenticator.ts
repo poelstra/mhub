@@ -45,6 +45,14 @@ export class PlainAuthenticator implements Authenticator {
 		this._users.set(username, password);
 	}
 
+	/**
+	 * Remove user, if it exists.
+	 */
+	public deleteUser(username: string): void {
+		PlainAuthenticator.validateUsername(username);
+		this._users.remove(username);
+	}
+
 	public authenticate(username: string, password: string): boolean {
 		PlainAuthenticator.validateUsername(username);
 		if (typeof password !== "string") {

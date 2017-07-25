@@ -14,6 +14,10 @@ export class Dict<T> {
 		return this._items["$" + key];
 	}
 
+	public remove(key: string): void {
+		delete this._items["$" + key];
+	}
+
 	public clear(): void {
 		// tslint:disable-next-line:no-null-keyword
 		this._items = Object.create(null);
