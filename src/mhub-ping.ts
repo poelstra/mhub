@@ -19,9 +19,9 @@ var usage = [
 	"routing to respond with `ping:response` to each `ping:request`",
 ].join("\n");
 
-function die(...args: any[]): void {
-	console.error.apply(this, args);
-	process.exit(1);
+function die(...args: any[]): never {
+	console.error.apply(undefined, args);
+	return process.exit(1);
 }
 
 var argv = yargs

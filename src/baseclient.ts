@@ -86,12 +86,12 @@ export interface Connection extends events.EventEmitter {
  */
 export abstract class BaseClient extends events.EventEmitter {
 	private _options: BaseClientOptions;
-	private _socket: Connection;
+	private _socket: Connection | undefined;
 	private _transactions: { [seqNo: number]: Resolver<protocol.Response> } = {};
 	private _seqNo: number = 0;
 	private _idleTimer: any = undefined;
-	private _connecting: Promise<void>;
-	private _closing: Promise<void>;
+	private _connecting: Promise<void> | undefined;
+	private _closing: Promise<void> | undefined;
 	private _socketConstructor: () => Connection;
 	private _connected: boolean = false; // Prevent emitting `close` when not connected
 
@@ -361,11 +361,13 @@ export abstract class BaseClient extends events.EventEmitter {
 				case "puback":
 				case "loginack":
 					const ackDec = <protocol.PubAckResponse | protocol.SubAckResponse | protocol.LoginAckResponse>response;
-					this._release(ackDec.seq, undefined, ackDec);
+					if (protocol.hasSequenceNumber(ackDec)) {
+						this._release(ackDec.seq, undefined, ackDec);
+					}
 					break;
 				case "pingack":
 					const pingDec = <protocol.PingAckResponse>response;
-					if (pingDec.seq) { // ignore 'gratuitous' pings from the server
+					if (protocol.hasSequenceNumber(pingDec)) { // ignore 'gratuitous' pings from the server
 						this._release(pingDec.seq, undefined, pingDec);
 					}
 					break;
@@ -429,16 +431,17 @@ export abstract class BaseClient extends events.EventEmitter {
 	}
 
 	private _send(msg: protocol.Command): Promise<protocol.Response> {
-		return new Promise<protocol.Response>((resolve: () => void, reject: (err: Error) => void) => {
-			msg.seq = this._nextSeq();
-			this._transactions[msg.seq] = resolve;
+		return new Promise<protocol.Response>((resolve: (res: protocol.Response) => void, reject: (err: Error) => void) => {
+			const seq = this._nextSeq();
+			msg.seq = seq;
+			this._transactions[seq] = resolve;
 			if (!this._socket || !this._connected) {
 				throw new Error("not connected");
 			}
 			this._restartIdleTimer();
 			this._socket.send(msg).catch((err: Error) => {
 				if (err) {
-					this._release(msg.seq, err);
+					this._release(seq, err);
 					return reject(err);
 				}
 			});
@@ -449,7 +452,7 @@ export abstract class BaseClient extends events.EventEmitter {
 	 * Resolve pending transaction promise (either fulfill or reject with error).
 	 * Returns true when the given sequence number was actually found.
 	 */
-	private _release(seqNr: number, err: Error|void, msg?: protocol.Response): boolean {
+	private _release(seqNr: number, err: Error | void, msg?: protocol.Response): boolean {
 		let resolver = this._transactions[seqNr];
 		if (!resolver) {
 			return false;
@@ -458,7 +461,7 @@ export abstract class BaseClient extends events.EventEmitter {
 		if (err) {
 			resolver(Promise.reject<never>(err));
 		} else {
-			resolver(msg);
+			resolver(msg!);
 		}
 		return true;
 	}

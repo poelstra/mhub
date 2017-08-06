@@ -13,8 +13,8 @@ export interface QueueOptions extends pubsub.BaseSource {
 	persistent?: boolean; // If true, queue will be persisted to storage (typically disk)
 }
 
-const QueueStorageID = "QueueStorage";
-const QueueStorageVersion = 1;
+const QUEUE_STORAGE_ID = "QueueStorage";
+const QUEUE_STORAGE_VERSION = 1;
 
 interface QueueStorage {
 	type: string;
@@ -28,14 +28,14 @@ export class Queue extends pubsub.BaseSource {
 
 	private _queue: Message[] = [];
 	private _matcher: Matcher;
-	private _storage: Storage<QueueStorage>;
+	private _storage: Storage<QueueStorage> | undefined;
 
 	constructor(name: string, options?: QueueOptions) {
 		super(name, options);
 		this.name = name;
 		this.capacity = options && options.capacity || 10;
 		this._matcher = getMatcher(options && options.pattern);
-		if (options.persistent) {
+		if (options && options.persistent) {
 			this._storage = getDefaultStorage();
 		}
 	}
@@ -48,7 +48,7 @@ export class Queue extends pubsub.BaseSource {
 			if (!data || typeof data !== "object") {
 				return;
 			}
-			if (data.type !== QueueStorageID || data.version !== QueueStorageVersion) {
+			if (data.type !== QUEUE_STORAGE_ID || data.version !== QUEUE_STORAGE_VERSION) {
 				console.log(`Warning: discarding invalid storage ID / version for node '${this.name}'`);
 				return;
 			}
@@ -72,9 +72,9 @@ export class Queue extends pubsub.BaseSource {
 			}
 			if (this._storage) {
 				this._storage.save(this.name, {
-					type: QueueStorageID,
-					version: QueueStorageVersion,
-					queue: this._queue
+					type: QUEUE_STORAGE_ID,
+					version: QUEUE_STORAGE_VERSION,
+					queue: this._queue,
 				});
 			}
 		}

@@ -34,11 +34,11 @@ export interface Source extends Initializable {
 }
 
 export function isDestination(node: BaseNode | undefined): node is Destination {
-	return node && typeof (<any>node).send === "function";
+	return !!(node && typeof (<any>node).send === "function");
 }
 
 export function isSource(node: BaseNode | undefined): node is Source {
-	return node && typeof (<any>node).bind === "function" && typeof (<any>node).unbind === "function";
+	return !!(node && typeof (<any>node).bind === "function" && typeof (<any>node).unbind === "function");
 }
 
 export type BaseNode = Source | Destination;
@@ -56,7 +56,7 @@ export class BaseSource implements Source {
 	}
 
 	public bind(destination: Destination, pattern?: string): void {
-		var b: Binding;
+		let b: Binding | undefined;
 		// Find existing bindings to this destination
 		for (var i = 0; i < this._bindings.length; i++) {
 			if (this._bindings[i].destination === destination) {

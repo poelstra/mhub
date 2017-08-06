@@ -155,10 +155,6 @@ export class HubClient extends events.EventEmitter {
 		}
 	}
 
-	private _hasSequenceNumber(msg: protocol.Command): boolean {
-		return typeof msg === "object" && typeof msg.seq === "number";
-	}
-
 	private _handlePublish(msg: protocol.PublishCommand): protocol.PubAckResponse | undefined {
 		const node = this._hub.find(msg.node);
 		if (!node) {
@@ -175,7 +171,7 @@ export class HubClient extends events.EventEmitter {
 
 		node.send(new Message(msg.topic, msg.data, msg.headers));
 
-		if (this._hasSequenceNumber(msg)) {
+		if (protocol.hasSequenceNumber(msg)) {
 			return {
 				type: "puback",
 				seq: msg.seq,
@@ -205,7 +201,7 @@ export class HubClient extends events.EventEmitter {
 		}
 		sub.bind(node, msg.pattern);
 
-		if (this._hasSequenceNumber(msg)) {
+		if (protocol.hasSequenceNumber(msg)) {
 			return {
 				type: "suback",
 				seq: msg.seq,
@@ -234,7 +230,7 @@ export class HubClient extends events.EventEmitter {
 		}
 		this.setUsername(msg.username);
 
-		if (this._hasSequenceNumber(msg)) {
+		if (protocol.hasSequenceNumber(msg)) {
 			return {
 				type: "loginack",
 				seq: msg.seq,

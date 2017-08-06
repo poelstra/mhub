@@ -32,9 +32,9 @@ function readFile(file: string | string[], rootDir: string): Buffer | Buffer[] {
 
 /// Convert filenames to the contents of these files
 export function replaceKeyFiles(options: TlsOptions, rootDir: string): void {
-	["pfx", "key", "cert", "crl", "ca", "dhparam", "NPNProtocols", "ALPNProtocols", "ticketKeys"].forEach((propName) => {
+	["pfx", "key", "cert", "crl", "ca", "dhparam", "NPNProtocols", "ALPNProtocols", "ticketKeys"].forEach((propName: keyof TlsOptions) => {
 		if (options[propName]) {
-			options[propName] = readFile(options[propName], rootDir);
+			options[propName] = readFile(options[propName] as string, rootDir);
 		}
 	});
 }

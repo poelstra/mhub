@@ -2,13 +2,12 @@
     "compilerOptions": {
         "target": "es5",
         "module": "commonjs",
+        "strict": true,
         "isolatedModules": false,
         "declaration": true,
-        "noImplicitAny": true,
         "removeComments": false,
         "noLib": false,
         "preserveConstEnums": true,
-        "suppressImplicitAnyIndexErrors": true,
         "sourceMap": true,
         "outDir": "../dist/",
         "types": [

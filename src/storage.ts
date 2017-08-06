@@ -73,7 +73,7 @@ export class SimpleFileStorage<T> implements Storage<T> {
 	}
 
 	public load(key: string): Promise<T|void> {
-		return new Promise<T>((resolve, reject) => {
+		return new Promise<T|void>((resolve, reject) => {
 			fs.readFile(
 				this._getFilename(key),
 				"utf8",

@@ -278,3 +278,22 @@ export type Command = SubscribeCommand | PublishCommand | PingCommand | LoginCom
  * All supported responses (i.e. server to client)
  */
 export type Response = MessageResponse | SubAckResponse | PubAckResponse | PingAckResponse | LoginAckResponse | ErrorResponse;
+
+/**
+ * Interface that helps with strict null checks.
+ * See hasSequenceNumber().
+ */
+export interface ObjectWithSequenceNumber {
+	seq: number;
+}
+
+/**
+ * Determine whether given object (typically a message) has a sequence number.
+ * (Note: this is very different from `if (msg.seq) ...` if the sequence number
+ * happens to be zero...)
+ * @param msg Anything, but typically a message object with/without sequence number
+ * @return true if argument is an object, and contains a numberic `seq` property
+ */
+export function hasSequenceNumber(msg: any): msg is ObjectWithSequenceNumber {
+	return typeof msg === "object" && typeof msg.seq === "number";
+}

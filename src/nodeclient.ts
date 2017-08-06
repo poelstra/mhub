@@ -35,7 +35,7 @@ class WebSocketConnection extends events.EventEmitter implements Connection {
 	private _socket: ws;
 	private _connected: boolean = false;
 
-	constructor(url: string, options: MClientOptions) {
+	constructor(url: string, options?: MClientOptions) {
 		super();
 
 		this._socket = new ws(url, <any>options);

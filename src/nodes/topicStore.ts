@@ -13,8 +13,8 @@ export interface TopicStoreOptions extends pubsub.BaseSource {
 	persistent?: boolean; // If true, state will be persisted to storage (typically disk)
 }
 
-const TopicStoreStorageID = "TopicStoreStorage";
-const TopicStoreStorageVersion = 1;
+const TOPIC_STORE_STORAGE_ID = "TopicStoreStorage";
+const TOPIC_STORE_STORAGE_VERSION = 1;
 
 interface TopicStoreStorage {
 	type: string;
@@ -35,15 +35,16 @@ interface TopicStoreStorage {
 export class TopicStore extends pubsub.BaseSource {
 	public name: string;
 
+	// tslint:disable-next-line:no-null-keyword
 	private _state: KeyValues<Message> = Object.create(null);
 	private _matcher: Matcher;
-	private _storage: Storage<TopicStoreStorage>;
+	private _storage: Storage<TopicStoreStorage> | undefined;
 
 	constructor(name: string, options?: TopicStoreOptions) {
 		super(name, options);
 		this.name = name;
 		this._matcher = getMatcher(options && options.pattern);
-		if (options.persistent) {
+		if (options && options.persistent) {
 			this._storage = getDefaultStorage();
 		}
 	}
@@ -57,12 +58,13 @@ export class TopicStore extends pubsub.BaseSource {
 				return;
 			}
 			if (
-					(data.type !== TopicStoreStorageID && data.type !== "TopicStateStorage") ||
-					data.version !== TopicStoreStorageVersion
+					(data.type !== TOPIC_STORE_STORAGE_ID && data.type !== "TopicStateStorage") ||
+					data.version !== TOPIC_STORE_STORAGE_VERSION
 				) {
 				console.log(`Warning: discarding invalid storage ID / version for node '${this.name}'`);
 				return;
 			}
+			// tslint:disable-next-line:forin
 			for (const topic in data.state) {
 				this._state[topic] = Message.fromObject(data.state[topic]);
 			}
@@ -85,9 +87,9 @@ export class TopicStore extends pubsub.BaseSource {
 			}
 			if (this._storage) {
 				this._storage.save(this.name, {
-					type: TopicStoreStorageID,
-					version: TopicStoreStorageVersion,
-					state: this._state
+					type: TOPIC_STORE_STORAGE_ID,
+					version: TOPIC_STORE_STORAGE_VERSION,
+					state: this._state,
 				});
 			}
 		}
@@ -95,6 +97,7 @@ export class TopicStore extends pubsub.BaseSource {
 
 	public bind(destination: pubsub.Destination, pattern?: string): void {
 		super.bind(destination, pattern);
+		// tslint:disable-next-line:forin
 		for (const topic in this._state) {
 			destination.send(this._state[topic]);
 		}

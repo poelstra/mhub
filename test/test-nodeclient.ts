@@ -22,7 +22,7 @@ class TestServer {
 	private _server: http.Server;
 	private _wss: ws.Server;
 	private _connectionId: number = 0;
-	private _connections: { [id: number]: ws; } = {};
+	private _connections: { [id: string]: ws; } = {};
 
 	constructor(port: number) {
 		this._port = port;

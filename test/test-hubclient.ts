@@ -38,7 +38,7 @@ describe("HubClient", (): void => {
 				expect(res.type).to.equal("error");
 				done();
 			});
-			client.processCommand(undefined);
+			client.processCommand(<any>undefined);
 		});
 
 		it("handles invalid input (not an object)", (done: MochaDone) => {

@@ -88,7 +88,8 @@ export class Message {
 		if (typeof o.topic !== "string") {
 			throw new TypeError("cannot create message from object, missing or invalid topic");
 		}
-		return new Message(o.topic, o.data, { ...o.headers });
+		const headers = (o ? { ...o.headers } : {}) as Headers;
+		return new Message(o.topic, o.data, headers);
 	}
 }
 

@@ -53,6 +53,10 @@ interface NodeDefinition {
 	options?: { [key: string]: any; };
 }
 
+interface NodesConfig {
+	[nodeName: string]: string | NodeDefinition;
+};
+
 type ListenOptions = WSServerOptions | TcpServerOptions;
 
 interface Config {
@@ -61,7 +65,7 @@ interface Config {
 	verbose?: boolean;
 	logging?: "none" | "fatal" | "error" | "warning" | "info" | "debug";
 	bindings?: Binding[];
-	nodes: string[] | { [nodeName: string]: string | NodeDefinition; };
+	nodes: string[] | NodesConfig;
 	storage?: string;
 	users?: string | { [username: string]: string };
 	rights: UserRights;
@@ -101,8 +105,8 @@ nodeClasses.forEach((c) => {
 
 // For backward compatibility
 /* tslint:disable:no-string-literal */
-nodeClasses["TopicQueue"] = TopicStore;
-nodeClasses["TopicState"] = TopicStore;
+nodeClassMap["TopicQueue"] = TopicStore;
+nodeClassMap["TopicState"] = TopicStore;
 /* tslint:enable:no-string-literal */
 
 // Build list of valid log level names (e.g. none, fatal, error, ...)
@@ -139,10 +143,11 @@ if (!args.config) {
 	configFile = path.resolve(args.config);
 }
 
+let config: Config;
 try {
-	var config: Config = JSON.parse(fs.readFileSync(configFile, "utf8"));
+	config = JSON.parse(fs.readFileSync(configFile, "utf8"));
 } catch (e) {
-	die(`Cannot parse config file '${configFile}':`, e);
+	throw die(`Cannot parse config file '${configFile}':`, e);
 }
 
 // Historically, verbose logging was the default.
@@ -155,7 +160,7 @@ if (config.logging) {
 	// Convert config.logging to a LogLevel
 	const found = Object.keys(LogLevel).some((s) => {
 		if (s.toLowerCase() === logLevelName) {
-			log.logLevel = LogLevel[s];
+			log.logLevel = (<any>LogLevel)[s] as LogLevel;
 			return true;
 		}
 		return false;
@@ -185,7 +190,7 @@ if (config.port) {
 	delete config.port;
 }
 if (!config.listen) {
-	die("Invalid configuration: `port` or `listen` missing");
+	throw die("Invalid configuration: `port` or `listen` missing");
 }
 if (!Array.isArray(config.listen)) {
 	config.listen = [config.listen];
@@ -193,7 +198,7 @@ if (!Array.isArray(config.listen)) {
 config.listen.forEach((listen: ListenOptions) => {
 	if (!listen.type) {
 		// Default to WebSocket, for backward compatibility
-		listen.type = "websocket";
+		listen!.type = "websocket";
 	}
 	if (listen.type === "websocket") {
 		// Read TLS key, cert, etc
@@ -226,12 +231,13 @@ if (typeof config.users === "string") {
 		die(`Cannot parse users file '${configFile}':`, e);
 	}
 }
-if (config.users !== undefined) {
-	if (typeof config.users !== "object") {
-		die("Invalid configuration: `users` should be or point to an object containting username -> password pairs");
-	}
-	Object.keys(config.users).forEach((username: string) => {
-		authenticator.setUser(username, config.users[username]);
+if (config.users !== undefined && typeof config.users !== "object") {
+	die("Invalid configuration: `users` should be a filename or object containting username -> password pairs");
+}
+if (typeof config.users === "object") {
+	const users = config.users;
+	Object.keys(users).forEach((username: string) => {
+		authenticator.setUser(username, users[username]);
 	});
 }
 hub.setAuthenticator(authenticator);
@@ -254,23 +260,25 @@ if (config.rights === undefined && config.users === undefined) {
 
 if (Array.isArray(config.nodes)) { // Backward compatibility, convert to new format
 	const oldNodes = <string[]>config.nodes;
-	config.nodes = {};
+	const newNodes: NodesConfig = {};
 	oldNodes.forEach((n: string) => {
 		if (typeof n !== "string") {
 			die("Invalid configuration: `nodes` is given as array, and must then contain only strings");
 		}
-		config.nodes[n] = {
+		newNodes[n] = {
 			type: "Exchange",
 		};
 	});
+	config.nodes = newNodes;
 }
 
 if (typeof config.nodes !== "object") {
 	die("Invalid configuration: `nodes` should be a NodeDefinition map, or an array of strings");
 }
 
+const nodesConfig: NodesConfig = config.nodes;
 Object.keys(config.nodes).forEach((nodeName: string): void => {
-	let def = config.nodes[nodeName];
+	let def = nodesConfig[nodeName];
 	if (typeof def === "string") {
 		def = <NodeDefinition>{
 			type: def,
@@ -290,11 +298,11 @@ Object.keys(config.nodes).forEach((nodeName: string): void => {
 config.bindings.forEach((binding: Binding, index: number): void => {
 	var from = hub.findSource(binding.from);
 	if (!from) {
-		die(`Unknown Source node '${binding.from}' in \`binding[${index}].from\``);
+		return die(`Unknown Source node '${binding.from}' in \`binding[${index}].from\``);
 	}
 	var to = hub.findDestination(binding.to);
 	if (!to) {
-		die(`Unknown Destination node '${binding.to}' in \`binding[${index}].to\``);
+		return die(`Unknown Destination node '${binding.to}' in \`binding[${index}].to\``);
 	}
 	from.bind(to, binding.pattern);
 });

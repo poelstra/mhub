@@ -24,9 +24,9 @@ var usage = [
 	"For self-signed certs, see --insecure.",
 ].join("\n");
 
-function die(...args: any[]): void {
-	console.error.apply(this, args);
-	process.exit(1);
+function die(...args: any[]): never {
+	console.error.apply(undefined, args);
+	return process.exit(1);
 }
 
 var args = yargs
@@ -148,7 +148,7 @@ function parseOutputFormat(s: string): OutputFormat {
 		case "json":
 			return OutputFormat.Json;
 		default:
-			die("Invalid output format:", s);
+			return die("Invalid output format:", s);
 	}
 }
 
@@ -243,7 +243,7 @@ function parseInputFormat(s: string): InputFormat {
 		case "json":
 			return InputFormat.Json;
 		default:
-			die("Invalid input format:", s);
+			return die("Invalid input format:", s);
 	}
 }
 
