@@ -53,12 +53,12 @@
     "parallelshell": "^2.0.0",
     "rimraf": "^2.6.1",
     "tslint": "^3.12.1",
-    "typescript": "2.3.2"
+    "typescript": "^2.4.2"
   },
   "dependencies": {
     "@types/minimatch": "^2.0.29",
     "@types/mkdirp": "^0.3.29",
-    "@types/node": "^6.0.45",
+    "@types/node": "^8.0.17",
     "@types/ws": "0.0.35",
     "@types/yargs": "0.0.33",
     "minimatch": "^3.0.2",
