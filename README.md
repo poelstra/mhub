@@ -313,6 +313,7 @@ mhub-server -l debug
 
 Or set the `logging` option in the config file to `"debug"`:
 ```js
+// In server.conf.json:
 {
     "logging": "debug" // or: none, fatal, error, warning, info (default)
 }
@@ -332,6 +333,7 @@ strings (legacy format), all nodes are created as `Exchange` nodes.
 Much more flexibility can be achieved by passing them as an object of
 { node_name: node_definition } pairs:
 ```js
+// In server.conf.json:
 {
     "nodes": {
         "nodename1": "TypeWithoutOptions",
@@ -410,6 +412,7 @@ To enable TLS / SSL on the server (`wss://` instead of `ws://`), you can change 
 server configuration to look like:
 
 ```js
+// In server.conf.json:
 {
     "listen": [
         {
@@ -431,6 +434,7 @@ This will still allow any client to connect. To only allow trusted clients to
 connect, use something like:
 
 ```js
+// In server.conf.json:
 {
     "listen": [
         {
