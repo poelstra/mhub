@@ -545,7 +545,11 @@ It is possible (and advisable) to also listen for the `close` event to reconnect
 (after some time) to the server in case the connection is lost. Note: any
 subscriptions will have to be recreated upon reconnection.
 
-For use in the browser, use e.g. [browserify](http://browserify.org/) or [webpack](https://webpack.github.io/),
+For use in the browser, a (preliminary) native WebSocket version is available as
+`import MHubClient from "mhub/dist/src/browserclient");`, which can then be bundled
+using e.g. [browserify](http://browserify.org/) or [webpack](https://webpack.github.io/).
+This client has the same interface as the Node.JS version, and will be moved to
+its own package at a later stage.
 
 API doc for MClient:
 ```ts
