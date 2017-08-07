@@ -253,7 +253,11 @@ if (config.rights === undefined && config.users === undefined) {
 		},
 	});
 } else {
-	hub.setRights(config.rights || {});
+	try {
+		hub.setRights(config.rights || {});
+	} catch (err) {
+		die("Invalid configuration: `rights` property: " + err.message);
+	}
 }
 
 // Instantiate nodes from config file

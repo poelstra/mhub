@@ -7,7 +7,7 @@ import * as events from "events";
 
 import log from "./log";
 
-import Hub, { Permissions } from "./hub";
+import Hub, { Authorizer } from "./hub";
 import * as protocol from "./protocol";
 import * as pubsub from "./pubsub";
 import Message from "./message";
@@ -73,13 +73,13 @@ export class HubClient extends events.EventEmitter {
 	private _hub: Hub;
 	private _subscriptions: Dict<SubscriptionNode> = new Dict<SubscriptionNode>();
 	private _username: string;
-	private _permissions: Permissions;
+	private _authorizer: Authorizer;
 
 	constructor(hub: Hub, name: string) {
 		super();
 		this._hub = hub;
 		this.name = name;
-		this._permissions = this._hub.getUserPermissions(""); // permissions for anonymous user
+		this._authorizer = this._hub.getAuthorizer(""); // permissions for anonymous user
 	}
 
 	/**
@@ -104,7 +104,7 @@ export class HubClient extends events.EventEmitter {
 	 */
 	public setUsername(username: string): void {
 		this._username = username;
-		this._permissions = this._hub.getUserPermissions(this._username);
+		this._authorizer = this._hub.getAuthorizer(this._username);
 	}
 
 	/**
@@ -157,13 +157,13 @@ export class HubClient extends events.EventEmitter {
 	}
 
 	private _handlePublish(msg: protocol.PublishCommand): protocol.PubAckResponse | undefined {
+		if (!this._authorizer.canPublish(msg.node, msg.topic)) {
+			throw new Error("permission denied");
+		}
+
 		const node = this._hub.find(msg.node);
 		if (!node) {
 			throw new Error(`unknown node '${msg.node}'`);
-		}
-
-		if (!this._permissions[msg.type]) {
-			throw new Error("permission denied");
 		}
 
 		if (!pubsub.isDestination(node)) {
@@ -181,13 +181,14 @@ export class HubClient extends events.EventEmitter {
 	}
 
 	private _handleSubscribe(msg: protocol.SubscribeCommand): protocol.SubAckResponse | undefined {
+		const authResult = this._authorizer.canSubscribe(msg.node, msg.pattern);
+		if (!authResult) {
+			throw new Error("permission denied");
+		}
+
 		const node = this._hub.find(msg.node);
 		if (!node) {
 			throw new Error(`unknown node '${msg.node}'`);
-		}
-
-		if (!this._permissions[msg.type]) {
-			throw new Error("permission denied");
 		}
 
 		if (!pubsub.isSource(node)) {
@@ -200,7 +201,18 @@ export class HubClient extends events.EventEmitter {
 			sub = new SubscriptionNode(this, id, this._onResponseHandler);
 			this._subscriptions.set(id, sub);
 		}
-		sub.bind(node, msg.pattern);
+
+		// Create a matcher that filters both the subscription pattern and
+		// authorization pattern(s), if needed.
+		const patternMatcher = getMatcher(msg.pattern);
+		let finalMatcher: (topic: string) => boolean;
+		if (typeof authResult === "function") {
+			finalMatcher = (topic) => authResult(topic) && patternMatcher(topic);
+		} else {
+			// authResult is true
+			finalMatcher = patternMatcher;
+		}
+		sub.bind(node, finalMatcher);
 
 		if (protocol.hasSequenceNumber(msg)) {
 			return {
