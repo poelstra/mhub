@@ -7,10 +7,10 @@ import Promise from "ts-promise";
 
 import Message from "./message";
 
-import { getMatcher, Matcher } from "./match";
+import { MatchSpec, getMatcher, Matcher } from "./match";
 
 interface MatchDef {
-	pattern: string;
+	pattern: MatchSpec;
 	filter: Matcher;
 }
 
@@ -30,8 +30,8 @@ export interface Destination extends Initializable {
 
 export interface Source extends Initializable {
 	name: string;
-	bind(destination: Destination, pattern?: string): void;
-	unbind(destination: Destination, pattern?: string): void;
+	bind(destination: Destination, pattern?: MatchSpec): void;
+	unbind(destination: Destination, pattern?: MatchSpec): void;
 }
 
 export function isDestination(node: BaseNode | undefined): node is Destination {
@@ -56,7 +56,7 @@ export class BaseSource implements Source {
 		this.name = name;
 	}
 
-	public bind(destination: Destination, pattern?: string): void {
+	public bind(destination: Destination, pattern?: MatchSpec): void {
 		let b: Binding | undefined;
 		// Find existing bindings to this destination
 		for (var i = 0; i < this._bindings.length; i++) {
@@ -80,7 +80,7 @@ export class BaseSource implements Source {
 		});
 	}
 
-	public unbind(destination: Destination, pattern?: string): void {
+	public unbind(destination: Destination, pattern?: MatchSpec): void {
 		if (!pattern) {
 			// Remove all bindings to given destination
 			this._bindings = this._bindings.filter((b: Binding): boolean => {

@@ -12,6 +12,7 @@ import * as protocol from "./protocol";
 import * as pubsub from "./pubsub";
 import Message from "./message";
 import Dict from "./dict";
+import { MatchSpec, getMatcher } from "./match";
 
 type ResponseHandler = (response: protocol.Response) => void;
 
@@ -41,7 +42,7 @@ class SubscriptionNode implements pubsub.Destination {
 		this._onResponse(response);
 	}
 
-	public bind(node: pubsub.Source, pattern?: string): void {
+	public bind(node: pubsub.Source, pattern?: MatchSpec): void {
 		if (this._nodes.indexOf(node) < 0) {
 			this._nodes.push(node);
 		}

@@ -2,7 +2,7 @@ import Promise from "ts-promise";
 
 import * as pubsub from "../pubsub";
 import Message from "../message";
-import { Matcher, getMatcher } from "../match";
+import { Matcher, getMatcher, MatchSpec } from "../match";
 import { Storage, getDefaultStorage } from "../storage";
 
 import log from "../log";
@@ -80,7 +80,7 @@ export class Queue extends pubsub.BaseSource {
 		}
 	}
 
-	public bind(destination: pubsub.Destination, pattern?: string): void {
+	public bind(destination: pubsub.Destination, pattern?: MatchSpec): void {
 		super.bind(destination, pattern);
 		this._queue.forEach((msg: Message): void => {
 			destination.send(msg);
