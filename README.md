@@ -467,7 +467,7 @@ connect (`[Error: self signed certificate] code: 'DEPTH_ZERO_SELF_SIGNED_CERT'`)
 In that case, either pass the server's certificate to `--ca`, or (for testing
 purposes), use the `--insecure` option to ignore these errors.
 
-## User authentication
+## Access control
 
 By default, everyone is allowed to connect, publish and subscribe to all
 available MHub nodes and topics.
@@ -477,46 +477,117 @@ MHub supports simple username/password authentication to lock this down.
 It is advised to only use these on secure (e.g. `wss://`) connections, as
 the username and password are sent in plain text.
 
+### Users
+
 To configure users, add a `users` key to `server.conf.json`. It can either be
 a string which points to a JSON file (relative paths resolved to the location
 of the config file) containing an object of `{ "username": "password" }` pairs,
 or such an object can be directly given in the config file itself.
 
+Example for inline users:
+```js
+// server.conf.json
+{
+    "users": {
+        "martin": "somePassword"
+    }
+}
+```
+
+Example for linking to a users file:
+```js
+// server.conf.json
+{
+    "users": "/path/to/users.json"
+}
+// users.json
+{
+    "martin": "somePassword"
+}
+```
+
+The commandline tools (`mhub-client`, `mhub-ping`) support `-U` and `-P` options
+to pass a username and password. Be advised that the commandline (and thus
+password) may be visible to other users on the system through e.g. `ps`.
+The MHub client library has a `login()` method.
+
+### Permissions
+
 Then, add a `rights` section to `server.conf.json` that specifies the rights
 (publish, subscribe) for each user, and the anonymous user (denoted by the
 empty string).
 
+Rights can be specified per user, as:
+* a boolean: `true` (allow everything) or `false` (allow nothing, which is
+  the default)
+* an object with permissions per action (`publish`, `subscribe`), which can
+  again be specified as:
+  * a boolean (allow/deny publish/subscribe in general)
+  * a map of node-permissions, which again can be given as:
+    * a boolean (allow/deny everything on this node, deny being the default already)
+    * a topic pattern, or array of patterns to allow
+
 For example:
 ```js
+// server.conf.json
 {
-    // Either specify the users 'inline' as such:
-    "users": {
-        "martin": "somePassword"
-    },
-
-    // Or, put that object in a file, and reference it like:
-    // "users": "users.json",
-
     "rights": {
         "": { // Anonymous/guest
             "subscribe": true,
             "publish": false
         },
+        "admin": true, // allow everything
         "martin": {
-            "subscribe": true,
-            "publish": true
+            "subscribe": true, // allow all subscriptions
+            "publish": {
+                "someNode": true, // allow publishing all topics to node "someNode"
+                "otherNode": "/some/**", // allow e.g. "/some/foo/bar" on "otherNode"
+                "default": ["/some/**", "/other"] // allow e.g. "/some/foo/bar" and "/other"
+            }
         }
     }
 }
 ```
 
-Note: if `users` and `rights` are omitted, everyone will have publish and
-subscribe rights. If only `users` is given, no-one will have any rights at
-all.
+Note: for backward compatibility and ease of use in the simple case, if both
+`users` and `rights` are omitted, everyone will have publish and
+subscribe rights! (If only one of them is given, no-one has access.)
 
-The commandline tools support `-U` and `-P` options to pass a username and
-password. Be advised that the commandline (and thus password) may be visible
-to other users on the system through e.g. `ps`.
+When a user tries to publish to a node/topic without having access, the command
+will return an error (i.e. it will not silently fail).
+
+When a user tries to subscribe to a node that is explicitly denied (or the user
+is not allowed to subscribe at all), the subscribe will fail. This also prevents
+a user from finding out whether a certain node exists, at all.
+
+However, when a user subscribes to a node which is protected by a pattern,
+the subscribe will succeed, although depending on the subscription pattern,
+no message may ever be received on it.
+
+For example:
+```
+// In server.conf.json:
+{
+    "rights": {
+        "testUser": {
+            "subscribe": {
+                "node1": false,
+                "node3": true,
+                "node4": "/foo/**",
+                "node5": ["/foo/**", "/bar"]
+            }
+        }
+    }
+}
+// Examples (note: no pattern means match everything)
+client.subscribe("node1") -> access denied
+client.subscribe("node2") -> access denied
+client.subscribe("node3") -> ok, can receive everything on this node
+client.subscribe("node4") -> ok, but will only receive topics matching "/foo/**"
+client.subscribe("node4", "/foo/bar/baz") -> ok, will only match "/foo/bar/baz"
+client.subscribe("node4", "/bar") -> ok, but will never match anything
+client.subscribe("node5", "/bar") -> ok, will only match "/bar"
+```
 
 ## Using MHub from Javascript
 
