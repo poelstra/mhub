@@ -43,7 +43,7 @@ export interface SubscribeCommand {
 	node: string;
 	/**
 	 * Optional pattern to apply to message topics.
-	 * Patterns are matched using (https://www.npmjs.com/package/minimatch),
+	 * Patterns are matched using (https://www.npmjs.com/package/micromatch),
 	 * e.g. `"test*"` will match `"tester"`.
 	 * If the pattern matches, it will be forwarded to the client, otherwise it
 	 * will be ignored.

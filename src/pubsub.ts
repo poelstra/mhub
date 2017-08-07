@@ -3,18 +3,19 @@
  * Provides the basic routing infrastructure to send and receive messages.
  */
 
-import * as minimatch from "minimatch";
 import Promise from "ts-promise";
 
 import Message from "./message";
 
-interface Matcher {
+import { getMatcher, Matcher } from "./match";
+
+interface MatchDef {
 	pattern: string;
-	filter: (topic: string, indexed?: number, array?: string[]) => boolean;
+	filter: Matcher;
 }
 
 interface Binding {
-	matchers: Matcher[];
+	matchers: MatchDef[];
 	destination: Destination;
 }
 
@@ -75,7 +76,7 @@ export class BaseSource implements Source {
 		// Create pattern matcher for this destination
 		b.matchers.push({
 			pattern: (pattern) ? pattern : "",
-			filter: (pattern) ? minimatch.filter(pattern) : (topic: string): boolean => true,
+			filter: getMatcher(pattern),
 		});
 	}
 
@@ -89,7 +90,7 @@ export class BaseSource implements Source {
 		} else {
 			// Remove only specific binding to destination
 			this._bindings = this._bindings.filter((b: Binding): boolean => {
-				b.matchers = b.matchers.filter((m: Matcher): boolean => {
+				b.matchers = b.matchers.filter((m: MatchDef): boolean => {
 					var remove = m.pattern === pattern;
 					return !remove;
 				});
@@ -100,7 +101,7 @@ export class BaseSource implements Source {
 
 	protected _broadcast(message: Message): void {
 		this._bindings.forEach((b: Binding): void => {
-			if (b.matchers.some((m: Matcher): boolean => m.filter(message.topic))) {
+			if (b.matchers.some((m: MatchDef): boolean => m.filter(message.topic))) {
 				b.destination.send(message);
 			}
 		});

@@ -13,5 +13,9 @@
         "types": [
             "node", "mocha"
         ]
-    }
+    },
+    "include": [
+        "**/*.ts",
+        "../src/type-overrides.d.ts"
+    ]
 }

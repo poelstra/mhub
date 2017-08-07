@@ -56,12 +56,11 @@
     "typescript": "^2.4.2"
   },
   "dependencies": {
-    "@types/minimatch": "^2.0.29",
     "@types/mkdirp": "^0.3.29",
     "@types/node": "^8.0.17",
     "@types/ws": "0.0.35",
     "@types/yargs": "0.0.33",
-    "minimatch": "^3.0.2",
+    "micromatch": "^3.0.4",
     "mkdirp": "^0.5.1",
     "source-map-support": "^0.4.1",
     "ts-promise": "^0.3.4",

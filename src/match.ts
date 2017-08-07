@@ -1,4 +1,4 @@
-import * as minimatch from "minimatch";
+import * as micromatch from "micromatch";
 
 export type Matcher = (value: string) => boolean;
 
@@ -21,12 +21,6 @@ export function getMatcher(pattern?: string | string[]): Matcher {
 	if (!pattern) {
 		return () => true;
 	}
-	if (Array.isArray(pattern)) {
-		const matchers: Matcher[] = pattern.map(getMatcher);
-		return (value: string) => matchers.some((m, index) => m(value));
 	}
-	if (typeof pattern !== "string") {
-		throw new TypeError("invalid pattern");
-	}
-	return <Matcher>minimatch.filter(<string>pattern);
+	return micromatch.matcher(pattern);
 }
