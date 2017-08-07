@@ -157,35 +157,40 @@ To use SSL/TLS, use e.g. -s wss://your_host.
 For self-signed certs, see --insecure.
 
 Options:
-  --help         Show help                                             [boolean]
-  -s, --socket   WebSocket to connect to, specify as [protocol://]host[:port],
-                 e.g. ws://localhost:13900, or wss://localhost:13900
+  --help          Show help                                            [boolean]
+  -s, --socket    WebSocket to connect to, specify as [protocol://]host[:port],
+                  e.g. ws://localhost:13900, or wss://localhost:13900
                                 [string] [required] [default: "localhost:13900"]
-  -n, --node     Node to subscribe/publish to, e.g. 'test'
+  -n, --node      Node to subscribe/publish to, e.g. 'test'
                                         [string] [required] [default: "default"]
-  -l, --listen   Select listen mode                                    [boolean]
-  -p, --pattern  Topic subscription pattern as glob, e.g. 'twitter:*'   [string]
-  -o, --output   Output format, can be: human, text, jsondata, json
+  -l, --listen    Select listen mode                                   [boolean]
+  -p, --pattern   Topic subscription pattern as glob, e.g. 'twitter:*'  [string]
+  -o, --output    Output format, can be: human, text, jsondata, json
                                                      [string] [default: "human"]
-  -t, --topic    Message topic                                          [string]
-  -d, --data     Optional message data as JSON object, e.g. '"a string"' or '{
-                 "foo": "bar" }'                                        [string]
-  -h, --headers  Optional message headers as JSON object, e.g. '{ "my-header":
-                 "foo" }'                                               [string]
-  -i, --input    Read lines from stdin, post each line to server. <input_format>
-                 can be: text, json                                     [string]
-  --insecure     Disable server certificate validation, useful for testing using
-                 self-signed certificates                              [boolean]
-  --key          Filename of TLS private key (in PEM format)            [string]
-  --cert         Filename of TLS certificate (in PEM format)            [string]
-  --ca           Filename of TLS certificate authority (in PEM format)  [string]
-  --passphrase   Passphrase for private key                             [string]
-  --pfx          Filename of TLS private key, certificate and CA certificates
-                 (in PFX or PKCS12 format). Mutually exclusive with --key,
-                 --cert and --ca.                                       [string]
-  --crl          Filename of certificate revocation list (in PEM format)[string]
-  --ciphers      List of ciphers to use or exclude, separated by :      [string]
-  -v, --version  Show version number                                   [boolean]
+  -t, --topic     Message topic                                         [string]
+  -d, --data      Optional message data as JSON object, e.g. '"a string"' or '{
+                  "foo": "bar" }'                                       [string]
+  -h, --headers   Optional message headers as JSON object, e.g. '{ "my-header":
+                  "foo" }'                                              [string]
+  -i, --input     Read lines from stdin, post each line to server.
+                  <input_format> can be: text, json                     [string]
+  --insecure      Disable server certificate validation, useful for testing
+                  using self-signed certificates                       [boolean]
+  --key           Filename of TLS private key (in PEM format)           [string]
+  --cert          Filename of TLS certificate (in PEM format)           [string]
+  --ca            Filename of TLS certificate authority (in PEM format) [string]
+  --passphrase    Passphrase for private key                            [string]
+  --pfx           Filename of TLS private key, certificate and CA certificates
+                  (in PFX or PKCS12 format). Mutually exclusive with --key,
+                  --cert and --ca.                                      [string]
+  --crl           Filename of certificate revocation list (in PEM format)
+                                                                        [string]
+  --ciphers       List of ciphers to use or exclude, separated by :     [string]
+  -U, --username  Username                                              [string]
+  -P, --password  Password. Note: sent in plain-text, so only use on secure
+                  connection. Also note it may appear in e.g. `ps` output.
+                                                                        [string]
+  -v, --version   Show version number                                  [boolean]
 ```
 
 ### Listening for messages
