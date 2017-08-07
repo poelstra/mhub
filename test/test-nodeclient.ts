@@ -1,5 +1,9 @@
 /**
- * Tests for MHub Client.
+ * Tests for Node.JS MHub client.
+ *
+ * These tests mostly cover things like connection logic.
+ * Business logic such as authentication, publish/subscribe behaviour
+ * etc. are tested elsewhere.
  */
 
 import MClient from "../src/nodeclient";
