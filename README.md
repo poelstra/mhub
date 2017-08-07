@@ -723,6 +723,9 @@ declare class Message {
 }
 ```
 
+(Note: `Message` is not directly used on the wire, it is only used to pass to e.g.
+`client.publish()` and received for subscriptions).
+
 ## Wire protocol
 
 MHub typically uses JSON messages over websockets, or a line-based TCP socket.
@@ -794,6 +797,15 @@ or with e.g.
     "seq": 0
 }
 ```
+
+When sending a command with a sequence number, the server will *always* respond
+with a response having that same sequence number (either an ack, or an error).
+
+The only cases where the server will never send a sequence number are:
+- messages received on a subscription (you'll get your `subscription` ID instead)
+- errors that are not (or could not be) related to a specific command
+- gratuitous pingack's, which may be sent by a future implementation of the server
+  to check whether the connection is still alive
 
 ### Subscribing to nodes
 
