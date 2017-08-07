@@ -516,7 +516,7 @@ to other users on the system through e.g. `ps`.
 
 ## Using MHub from Javascript
 
-Simply `npm install --save mhub` in your package, then require the client
+In Node.JS, simply `npm install --save mhub` in your package, then require the client
 interface as e.g.:
 ```js
 // ES6
@@ -532,7 +532,7 @@ var client = new MClient("ws://localhost:13900");
 client.on("message", function(message) {
     console.log(message.topic, message.data, message.headers);
 });
-client.on("open", function() {
+client.connect().then(function() {
     client.subscribe("blib"); // or e.g. client.subscribe("blib", "my:*");
     client.publish("blib", "my:topic", 42, { some: "header" });
 });
