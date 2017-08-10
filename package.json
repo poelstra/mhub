@@ -12,7 +12,7 @@
     "mserver": "./bin/mhub-server"
   },
   "scripts": {
-    "test": "npm run -s lint && npm run -s mocha",
+    "test": "npm run -s build && npm run -s lint && npm run -s mocha",
     "mocha": "mocha -R spec dist/test/",
     "start": "node ./bin/mhub-server",
     "lint": "tslint --format verbose src/*.ts test/*.ts",
