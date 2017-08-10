@@ -16,10 +16,6 @@ const MAX_SEQ = 65536;
 
 type Resolver<T> = (v: T|Thenable<T>) => void;
 
-interface VoidResolver extends Resolver<void> {
-	(v?: Thenable<void>): void;
-}
-
 /**
  * Options to be passed to constructor.
  */

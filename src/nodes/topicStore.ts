@@ -1,10 +1,10 @@
 import Promise from "ts-promise";
 
-import { KeyValues } from "../types";
-import * as pubsub from "../pubsub";
+import { getMatcher, Matcher, MatchSpec } from "../match";
 import Message from "../message";
-import { Matcher, getMatcher, MatchSpec } from "../match";
-import { Storage, getDefaultStorage } from "../storage";
+import * as pubsub from "../pubsub";
+import { getDefaultStorage, Storage } from "../storage";
+import { KeyValues } from "../types";
 
 import log from "../log";
 
@@ -20,7 +20,7 @@ interface TopicStoreStorage {
 	type: string;
 	version: number;
 	state: KeyValues<Message>;
-};
+}
 
 /**
  * Remember last message for each topic.
@@ -61,6 +61,7 @@ export class TopicStore extends pubsub.BaseSource {
 					(data.type !== TOPIC_STORE_STORAGE_ID && data.type !== "TopicStateStorage") ||
 					data.version !== TOPIC_STORE_STORAGE_VERSION
 				) {
+				// tslint:disable-next-line:no-console
 				console.log(`Warning: discarding invalid storage ID / version for node '${this.name}'`);
 				return;
 			}

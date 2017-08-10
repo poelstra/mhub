@@ -4,9 +4,9 @@
 
 import * as net from "net";
 
-import log from "../log";
 import Hub from "../hub";
 import HubClient from "../hubclient";
+import log from "../log";
 import * as protocol from "../protocol";
 
 export class TcpConnection {

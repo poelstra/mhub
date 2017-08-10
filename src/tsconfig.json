@@ -1,17 +1,18 @@
 {
-    "compilerOptions": {
-        "target": "es5",
-        "module": "commonjs",
-        "strict": true,
-        "isolatedModules": false,
-        "declaration": true,
-        "removeComments": false,
-        "noLib": false,
-        "preserveConstEnums": true,
-        "sourceMap": true,
-        "outDir": "../dist/src/",
-        "types": [
-            "node"
-        ]
-    }
+	"compilerOptions": {
+		"target": "es5",
+		"module": "commonjs",
+		"strict": true,
+		"noUnusedLocals": true,
+		"isolatedModules": false,
+		"declaration": true,
+		"removeComments": false,
+		"noLib": false,
+		"preserveConstEnums": true,
+		"sourceMap": true,
+		"outDir": "../dist/src/",
+		"types": [
+			"node"
+		]
+	}
 }

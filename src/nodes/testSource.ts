@@ -1,5 +1,5 @@
-import * as pubsub from "../pubsub";
 import Message from "../message";
+import * as pubsub from "../pubsub";
 
 export interface TestSourceOptions extends pubsub.BaseSource {
 	topic?: string; // Topic to use for test messages (default "blib")

@@ -1,6 +1,7 @@
-import * as pubsub from "../pubsub";
 import Message from "../message";
+import * as pubsub from "../pubsub";
 
+// tslint:disable-next-line:no-empty-interface
 export interface ConsoleDestinationOptions {
 }
 
@@ -12,6 +13,7 @@ export class ConsoleDestination implements pubsub.Destination {
 	}
 
 	public send(message: Message): void {
+		// tslint:disable-next-line:no-console
 		console.log("[" + this.name + "]", message);
 	}
 }

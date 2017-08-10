@@ -1,9 +1,9 @@
 import Promise from "ts-promise";
 
-import * as pubsub from "../pubsub";
+import { getMatcher, Matcher, MatchSpec } from "../match";
 import Message from "../message";
-import { Matcher, getMatcher, MatchSpec } from "../match";
-import { Storage, getDefaultStorage } from "../storage";
+import * as pubsub from "../pubsub";
+import { getDefaultStorage, Storage } from "../storage";
 
 import log from "../log";
 
@@ -20,7 +20,7 @@ interface QueueStorage {
 	type: string;
 	version: number;
 	queue: Message[];
-};
+}
 
 export class Queue extends pubsub.BaseSource {
 	public name: string;
@@ -49,7 +49,8 @@ export class Queue extends pubsub.BaseSource {
 				return;
 			}
 			if (data.type !== QUEUE_STORAGE_ID || data.version !== QUEUE_STORAGE_VERSION) {
-				console.log(`Warning: discarding invalid storage ID / version for node '${this.name}'`);
+				// tslint:disable-next-line:no-console
+				console.error(`Warning: discarding invalid storage ID / version for node '${this.name}'`);
 				return;
 			}
 			for (const msg of data.queue) {

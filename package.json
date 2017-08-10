@@ -15,7 +15,7 @@
     "test": "npm run -s build && npm run -s lint && npm run -s mocha",
     "mocha": "mocha -R spec dist/test/",
     "start": "node ./bin/mhub-server",
-    "lint": "tslint --format verbose src/*.ts test/*.ts",
+    "lint": "tslint --type-check --format verbose -p src/ && tslint --type-check --format verbose -p test/",
     "build:src": "tsc -p src/",
     "watch:src": "tsc -p src/ --watch",
     "build:test": "tsc -p test/",

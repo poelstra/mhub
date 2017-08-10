@@ -3,6 +3,9 @@
     "tslint:recommended"
   ],
   "rules": {
+    "no-unused-variable": [
+      true
+    ],
     "indent": [
       "tab"
     ],

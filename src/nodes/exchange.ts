@@ -1,7 +1,8 @@
-import * as pubsub from "../pubsub";
-import Message from "../message";
 import log from "../log";
+import Message from "../message";
+import * as pubsub from "../pubsub";
 
+// tslint:disable-next-line:no-empty-interface
 export interface ExchangeOptions extends pubsub.BaseSourceOptions {
 }
 
