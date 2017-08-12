@@ -11,8 +11,8 @@ import Promise from "ts-promise";
 
 import { Authenticator } from "./authenticator";
 import Dict from "./dict";
+import { getMatcher, Matcher } from "./match";
 import * as pubsub from "./pubsub";
-import { Matcher, getMatcher } from "./match";
 
 /**
  * Specify what permission a user has to e.g. publish or subscribe.
@@ -89,7 +89,12 @@ export class Authorizer {
 		return this._hasPermission(this._permissions.subscribe, node, pattern, true);
 	}
 
-	private _hasPermission(permission: Permission, node: string, topicOrPattern: string | undefined, isPattern: boolean): boolean | Matcher {
+	private _hasPermission(
+		permission: Permission,
+		node: string,
+		topicOrPattern: string | undefined,
+		isPattern: boolean
+	): boolean | Matcher {
 		if (typeof permission === "boolean") {
 			return permission;
 		}
@@ -152,8 +157,8 @@ export class Hub {
 	}
 
 	public init(): Promise<void> {
-		const initPromises: Promise<void>[] = [];
-		this._nodes.forEach(node => {
+		const initPromises: Array<Promise<void>> = [];
+		this._nodes.forEach((node) => {
 			if (node.init) {
 				initPromises.push(node.init());
 			}

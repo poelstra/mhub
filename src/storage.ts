@@ -3,9 +3,9 @@
  */
 
 import * as fs from "fs";
+import { sync as mkdirpSync } from "mkdirp";
 import * as path from "path";
 import Promise from "ts-promise";
-import { sync as mkdirpSync } from "mkdirp";
 
 import { KeyValues } from "./types";
 
@@ -46,7 +46,7 @@ export class SimpleFileStorage<T> implements Storage<T> {
 		const realFile = this._getFilename(key);
 		const tmpFile = realFile + ".tmp";
 		return new Promise<void>((resolve, reject) => {
-			let data = JSON.stringify(value);
+			const data = JSON.stringify(value);
 			fs.writeFile(
 				tmpFile,
 				data + (data ? "\n" : ""),
@@ -139,7 +139,7 @@ export class ThrottledStorage<T> implements Storage<T> {
 		});
 		this._saveQueue[key] = {
 			lastValue: value,
-			promise: promise,
+			promise,
 		};
 		return promise;
 	}

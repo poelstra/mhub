@@ -3,11 +3,12 @@
  */
 
 import * as events from "events";
-import * as ws from "ws";
 import Promise from "ts-promise";
-import { TlsOptions } from "./tls";
-import { BaseClientOptions, BaseClient, Connection } from "./baseclient";
+import * as ws from "ws";
+
+import { BaseClient, BaseClientOptions, Connection } from "./baseclient";
 import * as protocol from "./protocol";
+import { TlsOptions } from "./tls";
 
 const DEFAULT_PORT_WS = 13900;
 const DEFAULT_PORT_WSS = 13901;

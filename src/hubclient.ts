@@ -7,12 +7,12 @@ import * as events from "events";
 
 import log from "./log";
 
+import Dict from "./dict";
 import Hub, { Authorizer } from "./hub";
+import { getMatcher, MatchSpec } from "./match";
+import Message from "./message";
 import * as protocol from "./protocol";
 import * as pubsub from "./pubsub";
-import Message from "./message";
-import Dict from "./dict";
-import { MatchSpec, getMatcher } from "./match";
 
 type ResponseHandler = (response: protocol.Response) => void;
 

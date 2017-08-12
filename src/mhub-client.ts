@@ -4,14 +4,17 @@
 
 import "source-map-support/register";
 
-import * as yargs from "yargs";
 import * as path from "path";
 import Promise from "ts-promise";
-import MClient from "./nodeclient";
-import Message from "./message";
-import { TlsOptions, replaceKeyFiles } from "./tls";
+import * as yargs from "yargs";
 
-var usage = [
+import { Headers, Message } from "./message";
+import MClient from "./nodeclient";
+import { replaceKeyFiles, TlsOptions } from "./tls";
+
+// tslint:disable:no-console
+
+const usage = [
 	"Listen mode:",
 	"  mhub-client [-n <nodename>] -l [-p <topic_pattern>] [-o <output_format>]",
 	"Post mode:",
@@ -24,12 +27,13 @@ var usage = [
 	"For self-signed certs, see --insecure.",
 ].join("\n");
 
+// tslint:disable-next-line:no-shadowed-variable
 function die(...args: any[]): never {
 	console.error.apply(undefined, args);
 	return process.exit(1);
 }
 
-var args = yargs
+const args = yargs
 	.usage(usage)
 	.help("help")
 	// tslint:disable-next-line:no-require-imports
@@ -38,7 +42,8 @@ var args = yargs
 	.option("s", {
 		type: "string",
 		alias: "socket",
-		description: "WebSocket to connect to, specify as [protocol://]host[:port], e.g. ws://localhost:13900, or wss://localhost:13900",
+		description: "WebSocket to connect to, specify as [protocol://]host[:port], e.g. ws://localhost:13900, " +
+				"or wss://localhost:13900",
 		required: true,
 		default: "localhost:13900",
 	})
@@ -126,7 +131,8 @@ var args = yargs
 	.option("P", {
 		type: "string",
 		alias: "password",
-		description: "Password. Note: sent in plain-text, so only use on secure connection. Also note it may appear in e.g. `ps` output.",
+		description: "Password. Note: sent in plain-text, so only use on secure connection. " +
+				"Also note it may appear in e.g. `ps` output.",
 	})
 	.strict();
 
@@ -134,7 +140,7 @@ enum OutputFormat {
 	Human,
 	Text,
 	JsonData,
-	Json
+	Json,
 }
 
 function parseOutputFormat(s: string): OutputFormat {
@@ -153,7 +159,7 @@ function parseOutputFormat(s: string): OutputFormat {
 }
 
 function createClient(argv: any): Promise<MClient> {
-	let tlsOptions: TlsOptions = {};
+	const tlsOptions: TlsOptions = {};
 	tlsOptions.pfx = argv.pfx;
 	tlsOptions.key = argv.key;
 	tlsOptions.passphrase = argv.passphrase;
@@ -177,8 +183,8 @@ function createClient(argv: any): Promise<MClient> {
 }
 
 function listenMode(): void {
-	var argv = args.argv;
-	var format = parseOutputFormat(argv.output);
+	const argv = args.argv;
+	const format = parseOutputFormat(argv.output);
 	createClient(argv).then((client) => {
 		client.on("message", (msg: Message): void => {
 			switch (format) {
@@ -203,11 +209,11 @@ function listenMode(): void {
 }
 
 function postMode(): void {
-	var argv = args
+	const argv = args
 		.require("topic", true)
 		.argv;
 
-	var data: any;
+	let data: any;
 	try {
 		data = argv.data && JSON.parse(argv.data);
 	} catch (e) {
@@ -218,7 +224,7 @@ function postMode(): void {
 		);
 	}
 
-	var headers: any;
+	let headers: Headers;
 	try {
 		headers = argv.headers && JSON.parse(argv.headers);
 	} catch (e) {
@@ -226,14 +232,14 @@ function postMode(): void {
 	}
 
 	createClient(argv).then((client) => {
-		let closer = () => client.close();
+		const closer = () => client.close();
 		return client.publish(argv.node, argv.topic, data, headers).then(closer, closer);
 	}).catch(die);
 }
 
 enum InputFormat {
 	Text,
-	Json
+	Json,
 }
 
 function parseInputFormat(s: string): InputFormat {
@@ -248,36 +254,36 @@ function parseInputFormat(s: string): InputFormat {
 }
 
 function pipeMode(): void {
-	var argv = args
+	const argv = args
 		.require("topic", true)
 		.argv;
 
-	var format = parseInputFormat(argv.input);
+	const format = parseInputFormat(argv.input);
 
-	var headers: any;
+	let headers: Headers;
 	try {
 		headers = argv.headers && JSON.parse(argv.headers);
 	} catch (e) {
 		die("Error parsing message headers as JSON: " + e.message);
 	}
 
-	var ended = false;
+	let ended = false;
 	createClient(argv).then((client) => {
 		// Connection opened, start reading lines from stdin
 		process.stdin.setEncoding("utf8");
 		process.stdin.on("readable", onRead);
 		process.stdin.on("end", onEnd);
 
-		var lineBuffer = "";
+		let lineBuffer = "";
 
 		function onRead(): void {
-			var chunk = process.stdin.read();
+			const chunk = process.stdin.read();
 			if (chunk === null) { // tslint:disable-line:no-null-keyword
 				return;
 			}
 			lineBuffer += chunk;
 			while (true) {
-				var p = lineBuffer.indexOf("\n");
+				const p = lineBuffer.indexOf("\n");
 				if (p < 0) {
 					break;
 				}
@@ -302,7 +308,7 @@ function pipeMode(): void {
 			if (line[line.length - 1] === "\r") {
 				line = line.slice(0, -1);
 			}
-			var data: any;
+			let data: any;
 			if (format === InputFormat.Json) {
 				try {
 					data = JSON.parse(line);
@@ -313,7 +319,7 @@ function pipeMode(): void {
 				data = line;
 			}
 
-			let closer = () => {
+			const closer = () => {
 				if (ended) {
 					client.close();
 				}
@@ -323,16 +329,20 @@ function pipeMode(): void {
 	}).catch(die);
 }
 
-var argv = args.argv;
+function main(): void {
+	const argv = args.argv;
 
-if (argv.listen) {
-	listenMode();
-} else if (argv.topic) {
-	if (argv.input) {
-		pipeMode();
+	if (argv.listen) {
+		listenMode();
+	} else if (argv.topic) {
+		if (argv.input) {
+			pipeMode();
+		} else {
+			postMode();
+		}
 	} else {
-		postMode();
+		die("Either -l or -t is required, see --help for more info.");
 	}
-} else {
-	die("Either -l or -t is required, see --help for more info.");
 }
+
+main();

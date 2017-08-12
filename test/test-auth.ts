@@ -2,16 +2,19 @@
  * Tests for MHub client/server authentication/authorization.
  */
 
-import LocalClient from "../src/localclient";
-import Hub from "../src/hub";
-import { Exchange } from "../src/nodes/exchange";
-import { PlainAuthenticator } from "../src/authenticator";
+import { expect } from "chai";
 import Promise from "ts-promise";
 
-import { expect } from "chai";
+import { PlainAuthenticator } from "../src/authenticator";
+import Hub from "../src/hub";
+import LocalClient from "../src/localclient";
+import { Message } from "../src/message";
+import { Exchange } from "../src/nodes/exchange";
 
 import "./common";
-import { Message } from "../src/message";
+
+// We have a lot of "testUser" etc which I think makes it more readable, so:
+// tslint:disable:object-literal-key-quotes
 
 /**
  * Define subscription pattern, then a number of topics to publish,
@@ -109,8 +112,9 @@ describe("auth", (): void => {
 			// tslint:disable-next-line:forin
 			for (const publishTopic in publishTests) {
 				const expectedResult = publishTests[publishTopic];
-				it(`subscription to ${node}:${subscriptionPattern || "<no pattern>"} ${expectedResult ? "pass" : "filter"} ${publishTopic}`, () => {
-					let msgs: Message[] = [];
+				it(`subscription to ${node}:${subscriptionPattern || "<no pattern>"} ${expectedResult ? "pass" : "filter"} ` +
+						`${publishTopic}`, () => {
+					const msgs: Message[] = [];
 					client.on("message", (msg: Message) => msgs.push(msg));
 					return client.subscribe(node, subscriptionPattern)
 						.then(() => {
@@ -563,7 +567,7 @@ describe("auth", (): void => {
 		});
 
 		it("can receive everything", () => {
-			let msgs: Message[] = [];
+			const msgs: Message[] = [];
 			return client.subscribe("default")
 				.then(() => client.on("message", (msg: Message) => msgs.push(msg)))
 				.then(() => client.publish("default", "/foo/bar/baz"))
@@ -577,7 +581,7 @@ describe("auth", (): void => {
 		});
 
 		it("can filter on a topic", () => {
-			let msgs: Message[] = [];
+			const msgs: Message[] = [];
 			return client.subscribe("default", "/bar")
 				.then(() => client.on("message", (msg: Message) => msgs.push(msg)))
 				.then(() => client.publish("default", "/foo/bar/baz"))

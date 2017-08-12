@@ -7,7 +7,7 @@ import Promise from "ts-promise";
 
 import Message from "./message";
 
-import { MatchSpec, getMatcher, Matcher } from "./match";
+import { getMatcher, Matcher, MatchSpec } from "./match";
 
 interface MatchDef {
 	pattern: MatchSpec;
@@ -44,6 +44,7 @@ export function isSource(node: BaseNode | undefined): node is Source {
 
 export type BaseNode = Source | Destination;
 
+// tslint:disable-next-line:no-empty-interface
 export interface BaseSourceOptions {
 }
 
@@ -59,7 +60,7 @@ export class BaseSource implements Source {
 	public bind(destination: Destination, pattern?: MatchSpec): void {
 		let b: Binding | undefined;
 		// Find existing bindings to this destination
-		for (var i = 0; i < this._bindings.length; i++) {
+		for (let i = 0; i < this._bindings.length; i++) {
 			if (this._bindings[i].destination === destination) {
 				b = this._bindings[i];
 				break;
@@ -69,7 +70,7 @@ export class BaseSource implements Source {
 		if (!b) {
 			b = {
 				matchers: [],
-				destination: destination,
+				destination,
 			};
 			this._bindings.push(b);
 		}
@@ -84,14 +85,14 @@ export class BaseSource implements Source {
 		if (!pattern) {
 			// Remove all bindings to given destination
 			this._bindings = this._bindings.filter((b: Binding): boolean => {
-				var remove = b.destination === destination;
+				const remove = b.destination === destination;
 				return !remove;
 			});
 		} else {
 			// Remove only specific binding to destination
 			this._bindings = this._bindings.filter((b: Binding): boolean => {
 				b.matchers = b.matchers.filter((m: MatchDef): boolean => {
-					var remove = m.pattern === pattern;
+					const remove = m.pattern === pattern;
 					return !remove;
 				});
 				return b.matchers.length > 0;

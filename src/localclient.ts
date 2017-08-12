@@ -4,9 +4,10 @@
 
 import * as events from "events";
 import Promise from "ts-promise";
+
 import { BaseClient, Connection } from "./baseclient";
-import { HubClient } from "./hubclient";
 import { Hub } from "./hub";
+import { HubClient } from "./hubclient";
 import * as protocol from "./protocol";
 
 class LocalConnection extends events.EventEmitter implements Connection {

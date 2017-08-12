@@ -2,13 +2,13 @@
  * Tests for HubClient.
  */
 
-import HubClient from "../src/hubclient";
-import Hub from "../src/hub";
-import * as protocol from "../src/protocol";
-import { PlainAuthenticator } from "../src/authenticator";
-import Exchange from "../src/nodes/exchange";
-
 import { expect } from "chai";
+
+import { PlainAuthenticator } from "../src/authenticator";
+import Hub from "../src/hub";
+import HubClient from "../src/hubclient";
+import Exchange from "../src/nodes/exchange";
+import * as protocol from "../src/protocol";
 
 import "./common";
 

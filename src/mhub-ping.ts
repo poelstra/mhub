@@ -4,14 +4,15 @@
 
 import "source-map-support/register";
 
-import * as yargs from "yargs";
 import * as path from "path";
 import Promise from "ts-promise";
-import MClient from "./nodeclient";
-import Message from "./message";
-import { TlsOptions, replaceKeyFiles } from "./tls";
+import * as yargs from "yargs";
 
-var usage = [
+import { Headers, Message } from "./message";
+import MClient from "./nodeclient";
+import { replaceKeyFiles, TlsOptions } from "./tls";
+
+const usage = [
 	"Sends a message to the given node, waits for an answer, then sends the next etc.",
 	"Prints the round-trip time for each message.",
 	"",
@@ -24,7 +25,7 @@ function die(...args: any[]): never {
 	return process.exit(1);
 }
 
-var argv = yargs
+const argv = yargs
 	.usage(usage)
 	.help("help")
 	// tslint:disable-next-line:no-require-imports
@@ -99,13 +100,14 @@ var argv = yargs
 	.option("P", {
 		type: "string",
 		alias: "password",
-		description: "Password. Note: sent in plain-text, so only use on secure connection. Also note it may appear in e.g. `ps` output.",
+		description: "Password. Note: sent in plain-text, so only use on secure connection. " +
+				"Also note it may appear in e.g. `ps` output.",
 	})
 	.strict()
 	.argv;
 
 function createClient(): Promise<MClient> {
-	let tlsOptions: TlsOptions = {};
+	const tlsOptions: TlsOptions = {};
 	tlsOptions.pfx = argv.pfx;
 	tlsOptions.key = argv.key;
 	tlsOptions.passphrase = argv.passphrase;
@@ -128,10 +130,11 @@ function createClient(): Promise<MClient> {
 	}).return(client);
 }
 
-var data: any;
+let data: any;
 try {
 	data = argv.data && JSON.parse(argv.data);
 } catch (e) {
+	// tslint:disable-next-line:no-console
 	console.error("Error parsing message data as JSON: " + e.message);
 	die(
 		"Hint: if you're passing a string, make sure to put double-quotes around it, " +
@@ -139,18 +142,18 @@ try {
 	);
 }
 
-var headers: any;
+let headers: Headers;
 try {
 	headers = argv.headers && JSON.parse(argv.headers);
 } catch (e) {
 	die("Error parsing message headers as JSON: " + e.message);
 }
 
-var pingCount = argv.count;
+let pingCount = argv.count;
 
 createClient().then((client) => {
 	client.on("message", (msg: Message): void => {
-		var reply = JSON.stringify(msg.data);
+		const reply = JSON.stringify(msg.data);
 		if (argv.data === reply) {
 			console.timeEnd("pong"); // tslint:disable-line:no-console
 			if (pingCount > 0) {

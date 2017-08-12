@@ -24,7 +24,7 @@ export class Dict<T> {
 	}
 
 	public keys(): string[] {
-		let keys: string[] = [];
+		const keys: string[] = [];
 		for (const key in this._items) { // tslint:disable-line:forin
 			keys.push(key.substr(1)); // strip the $
 		}

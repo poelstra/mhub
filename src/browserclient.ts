@@ -4,7 +4,7 @@
 
 import * as events from "events";
 import Promise from "ts-promise";
-import { BaseClientOptions, BaseClient, Connection } from "./baseclient";
+import { BaseClient, BaseClientOptions, Connection } from "./baseclient";
 import * as protocol from "./protocol";
 
 const DEFAULT_PORT_WS = 13900;
@@ -13,6 +13,7 @@ const DEFAULT_PORT_WSS = 13901;
 /**
  * Options to be passed to MClient constructor.
  */
+// tslint:disable-next-line:no-empty-interface
 export interface MClientOptions extends BaseClientOptions {
 }
 

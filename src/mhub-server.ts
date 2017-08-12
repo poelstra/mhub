@@ -6,23 +6,24 @@
 
 import "source-map-support/register";
 
+import * as fs from "fs";
 import * as http from "http";
 import * as https from "https";
-import * as yargs from "yargs";
-import * as path from "path";
-import * as fs from "fs";
 import * as net from "net";
-import * as ws from "ws";
+import * as path from "path";
 import Promise from "ts-promise";
-import * as pubsub from "./pubsub";
-import * as storage from "./storage";
+import * as ws from "ws";
+import * as yargs from "yargs";
+
 import { PlainAuthenticator } from "./authenticator";
 import Hub, { UserRights } from "./hub";
-import WSConnection from "./transports/wsconnection";
-import TcpConnection from "./transports/tcpconnection";
-import { KeyValues } from "./types";
-import { TlsOptions, replaceKeyFiles } from "./tls";
 import { LogLevel } from "./logger";
+import * as pubsub from "./pubsub";
+import * as storage from "./storage";
+import { replaceKeyFiles, TlsOptions } from "./tls";
+import TcpConnection from "./transports/tcpconnection";
+import WSConnection from "./transports/wsconnection";
+import { KeyValues } from "./types";
 
 import log from "./log";
 
@@ -55,7 +56,7 @@ interface NodeDefinition {
 
 interface NodesConfig {
 	[nodeName: string]: string | NodeDefinition;
-};
+}
 
 type ListenOptions = WSServerOptions | TcpServerOptions;
 
@@ -71,6 +72,7 @@ interface Config {
 	rights: UserRights;
 }
 
+// tslint:disable-next-line:no-shadowed-variable
 function die(...args: any[]): void {
 	log.fatal.apply(log, args);
 	process.exit(1);
@@ -110,11 +112,11 @@ nodeClassMap["TopicState"] = TopicStore;
 /* tslint:enable:no-string-literal */
 
 // Build list of valid log level names (e.g. none, fatal, error, ...)
-const logLevelNames = Object.keys(LogLevel).filter(s => !/\d+/.test(s)).map(s => s.toLowerCase());
+const logLevelNames = Object.keys(LogLevel).filter((s) => !/\d+/.test(s)).map((s) => s.toLowerCase());
 
 // Parse input arguments
 
-var args = yargs
+const args = yargs
 	.usage("mhub-server [-c <config_file>]")
 	.help("help")
 	.alias("h", "help")
@@ -136,7 +138,7 @@ var args = yargs
 
 // Parse config file
 
-var configFile: string;
+let configFile: string;
 if (!args.config) {
 	configFile = path.resolve(__dirname, "../../server.conf.json");
 } else {
@@ -218,7 +220,7 @@ storage.setDefaultStorage(simpleStorage);
 
 // Create hub
 
-var hub = new Hub();
+const hub = new Hub();
 
 // Initialize users
 
@@ -300,11 +302,11 @@ Object.keys(config.nodes).forEach((nodeName: string): void => {
 // Setup bindings between nodes
 
 config.bindings.forEach((binding: Binding, index: number): void => {
-	var from = hub.findSource(binding.from);
+	const from = hub.findSource(binding.from);
 	if (!from) {
 		return die(`Unknown Source node '${binding.from}' in \`binding[${index}].from\``);
 	}
-	var to = hub.findDestination(binding.to);
+	const to = hub.findDestination(binding.to);
 	if (!to) {
 		return die(`Unknown Destination node '${binding.to}' in \`binding[${index}].to\``);
 	}
@@ -332,6 +334,7 @@ function startWebSocketServer(options: WSServerOptions): Promise<void> {
 
 		const wss = new ws.Server({ server: <any>server, path: "/" });
 		wss.on("connection", (conn: ws) => {
+			// tslint:disable-next-line:no-unused-expression
 			new WSConnection(hub, conn, "websocket" + connectionId++);
 		});
 
@@ -352,6 +355,7 @@ function startTcpServer(options: TcpServerOptions): Promise<void> {
 		options.port = options.port || DEFAULT_PORT_TCP;
 
 		const server = net.createServer((socket: net.Socket) => {
+			// tslint:disable-next-line:no-unused-expression
 			new TcpConnection(hub, socket, "tcp" + connectionId++);
 		});
 

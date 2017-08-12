@@ -18,8 +18,6 @@ export interface Authenticator {
  * Basic username/password-based authentication manager.
  */
 export class PlainAuthenticator implements Authenticator {
-	private _users: Dict<string> = new Dict<string>(); // Username -> password mapping
-
 	public static validateUsername(username: string): void {
 		if (typeof username !== "string" || username === "") {
 			throw new TypeError("invalid username");
@@ -29,6 +27,8 @@ export class PlainAuthenticator implements Authenticator {
 			throw new TypeError("invalid username (cannot start with @)");
 		}
 	}
+
+	private _users: Dict<string> = new Dict<string>(); // Username -> password mapping
 
 	/**
 	 * Add/replace user, using given password.

@@ -14,9 +14,7 @@ import * as protocol from "./protocol";
 
 const MAX_SEQ = 65536;
 
-interface Resolver<T> {
-	(v: T|Thenable<T>): void;
-}
+type Resolver<T> = (v: T|Thenable<T>) => void;
 
 interface VoidResolver extends Resolver<void> {
 	(v?: Thenable<void>): void;
@@ -167,7 +165,7 @@ export abstract class BaseClient extends events.EventEmitter {
 				// Abort pending transactions
 				const transactionError = error || new Error("connection closed");
 				const closedRejection = Promise.reject<never>(transactionError);
-				for (let t in this._transactions) {
+				for (const t in this._transactions) {
 					if (!this._transactions[t]) {
 						continue;
 					}
@@ -227,8 +225,8 @@ export abstract class BaseClient extends events.EventEmitter {
 		return this._send(<protocol.SubscribeCommand>{
 			type: "subscribe",
 			node: nodeName,
-			pattern: pattern,
-			id: id,
+			pattern,
+			id,
 		}).return();
 	}
 
@@ -251,7 +249,7 @@ export abstract class BaseClient extends events.EventEmitter {
 	// Implementation
 	public publish(nodeName: string, ...args: any[]): Promise<void> {
 		if (typeof args[0] === "object") {
-			var message: Message = args[0];
+			const message: Message = args[0];
 			return this._send(<protocol.PublishCommand>{
 				type: "publish",
 				node: nodeName,
@@ -453,7 +451,7 @@ export abstract class BaseClient extends events.EventEmitter {
 	 * Returns true when the given sequence number was actually found.
 	 */
 	private _release(seqNr: number, err: Error | void, msg?: protocol.Response): boolean {
-		let resolver = this._transactions[seqNr];
+		const resolver = this._transactions[seqNr];
 		if (!resolver) {
 			return false;
 		}
@@ -477,7 +475,7 @@ export abstract class BaseClient extends events.EventEmitter {
 			this._seqNo = (this._seqNo + 1) % MAX_SEQ;
 		}
 		assert(maxIteration, "out of sequence numbers");
-		let result = this._seqNo;
+		const result = this._seqNo;
 		this._seqNo = (this._seqNo + 1) % MAX_SEQ;
 		return result;
 	}

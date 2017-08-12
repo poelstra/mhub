@@ -11,7 +11,7 @@ export enum LogLevel {
 	Error,
 	Warning,
 	Info,
-	Debug
+	Debug,
 }
 
 export class Logger {
@@ -32,6 +32,7 @@ export class Logger {
 	 * Default action is to log the message to the console.
 	 */
 	public onMessage = (msg: string): void => {
+		// tslint:disable-next-line:no-console
 		console.log(msg);
 	};
 
@@ -66,7 +67,7 @@ export class Logger {
 		if (this.logLevel === LogLevel.Debug) {
 			args[0] = `${new Date().toISOString()} ${args[0]}`;
 		}
-		var msg = util.format.apply(undefined, args);
+		const msg = util.format.apply(undefined, args);
 		this.onMessage(msg);
 	}
 

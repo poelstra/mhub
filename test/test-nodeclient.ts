@@ -6,15 +6,15 @@
  * etc. are tested elsewhere.
  */
 
-import MClient from "../src/nodeclient";
-import Hub from "../src/hub";
-import { PlainAuthenticator } from "../src/authenticator";
-import Promise from "ts-promise";
-import * as http from "http";
-import * as ws from "ws";
-import WSConnection from "../src/transports/wsconnection";
-
 import { expect } from "chai";
+import * as http from "http";
+import Promise from "ts-promise";
+import * as ws from "ws";
+
+import { PlainAuthenticator } from "../src/authenticator";
+import Hub from "../src/hub";
+import MClient from "../src/nodeclient";
+import WSConnection from "../src/transports/wsconnection";
 
 import "./common";
 
@@ -61,6 +61,7 @@ class TestServer {
 
 			this._wss.on("connection", (conn: ws) => {
 				const connId = this._connectionId++;
+				// tslint:disable-next-line:no-unused-expression
 				new WSConnection(this._hub, conn, "websocket" + connId);
 				this._connections[connId] = conn;
 				this.connectionCount++;

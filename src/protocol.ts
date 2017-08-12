@@ -277,7 +277,8 @@ export type Command = SubscribeCommand | PublishCommand | PingCommand | LoginCom
 /**
  * All supported responses (i.e. server to client)
  */
-export type Response = MessageResponse | SubAckResponse | PubAckResponse | PingAckResponse | LoginAckResponse | ErrorResponse;
+export type Response = MessageResponse | SubAckResponse | PubAckResponse | PingAckResponse |
+		LoginAckResponse | ErrorResponse;
 
 /**
  * Interface that helps with strict null checks.

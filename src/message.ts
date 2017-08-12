@@ -25,6 +25,26 @@ export interface MessageLike {
  */
 export class Message {
 	/**
+	 * Create a Message object from a plain object, by taking its topic, data and
+	 * headers properties.
+	 *
+	 * Note that the data is not deep-cloned.
+	 *
+	 * @param o Input object. Must at least contain a `.topic` property.
+	 * @return New `Message` instance, with given topic, same data, and clone of headers.
+	 */
+	public static fromObject(o: MessageLike): Message {
+		if (!o || typeof o !== "object") {
+			throw new TypeError("cannot create message from object, got " + typeof o);
+		}
+		if (typeof o.topic !== "string") {
+			throw new TypeError("cannot create message from object, missing or invalid topic");
+		}
+		const headers = (o ? { ...o.headers } : {}) as Headers;
+		return new Message(o.topic, o.data, headers);
+	}
+
+	/**
 	 * Topic of message.
 	 * Can be used to determine routing between pubsub Nodes.
 	 */
@@ -70,26 +90,6 @@ export class Message {
 	 */
 	public clone(): Message {
 		return new Message(this.topic, this.data, { ...this.headers });
-	}
-
-	/**
-	 * Create a Message object from a plain object, by taking its topic, data and
-	 * headers properties.
-	 *
-	 * Note that the data is not deep-cloned.
-	 *
-	 * @param o Input object. Must at least contain a `.topic` property.
-	 * @return New `Message` instance, with given topic, same data, and clone of headers.
-	 */
-	public static fromObject(o: MessageLike): Message {
-		if (!o || typeof o !== "object") {
-			throw new TypeError("cannot create message from object, got " + typeof o);
-		}
-		if (typeof o.topic !== "string") {
-			throw new TypeError("cannot create message from object, missing or invalid topic");
-		}
-		const headers = (o ? { ...o.headers } : {}) as Headers;
-		return new Message(o.topic, o.data, headers);
 	}
 }
 
