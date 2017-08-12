@@ -964,6 +964,13 @@ before sending a pull-request.
 The list below shows notable changes between each release.
 For details, see the version tags at GitHub.
 
+0.9.0 (2017-08-12):
+- mhub-server: Add fine-grained permission control: publish/subscribe rights per node/topic(-pattern)
+- mhub-server: Switch to `micromatch` iso `minimatch` (mostly drop-in, but may have subtle changes for intricate patterns)
+- message: `clone()` and `fromObject()` now make shallow clone of headers (NOT data)
+- client: Add preliminary browser client (`import MHubClient from "dist/src/browserclient"`). Note: API may change, will likely move to dedicated package in future.
+- all: Update to TS 2.4.2, enabled strict null-checks
+
 0.8.0 (2017-02-25):
 - protocol: Add plaintext username/password authentication
 - mhub-server: Add users and publish/subscribe permissions
