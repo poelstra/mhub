@@ -319,7 +319,7 @@ let connectionId = 0;
 
 function startWebSocketServer(options: WSServerOptions): Promise<void> {
 	return new Promise<void>((resolve, reject) => {
-		options = Object.create(options);
+		options = { ...options }; // clone
 
 		let server: http.Server | https.Server;
 		const useTls = !!(options.key || options.pfx);
@@ -351,7 +351,7 @@ function startWebSocketServer(options: WSServerOptions): Promise<void> {
 
 function startTcpServer(options: TcpServerOptions): Promise<void> {
 	return new Promise<void>((resolve, reject) => {
-		options = Object.create(options);
+		options = { ...options }; // clone
 		options.port = options.port || DEFAULT_PORT_TCP;
 
 		const server = net.createServer((socket: net.Socket) => {
