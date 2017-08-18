@@ -20,22 +20,25 @@ export interface TlsOptions {
 	ALPNProtocols?: string[] | Buffer;
 }
 
-function readFile(file: string, rootDir: string): Buffer;
-function readFile(file: string[], rootDir: string): Buffer[];
-function readFile(file: string | string[], rootDir: string): Buffer | Buffer[] {
+function convertToBuffer(value: any, rootDir: string): any {
 	// Some options accept an array of keys/certs etc
-	if (Array.isArray(file)) {
-		return file.map((fileName) => readFile(fileName, rootDir));
+	if (Array.isArray(value)) {
+		return value.map((element) => convertToBuffer(element, rootDir));
 	}
-	return fs.readFileSync(path.resolve(rootDir, file));
+	if (typeof value !== "string") {
+		// Pass through Buffer / UInt8Array as-is
+		return value;
+	}
+	// Read filename, convert to file contents
+	return fs.readFileSync(path.resolve(rootDir, value));
 }
 
 /// Convert filenames to the contents of these files
 export function replaceKeyFiles(options: TlsOptions, rootDir: string): void {
-	["pfx", "key", "cert", "crl", "ca", "dhparam", "NPNProtocols", "ALPNProtocols", "ticketKeys"]
+	["pfx", "key", "cert", "crl", "ca", "dhparam", "ticketKeys"]
 		.forEach((propName: keyof TlsOptions) => {
 			if (options[propName]) {
-				options[propName] = readFile(options[propName] as string, rootDir);
+				options[propName] = convertToBuffer(options[propName], rootDir);
 			}
 		});
 }
