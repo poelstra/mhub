@@ -964,6 +964,9 @@ before sending a pull-request.
 The list below shows notable changes between each release.
 For details, see the version tags at GitHub.
 
+0.9.1 (2017-08-18):
+- mhub-server: Fix TLS server on newer versions of Node.
+
 0.9.0 (2017-08-12):
 - mhub-server: Add fine-grained permission control: publish/subscribe rights per node/topic(-pattern)
 - mhub-server: Switch to `micromatch` iso `minimatch` (mostly drop-in, but may have subtle changes for intricate patterns)
