@@ -455,7 +455,7 @@ See https://nodejs.org/dist/latest-v6.x/docs/api/tls.html#tls_tls_createserver_o
 for details on the supported options. Options that accept a Buffer (or array of
 Buffers) need to be specified as filename(s) in the configuration file.
 
-For testing purposes, it can be useful to look at [certificates for localhost](https://github.com/Daplie/localhost.daplie.com-certificates).
+For testing purposes, it can be useful to look at [certificates for localhost](https://www.npmjs.com/package/localhost.daplie.me-certificates).
 When using these, use `{ "type": "websocket", "port": 13901, "key": "privkey.pem", "cert": "fullchain.pem" }`.
 
 On `mhub-client`, to enable TLS, specify a `wss://` URL.
