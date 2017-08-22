@@ -892,7 +892,7 @@ To start receiving messages, you can subscribe to a node. To simply receive all
 messages from node `test`, the minimal message would be:
 ```json
 {
-    "type": "subcribe",
+    "type": "subscribe",
     "node": "test"
 }
 ```
@@ -923,7 +923,7 @@ e.g. to subscribe to different nodes.)
 For example:
 ```json
 {
-    "type": "subcribe",
+    "type": "subscribe",
     "node": "test",
     "pattern": "my*",
     "id": "someID",
