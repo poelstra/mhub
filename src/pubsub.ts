@@ -60,9 +60,9 @@ export class BaseSource implements Source {
 	public bind(destination: Destination, pattern?: MatchSpec): void {
 		let b: Binding | undefined;
 		// Find existing bindings to this destination
-		for (let i = 0; i < this._bindings.length; i++) {
-			if (this._bindings[i].destination === destination) {
-				b = this._bindings[i];
+		for (const binding of this._bindings) {
+			if (binding.destination === destination) {
+				b = binding;
 				break;
 			}
 		}
