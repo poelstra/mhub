@@ -56,6 +56,17 @@ export interface Config {
     rights: UserRights;
 }
 
+export interface NormalizedConfig {
+    listen: ListenOptions | ListenOptions[];
+    verbose?: boolean;
+    logging?: "none" | "fatal" | "error" | "warning" | "info" | "debug";
+    bindings: Binding[];
+    nodes: NodesConfig;
+    storage?: string;
+    users?: { [username: string]: string };
+    rights: UserRights;
+}
+
 // Initialize and start server
 
 let connectionId = 0;
@@ -119,7 +130,7 @@ function startTcpServer(hub: Hub, options: TcpServerOptions): Promise<void> {
     });
 }
 
-export function startTransports(hub: Hub, config: Config): Promise<void> {
+export function startTransports(hub: Hub, config: NormalizedConfig): Promise<void> {
     const serverOptions = Array.isArray(config.listen) ? config.listen : [config.listen];
     return Promise.all(
         serverOptions.map((options: ListenOptions) => {

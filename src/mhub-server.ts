@@ -14,7 +14,7 @@ import { PlainAuthenticator } from "./authenticator";
 import Hub from "./hub";
 import { LogLevel } from "./logger";
 import { Binding, Config, ListenOptions, NodeDefinition,
-	NodesConfig, startTransports
+	NodesConfig, NormalizedConfig, startTransports
 } from "./nodeserver";
 import * as pubsub from "./pubsub";
 import * as storage from "./storage";
@@ -128,64 +128,95 @@ if (config.logging) {
 log.info("Using config file " + configFile);
 
 // 'Normalize' config and convert paths to their contents
-if (!config.nodes) {
-	die("Invalid configuration: missing `nodes`");
+function normalizeConfig(looseConfig: Config): NormalizedConfig {
+	if (!config.nodes) {
+		die("Invalid configuration: missing `nodes`");
+	}
+
+	if (config.port) {
+		if (config.listen) {
+			die("Invalid configuration: specify either `port` or `listen`");
+		}
+		config.listen = {
+			type: "websocket",
+			port: config.port,
+		};
+		delete config.port;
+	}
+	if (!config.listen) {
+		throw die("Invalid configuration: `port` or `listen` missing");
+	}
+	if (!Array.isArray(config.listen)) {
+		config.listen = [config.listen];
+	}
+	config.listen.forEach((listen: ListenOptions) => {
+		if (!listen.type) {
+			// Default to WebSocket, for backward compatibility
+			listen!.type = "websocket";
+		}
+		if (listen.type === "websocket") {
+			// Read TLS key, cert, etc
+			replaceKeyFiles(listen, path.dirname(configFile));
+		}
+	});
+
+	// Initialize users
+	if (typeof config.users === "string") {
+		const usersFile = path.resolve(path.dirname(configFile), config.users);
+		try {
+			config.users = JSON.parse(fs.readFileSync(usersFile, "utf8"));
+		} catch (e) {
+			die(`Cannot parse users file '${configFile}':`, e);
+		}
+	}
+	if (config.users !== undefined && typeof config.users !== "object") {
+		die("Invalid configuration: `users` should be a filename or object containting username -> password pairs");
+	}
+
+	if (!config.bindings) {
+		config.bindings = [];
+	}
+
+	if (Array.isArray(config.nodes)) { // Backward compatibility, convert to new format
+		const oldNodes = <string[]>config.nodes;
+		const newNodes: NodesConfig = {};
+		oldNodes.forEach((n: string) => {
+			if (typeof n !== "string") {
+				die("Invalid configuration: `nodes` is given as array, and must then contain only strings");
+			}
+			newNodes[n] = {
+				type: "Exchange",
+			};
+		});
+		config.nodes = newNodes;
+	}
+
+	if (typeof config.nodes !== "object") {
+		die("Invalid configuration: `nodes` should be a NodeDefinition map, or an array of strings");
+	}
+
+	return <NormalizedConfig>config;
 }
 
-if (config.port) {
-	if (config.listen) {
-		die("Invalid configuration: specify either `port` or `listen`");
-	}
-	config.listen = {
-		type: "websocket",
-		port: config.port,
-	};
-	delete config.port;
-}
-if (!config.listen) {
-	throw die("Invalid configuration: `port` or `listen` missing");
-}
-if (!Array.isArray(config.listen)) {
-	config.listen = [config.listen];
-}
-config.listen.forEach((listen: ListenOptions) => {
-	if (!listen.type) {
-		// Default to WebSocket, for backward compatibility
-		listen!.type = "websocket";
-	}
-	if (listen.type === "websocket") {
-		// Read TLS key, cert, etc
-		replaceKeyFiles(listen, path.dirname(configFile));
-	}
-});
+const normalizedConfig = normalizeConfig(config);
 
 // Create default storage
 
-const storageRoot = path.resolve(path.dirname(configFile), config.storage || "./storage");
-const simpleStorage = new storage.ThrottledStorage(new storage.SimpleFileStorage<any>(storageRoot));
-storage.setDefaultStorage(simpleStorage);
+function createDefaultStorage() {
+	const storageRoot = path.resolve(path.dirname(configFile), normalizedConfig.storage || "./storage");
+	const simpleStorage = new storage.ThrottledStorage(new storage.SimpleFileStorage<any>(storageRoot));
+	storage.setDefaultStorage(simpleStorage);
+}
+
+createDefaultStorage();
 
 // Create hub
 
 const hub = new Hub();
 
-// Initialize users
-if (typeof config.users === "string") {
-	const usersFile = path.resolve(path.dirname(configFile), config.users);
-	try {
-		config.users = JSON.parse(fs.readFileSync(usersFile, "utf8"));
-	} catch (e) {
-		die(`Cannot parse users file '${configFile}':`, e);
-	}
-}
-if (config.users !== undefined && typeof config.users !== "object") {
-	die("Invalid configuration: `users` should be a filename or object containting username -> password pairs");
-}
-
-function setAuthenticator(): void {
+function setAuthenticator({users}: NormalizedConfig): void {
 	const authenticator = new PlainAuthenticator();
-	if (typeof config.users === "object") {
-		const users = config.users;
+	if (typeof users === "object") {
 		Object.keys(users).forEach((username: string) => {
 			authenticator.setUser(username, users[username]);
 		});
@@ -195,8 +226,8 @@ function setAuthenticator(): void {
 
 // Set up user permissions
 
-function setPermissions(): void {
-	if (config.rights === undefined && config.users === undefined) {
+function setPermissions({rights, users}: NormalizedConfig): void {
+	if (rights === undefined && users === undefined) {
 		// Default rights: allow everyone to publish/subscribe.
 		hub.setRights({
 			"": {
@@ -205,32 +236,14 @@ function setPermissions(): void {
 			},
 		});
 	} else {
-		hub.setRights(config.rights || {});
+		hub.setRights(rights || {});
 	}
 }
 
 // Instantiate nodes from config file
 
-if (Array.isArray(config.nodes)) { // Backward compatibility, convert to new format
-	const oldNodes = <string[]>config.nodes;
-	const newNodes: NodesConfig = {};
-	oldNodes.forEach((n: string) => {
-		if (typeof n !== "string") {
-			die("Invalid configuration: `nodes` is given as array, and must then contain only strings");
-		}
-		newNodes[n] = {
-			type: "Exchange",
-		};
-	});
-	config.nodes = newNodes;
-}
-
-if (typeof config.nodes !== "object") {
-	die("Invalid configuration: `nodes` should be a NodeDefinition map, or an array of strings");
-}
-
 function instantiateNodes(nodesConfig: NodesConfig) {
-	Object.keys(config.nodes).forEach((nodeName: string): void => {
+	Object.keys(nodesConfig).forEach((nodeName: string): void => {
 		let def = nodesConfig[nodeName];
 		if (typeof def === "string") {
 			def = <NodeDefinition>{
@@ -250,10 +263,7 @@ function instantiateNodes(nodesConfig: NodesConfig) {
 // Setup bindings between nodes
 
 function setupBindings() {
-	if (!config.bindings) {
-		config.bindings = [];
-	}
-	config.bindings.forEach((binding: Binding, index: number): void => {
+	normalizedConfig.bindings.forEach((binding: Binding, index: number): void => {
 		const from = hub.findSource(binding.from);
 		if (!from) {
 			return die(`Unknown Source node '${binding.from}' in \`binding[${index}].from\``);
@@ -267,17 +277,17 @@ function setupBindings() {
 }
 
 function main(nodes: NodesConfig): void {
-	setAuthenticator();
+	setAuthenticator(normalizedConfig);
 	try {
-		setPermissions();
+		setPermissions(normalizedConfig);
 	} catch (err) {
 		die("Invalid configuration: `rights` property: " + err.message);
 	}
 	instantiateNodes(nodes);
 	setupBindings();
-	hub.init().then(() => startTransports(hub, config)).catch((err: Error) => {
+	hub.init().then(() => startTransports(hub, normalizedConfig)).catch((err: Error) => {
 		die(`Failed to initialize:`, err);
 	});
 }
 
-main(config.nodes);
+main(normalizedConfig.nodes);
