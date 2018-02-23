@@ -355,6 +355,10 @@ function startTransports(): Promise<void> {
 	).return();
 }
 
-hub.init().then(startTransports).catch((err: Error) => {
-	die(`Failed to initialize:`, err);
-});
+function main(): void {
+	hub.init().then(startTransports).catch((err: Error) => {
+		die(`Failed to initialize:`, err);
+	});
+}
+
+main();
