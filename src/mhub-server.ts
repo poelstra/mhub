@@ -170,10 +170,6 @@ config.listen.forEach((listen: ListenOptions) => {
 	}
 });
 
-if (!config.bindings) {
-	config.bindings = [];
-}
-
 // Create default storage
 
 const storageRoot = path.resolve(path.dirname(configFile), config.storage || "./storage");
@@ -185,8 +181,6 @@ storage.setDefaultStorage(simpleStorage);
 const hub = new Hub();
 
 // Initialize users
-
-const authenticator = new PlainAuthenticator();
 if (typeof config.users === "string") {
 	const usersFile = path.resolve(path.dirname(configFile), config.users);
 	try {
@@ -198,30 +192,40 @@ if (typeof config.users === "string") {
 if (config.users !== undefined && typeof config.users !== "object") {
 	die("Invalid configuration: `users` should be a filename or object containting username -> password pairs");
 }
-if (typeof config.users === "object") {
-	const users = config.users;
-	Object.keys(users).forEach((username: string) => {
-		authenticator.setUser(username, users[username]);
-	});
+
+function setAuthenticator(): void {
+	const authenticator = new PlainAuthenticator();
+	if (typeof config.users === "object") {
+		const users = config.users;
+		Object.keys(users).forEach((username: string) => {
+			authenticator.setUser(username, users[username]);
+		});
+	}
+	hub.setAuthenticator(authenticator);
 }
-hub.setAuthenticator(authenticator);
+
+setAuthenticator();
 
 // Set up user permissions
 
-if (config.rights === undefined && config.users === undefined) {
-	// Default rights: allow everyone to publish/subscribe.
-	hub.setRights({
-		"": {
-			publish: true,
-			subscribe: true,
-		},
-	});
-} else {
-	try {
+function setPermissions(): void {
+	if (config.rights === undefined && config.users === undefined) {
+		// Default rights: allow everyone to publish/subscribe.
+		hub.setRights({
+			"": {
+				publish: true,
+				subscribe: true,
+			},
+		});
+	} else {
 		hub.setRights(config.rights || {});
-	} catch (err) {
-		die("Invalid configuration: `rights` property: " + err.message);
 	}
+}
+
+try {
+	setPermissions();
+} catch (err) {
+	die("Invalid configuration: `rights` property: " + err.message);
 }
 
 // Instantiate nodes from config file
@@ -244,36 +248,46 @@ if (typeof config.nodes !== "object") {
 	die("Invalid configuration: `nodes` should be a NodeDefinition map, or an array of strings");
 }
 
-const nodesConfig: NodesConfig = config.nodes;
-Object.keys(config.nodes).forEach((nodeName: string): void => {
-	let def = nodesConfig[nodeName];
-	if (typeof def === "string") {
-		def = <NodeDefinition>{
-			type: def,
-		};
-	}
-	const typeName = def.type;
-	const nodeConstructor = nodeClassMap[typeName];
-	if (!nodeConstructor) {
-		die(`Unknown node type '${typeName}' for node '${nodeName}'`);
-	}
-	const node = new nodeConstructor(nodeName, def.options);
-	hub.add(node);
-});
+function instantiateNodes(nodesConfig: NodesConfig) {
+	Object.keys(config.nodes).forEach((nodeName: string): void => {
+		let def = nodesConfig[nodeName];
+		if (typeof def === "string") {
+			def = <NodeDefinition>{
+				type: def,
+			};
+		}
+		const typeName = def.type;
+		const nodeConstructor = nodeClassMap[typeName];
+		if (!nodeConstructor) {
+			die(`Unknown node type '${typeName}' for node '${nodeName}'`);
+		}
+		const node = new nodeConstructor(nodeName, def.options);
+		hub.add(node);
+	});
+}
+
+instantiateNodes(config.nodes);
 
 // Setup bindings between nodes
 
-config.bindings.forEach((binding: Binding, index: number): void => {
-	const from = hub.findSource(binding.from);
-	if (!from) {
-		return die(`Unknown Source node '${binding.from}' in \`binding[${index}].from\``);
+function setupBindings() {
+	if (!config.bindings) {
+		config.bindings = [];
 	}
-	const to = hub.findDestination(binding.to);
-	if (!to) {
-		return die(`Unknown Destination node '${binding.to}' in \`binding[${index}].to\``);
-	}
-	from.bind(to, binding.pattern);
-});
+	config.bindings.forEach((binding: Binding, index: number): void => {
+		const from = hub.findSource(binding.from);
+		if (!from) {
+			return die(`Unknown Source node '${binding.from}' in \`binding[${index}].from\``);
+		}
+		const to = hub.findDestination(binding.to);
+		if (!to) {
+			return die(`Unknown Destination node '${binding.to}' in \`binding[${index}].to\``);
+		}
+		from.bind(to, binding.pattern);
+	});
+}
+
+setupBindings();
 
 // Initialize and start server
 
