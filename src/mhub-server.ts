@@ -204,8 +204,6 @@ function setAuthenticator(): void {
 	hub.setAuthenticator(authenticator);
 }
 
-setAuthenticator();
-
 // Set up user permissions
 
 function setPermissions(): void {
@@ -220,12 +218,6 @@ function setPermissions(): void {
 	} else {
 		hub.setRights(config.rights || {});
 	}
-}
-
-try {
-	setPermissions();
-} catch (err) {
-	die("Invalid configuration: `rights` property: " + err.message);
 }
 
 // Instantiate nodes from config file
@@ -266,8 +258,6 @@ function instantiateNodes(nodesConfig: NodesConfig) {
 	});
 }
 
-instantiateNodes(config.nodes);
-
 // Setup bindings between nodes
 
 function setupBindings() {
@@ -286,8 +276,6 @@ function setupBindings() {
 		from.bind(to, binding.pattern);
 	});
 }
-
-setupBindings();
 
 // Initialize and start server
 
@@ -369,10 +357,18 @@ function startTransports(): Promise<void> {
 	).return();
 }
 
-function main(): void {
+function main(nodes: NodesConfig): void {
+	setAuthenticator();
+	try {
+		setPermissions();
+	} catch (err) {
+		die("Invalid configuration: `rights` property: " + err.message);
+	}
+	instantiateNodes(nodes);
+	setupBindings();
 	hub.init().then(startTransports).catch((err: Error) => {
 		die(`Failed to initialize:`, err);
 	});
 }
 
-main();
+main(config.nodes);
