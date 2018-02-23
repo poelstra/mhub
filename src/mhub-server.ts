@@ -198,8 +198,6 @@ function normalizeConfig(looseConfig: Config): NormalizedConfig {
 	return <NormalizedConfig>config;
 }
 
-const normalizedConfig = normalizeConfig(config);
-
 // Create default storage
 
 function createDefaultStorage({ storage: storageConfig }: NormalizedConfig) {
@@ -208,13 +206,7 @@ function createDefaultStorage({ storage: storageConfig }: NormalizedConfig) {
 	storage.setDefaultStorage(simpleStorage);
 }
 
-createDefaultStorage(normalizedConfig);
-
-// Create hub
-
-const hub = new Hub();
-
-function setAuthenticator({ users }: NormalizedConfig): void {
+function setAuthenticator(hub: Hub, { users }: NormalizedConfig): void {
 	const authenticator = new PlainAuthenticator();
 	if (typeof users === "object") {
 		Object.keys(users).forEach((username: string) => {
@@ -226,7 +218,7 @@ function setAuthenticator({ users }: NormalizedConfig): void {
 
 // Set up user permissions
 
-function setPermissions({ rights, users }: NormalizedConfig): void {
+function setPermissions(hub: Hub, { rights, users }: NormalizedConfig): void {
 	if (rights === undefined && users === undefined) {
 		// Default rights: allow everyone to publish/subscribe.
 		hub.setRights({
@@ -242,7 +234,7 @@ function setPermissions({ rights, users }: NormalizedConfig): void {
 
 // Instantiate nodes from config file
 
-function instantiateNodes({ nodes }: NormalizedConfig) {
+function instantiateNodes(hub: Hub, { nodes }: NormalizedConfig) {
 	Object.keys(nodes).forEach((nodeName: string): void => {
 		let def = nodes[nodeName];
 		if (typeof def === "string") {
@@ -262,7 +254,7 @@ function instantiateNodes({ nodes }: NormalizedConfig) {
 
 // Setup bindings between nodes
 
-function setupBindings({ bindings }: NormalizedConfig) {
+function setupBindings(hub: Hub, { bindings }: NormalizedConfig) {
 	bindings.forEach((binding: Binding, index: number): void => {
 		const from = hub.findSource(binding.from);
 		if (!from) {
@@ -277,14 +269,22 @@ function setupBindings({ bindings }: NormalizedConfig) {
 }
 
 function main(): void {
-	setAuthenticator(normalizedConfig);
+	const normalizedConfig = normalizeConfig(config);
+
+	createDefaultStorage(normalizedConfig);
+
+	// Create hub
+
+	const hub = new Hub();
+
+	setAuthenticator(hub, normalizedConfig);
 	try {
-		setPermissions(normalizedConfig);
+		setPermissions(hub, normalizedConfig);
 	} catch (err) {
 		die("Invalid configuration: `rights` property: " + err.message);
 	}
-	instantiateNodes(normalizedConfig);
-	setupBindings(normalizedConfig);
+	instantiateNodes(hub, normalizedConfig);
+	setupBindings(hub, normalizedConfig);
 	hub.init().then(() => startTransports(hub, normalizedConfig)).catch((err: Error) => {
 		die(`Failed to initialize:`, err);
 	});
