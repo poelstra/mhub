@@ -7,32 +7,21 @@
 import "source-map-support/register";
 
 import * as fs from "fs";
-import * as http from "http";
-import * as https from "https";
-import * as net from "net";
 import * as path from "path";
-import Promise from "ts-promise";
-import * as ws from "ws";
 import * as yargs from "yargs";
 
 import { PlainAuthenticator } from "./authenticator";
 import Hub from "./hub";
 import { LogLevel } from "./logger";
 import { Binding, Config, ListenOptions, NodeDefinition,
-	NodesConfig, TcpServerOptions, WSServerOptions
+	NodesConfig, startTransports
 } from "./nodeserver";
 import * as pubsub from "./pubsub";
 import * as storage from "./storage";
 import { replaceKeyFiles } from "./tls";
-import TcpConnection from "./transports/tcpconnection";
-import WSConnection from "./transports/wsconnection";
 import { KeyValues } from "./types";
 
 import log from "./log";
-
-const DEFAULT_PORT_WS = 13900;
-const DEFAULT_PORT_WSS = 13901;
-const DEFAULT_PORT_TCP = 13902;
 
 // tslint:disable-next-line:no-shadowed-variable
 function die(...args: any[]): void {
@@ -277,86 +266,6 @@ function setupBindings() {
 	});
 }
 
-// Initialize and start server
-
-let connectionId = 0;
-
-function startWebSocketServer(options: WSServerOptions): Promise<void> {
-	return new Promise<void>((resolve, reject) => {
-		options = { ...options }; // clone
-
-		let server: http.Server | https.Server;
-		const useTls = !!(options.key || options.pfx);
-
-		options.port = options.port || (useTls ? DEFAULT_PORT_WS : DEFAULT_PORT_WSS);
-
-		if (useTls) {
-			server = https.createServer(options);
-		} else {
-			server = http.createServer();
-		}
-
-		const wss = new ws.Server({ server: <any>server, path: "/" });
-		wss.on("connection", (conn: ws) => {
-			// tslint:disable-next-line:no-unused-expression
-			new WSConnection(hub, conn, "websocket" + connectionId++);
-		});
-
-		server.listen(options.port, (): void => {
-			log.info("WebSocket Server started on port " + options.port, useTls ? "(TLS)" : "");
-			resolve(undefined);
-		});
-
-		server.on("error", (e: Error): void => {
-			reject(e);
-		});
-	});
-}
-
-function startTcpServer(options: TcpServerOptions): Promise<void> {
-	return new Promise<void>((resolve, reject) => {
-		options = { ...options }; // clone
-		options.port = options.port || DEFAULT_PORT_TCP;
-
-		const server = net.createServer((socket: net.Socket) => {
-			// tslint:disable-next-line:no-unused-expression
-			new TcpConnection(hub, socket, "tcp" + connectionId++);
-		});
-
-		server.listen(
-			{
-				port: options.port,
-				host: options.host,
-				backlog: options.backlog,
-			},
-			(): void => {
-				log.info("TCP Server started on port " + options.port);
-				resolve(undefined);
-			}
-		);
-
-		server.on("error", (e: Error): void => {
-			reject(e);
-		});
-	});
-}
-
-function startTransports(): Promise<void> {
-	const serverOptions = Array.isArray(config.listen) ? config.listen : [config.listen];
-	return Promise.all(
-		serverOptions.map((options: ListenOptions) => {
-			switch (options.type) {
-				case "websocket":
-					return startWebSocketServer(<WSServerOptions>options);
-				case "tcp":
-					return startTcpServer(<TcpServerOptions>options);
-				default:
-					throw new Error(`unsupported transport '${options!.type}'`);
-			}
-		})
-	).return();
-}
-
 function main(nodes: NodesConfig): void {
 	setAuthenticator();
 	try {
@@ -366,7 +275,7 @@ function main(nodes: NodesConfig): void {
 	}
 	instantiateNodes(nodes);
 	setupBindings();
-	hub.init().then(startTransports).catch((err: Error) => {
+	hub.init().then(() => startTransports(hub, config)).catch((err: Error) => {
 		die(`Failed to initialize:`, err);
 	});
 }
