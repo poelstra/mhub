@@ -16,11 +16,14 @@ import * as ws from "ws";
 import * as yargs from "yargs";
 
 import { PlainAuthenticator } from "./authenticator";
-import Hub, { UserRights } from "./hub";
+import Hub from "./hub";
 import { LogLevel } from "./logger";
+import { Binding, Config, ListenOptions, NodeDefinition,
+	NodesConfig, TcpServerOptions, WSServerOptions
+} from "./nodeserver";
 import * as pubsub from "./pubsub";
 import * as storage from "./storage";
-import { replaceKeyFiles, TlsOptions } from "./tls";
+import { replaceKeyFiles } from "./tls";
 import TcpConnection from "./transports/tcpconnection";
 import WSConnection from "./transports/wsconnection";
 import { KeyValues } from "./types";
@@ -30,47 +33,6 @@ import log from "./log";
 const DEFAULT_PORT_WS = 13900;
 const DEFAULT_PORT_WSS = 13901;
 const DEFAULT_PORT_TCP = 13902;
-
-interface Binding {
-	from: string;
-	to: string;
-	pattern?: string;
-}
-
-interface WSServerOptions extends TlsOptions {
-	type: "websocket";
-	port?: number; // default 13900 (ws) or 13901 (wss)
-}
-
-interface TcpServerOptions {
-	type: "tcp";
-	host?: string; // NodeJS default (note: will default to IPv6 if available!)
-	port?: number; // default 13902
-	backlog?: number; // NodeJS default, typically 511
-}
-
-interface NodeDefinition {
-	type: string;
-	options?: { [key: string]: any; };
-}
-
-interface NodesConfig {
-	[nodeName: string]: string | NodeDefinition;
-}
-
-type ListenOptions = WSServerOptions | TcpServerOptions;
-
-interface Config {
-	listen?: ListenOptions | ListenOptions[];
-	port?: number;
-	verbose?: boolean;
-	logging?: "none" | "fatal" | "error" | "warning" | "info" | "debug";
-	bindings?: Binding[];
-	nodes: string[] | NodesConfig;
-	storage?: string;
-	users?: string | { [username: string]: string };
-	rights: UserRights;
-}
 
 // tslint:disable-next-line:no-shadowed-variable
 function die(...args: any[]): void {
