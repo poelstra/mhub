@@ -77,7 +77,7 @@ function startWebSocketServer(hub: Hub, options: WSServerOptions): Promise<void>
 		let server: http.Server | https.Server;
 		const useTls = !!(options.key || options.pfx);
 
-		options.port = options.port || (useTls ? DEFAULT_PORT_WS : DEFAULT_PORT_WSS);
+		options.port = options.port || (useTls ? DEFAULT_PORT_WSS : DEFAULT_PORT_WS);
 
 		if (useTls) {
 			server = https.createServer(options);
