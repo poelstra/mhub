@@ -10,6 +10,7 @@ import * as fs from "fs";
 import * as path from "path";
 import * as yargs from "yargs";
 
+import Promise from "ts-promise";
 import { PlainAuthenticator } from "./authenticator";
 import Hub from "./hub";
 import { LogLevel } from "./logger";
@@ -130,12 +131,12 @@ log.info("Using config file " + configFile);
 // 'Normalize' config and convert paths to their contents
 function normalizeConfig(looseConfig: Config): NormalizedConfig {
 	if (!config.nodes) {
-		die("Invalid configuration: missing `nodes`");
+		throw new Error("Invalid configuration: missing `nodes`");
 	}
 
 	if (config.port) {
 		if (config.listen) {
-			die("Invalid configuration: specify either `port` or `listen`");
+			throw new Error("Invalid configuration: specify either `port` or `listen`");
 		}
 		config.listen = {
 			type: "websocket",
@@ -144,7 +145,7 @@ function normalizeConfig(looseConfig: Config): NormalizedConfig {
 		delete config.port;
 	}
 	if (!config.listen) {
-		throw die("Invalid configuration: `port` or `listen` missing");
+		throw new Error("Invalid configuration: `port` or `listen` missing");
 	}
 	if (!Array.isArray(config.listen)) {
 		config.listen = [config.listen];
@@ -166,11 +167,13 @@ function normalizeConfig(looseConfig: Config): NormalizedConfig {
 		try {
 			config.users = JSON.parse(fs.readFileSync(usersFile, "utf8"));
 		} catch (e) {
-			die(`Cannot parse users file '${configFile}':`, e);
+			throw new Error(`Cannot parse users file '${configFile}': ` + JSON.stringify(e, null, 2));
 		}
 	}
 	if (config.users !== undefined && typeof config.users !== "object") {
-		die("Invalid configuration: `users` should be a filename or object containting username -> password pairs");
+		throw new Error(
+			"Invalid configuration: `users` should be a filename or object containting username -> password pairs"
+		);
 	}
 
 	if (!config.bindings) {
@@ -182,7 +185,7 @@ function normalizeConfig(looseConfig: Config): NormalizedConfig {
 		const newNodes: NodesConfig = {};
 		oldNodes.forEach((n: string) => {
 			if (typeof n !== "string") {
-				die("Invalid configuration: `nodes` is given as array, and must then contain only strings");
+				throw new Error("Invalid configuration: `nodes` is given as array, and must then contain only strings");
 			}
 			newNodes[n] = {
 				type: "Exchange",
@@ -192,7 +195,7 @@ function normalizeConfig(looseConfig: Config): NormalizedConfig {
 	}
 
 	if (typeof config.nodes !== "object") {
-		die("Invalid configuration: `nodes` should be a NodeDefinition map, or an array of strings");
+		throw new Error("Invalid configuration: `nodes` should be a NodeDefinition map, or an array of strings");
 	}
 
 	return <NormalizedConfig>config;
@@ -228,7 +231,11 @@ function setPermissions(hub: Hub, { rights, users }: NormalizedConfig): void {
 			},
 		});
 	} else {
-		hub.setRights(rights || {});
+		try {
+			hub.setRights(rights || {});
+		} catch (err) {
+			throw new Error("Invalid configuration: `rights` property: " + err.message);
+		}
 	}
 }
 
@@ -245,7 +252,7 @@ function instantiateNodes(hub: Hub, { nodes }: NormalizedConfig) {
 		const typeName = def.type;
 		const nodeConstructor = nodeClassMap[typeName];
 		if (!nodeConstructor) {
-			die(`Unknown node type '${typeName}' for node '${nodeName}'`);
+			throw new Error(`Unknown node type '${typeName}' for node '${nodeName}'`);
 		}
 		const node = new nodeConstructor(nodeName, def.options);
 		hub.add(node);
@@ -258,17 +265,17 @@ function setupBindings(hub: Hub, { bindings }: NormalizedConfig) {
 	bindings.forEach((binding: Binding, index: number): void => {
 		const from = hub.findSource(binding.from);
 		if (!from) {
-			return die(`Unknown Source node '${binding.from}' in \`binding[${index}].from\``);
+			throw new Error(`Unknown Source node '${binding.from}' in \`binding[${index}].from\``);
 		}
 		const to = hub.findDestination(binding.to);
 		if (!to) {
-			return die(`Unknown Destination node '${binding.to}' in \`binding[${index}].to\``);
+			throw new Error(`Unknown Destination node '${binding.to}' in \`binding[${index}].to\``);
 		}
 		from.bind(to, binding.pattern);
 	});
 }
 
-function main(): void {
+function main(): Promise<void> {
 	const normalizedConfig = normalizeConfig(config);
 
 	createDefaultStorage(normalizedConfig);
@@ -278,16 +285,15 @@ function main(): void {
 	const hub = new Hub();
 
 	setAuthenticator(hub, normalizedConfig);
-	try {
-		setPermissions(hub, normalizedConfig);
-	} catch (err) {
-		die("Invalid configuration: `rights` property: " + err.message);
-	}
+	setPermissions(hub, normalizedConfig);
 	instantiateNodes(hub, normalizedConfig);
 	setupBindings(hub, normalizedConfig);
-	hub.init().then(() => startTransports(hub, normalizedConfig)).catch((err: Error) => {
-		die(`Failed to initialize:`, err);
+
+	return hub.init().then(() => startTransports(hub, normalizedConfig)).catch((err: Error) => {
+		throw new Error(`Failed to initialize:` + JSON.stringify(err, null, 2));
 	});
 }
 
-main();
+main().catch((err: Error) => {
+	die(err);
+});
