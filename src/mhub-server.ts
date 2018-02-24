@@ -97,34 +97,41 @@ if (!args.config) {
 	configFile = path.resolve(args.config);
 }
 
-let config: Config;
-try {
-	config = JSON.parse(fs.readFileSync(configFile, "utf8"));
-} catch (e) {
-	throw die(`Cannot parse config file '${configFile}':`, e);
+function parseConfigFile(filePath: string): Config {
+	try {
+		return JSON.parse(fs.readFileSync(filePath, "utf8"));
+	} catch (e) {
+		throw die(`Cannot parse config file '${filePath}':`, e);
+	}
 }
+
+const config = parseConfigFile(configFile);
 
 // Historically, verbose logging was the default.
 // Then, the config.verbose option was introduced, again kept as the default.
 // Now, we have the config.logging option which is more flexible and is used
 // whenever available.
 // This can then be overriden using the commandline.
-const logLevelName = args.loglevel || config.logging;
-if (config.logging) {
-	// Convert config.logging to a LogLevel
-	const found = Object.keys(LogLevel).some((s) => {
-		if (s.toLowerCase() === logLevelName) {
-			log.logLevel = (<any>LogLevel)[s] as LogLevel;
-			return true;
+function setLogLevel() {
+	const logLevelName = args.loglevel || config.logging;
+	if (config.logging) {
+		// Convert config.logging to a LogLevel
+		const found = Object.keys(LogLevel).some((s) => {
+			if (s.toLowerCase() === logLevelName) {
+				log.logLevel = (<any>LogLevel)[s] as LogLevel;
+				return true;
+			}
+			return false;
+		});
+		if (!found) {
+			die(`Invalid log level '${logLevelName}', expected one of: ${logLevelNames.join(", ")}`);
 		}
-		return false;
-	});
-	if (!found) {
-		die(`Invalid log level '${logLevelName}', expected one of: ${logLevelNames.join(", ")}`);
+	} else if (config.verbose === undefined || config.verbose) {
+		log.logLevel = LogLevel.Debug;
 	}
-} else if (config.verbose === undefined || config.verbose) {
-	log.logLevel = LogLevel.Debug;
 }
+
+setLogLevel();
 
 log.info("Using config file " + configFile);
 
