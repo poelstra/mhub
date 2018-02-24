@@ -116,14 +116,12 @@ function setLogLevel() {
 	const logLevelName = args.loglevel || config.logging;
 	if (config.logging) {
 		// Convert config.logging to a LogLevel
-		const found = Object.keys(LogLevel).some((s) => {
-			if (s.toLowerCase() === logLevelName) {
-				log.logLevel = (<any>LogLevel)[s] as LogLevel;
-				return true;
-			}
-			return false;
-		});
-		if (!found) {
+		const matching = Object.keys(LogLevel).filter((s) => {
+			return s.toLowerCase() === logLevelName;
+		})[0];
+		if (matching) {
+			log.logLevel = (<any>LogLevel)[matching] as LogLevel;
+		} else {
 			die(`Invalid log level '${logLevelName}', expected one of: ${logLevelNames.join(", ")}`);
 		}
 	} else if (config.verbose === undefined || config.verbose) {
