@@ -70,15 +70,12 @@ function parseConfigFile(filePath: string): Config {
 	}
 }
 
-log.info("Using config file " + configFile);
-const config = parseConfigFile(configFile);
-
 // Historically, verbose logging was the default.
 // Then, the config.verbose option was introduced, again kept as the default.
 // Now, we have the config.logging option which is more flexible and is used
 // whenever available.
 // This can then be overriden using the commandline.
-function setLogLevel() {
+function setLogLevel(config: Config) {
 	const logLevelName = args.loglevel || config.logging;
 	if (logLevelName) {
 		// Convert config.logging to a LogLevel
@@ -96,7 +93,7 @@ function setLogLevel() {
 }
 
 // 'Normalize' config and convert paths to their contents
-function normalizeConfig(looseConfig: Config): NormalizedConfig {
+function normalizeConfig(config: Config): NormalizedConfig {
 	if (!config.nodes) {
 		throw new Error("Invalid configuration: missing `nodes`");
 	}
@@ -183,7 +180,11 @@ function createDefaultStorage({ storage: storageConfig }: NormalizedConfig) {
 }
 
 function main(): Promise<void> {
-	setLogLevel();
+	const config = parseConfigFile(configFile);
+
+	setLogLevel(config);
+	log.info("Using config file " + configFile);
+
 	const normalizedConfig = normalizeConfig(config);
 
 	createDefaultStorage(normalizedConfig);
