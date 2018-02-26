@@ -15,8 +15,7 @@ import Hub from "./hub";
 import { LogLevel } from "./logger";
 import { Config, ListenOptions,
 	MServer,
-	NodesConfig, NormalizedConfig,
-	startTransports
+	NodesConfig, NormalizedConfig
 } from "./nodeserver";
 import * as storage from "./storage";
 import { replaceKeyFiles } from "./tls";
@@ -191,9 +190,7 @@ function main(): Promise<void> {
 
 	const server = new MServer(hub, normalizedConfig);
 
-	return hub.init().then(() => startTransports(hub, normalizedConfig)).catch((err: Error) => {
-		throw new Error(`Failed to initialize:` + JSON.stringify(err, null, 2));
-	});
+	return server.init();
 }
 
 Promise.resolve().then(main).catch((err: Error) => {

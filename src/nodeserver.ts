@@ -167,7 +167,7 @@ function startTcpServer(hub: Hub, options: TcpServerOptions): Promise<void> {
 	});
 }
 
-export function startTransports(hub: Hub, config: NormalizedConfig): Promise<void> {
+function startTransports(hub: Hub, config: NormalizedConfig): Promise<void> {
 	const serverOptions = Array.isArray(config.listen) ? config.listen : [config.listen];
 	return Promise.all(
 		serverOptions.map((options: ListenOptions) => {
@@ -184,11 +184,22 @@ export function startTransports(hub: Hub, config: NormalizedConfig): Promise<voi
 }
 
 export class MServer {
-	constructor(public hub: Hub, normalizedConfig: NormalizedConfig) {
+	constructor(
+		private hub: Hub,
+		private normalizedConfig: NormalizedConfig
+	) {
 		this.setAuthenticator(normalizedConfig);
 		this.setPermissions(normalizedConfig);
 		this.instantiateNodes(normalizedConfig);
 		this.setupBindings(normalizedConfig);
+	}
+
+	public init(): Promise<void> {
+		return this.hub.init().then(() => {
+			return startTransports(this.hub, this.normalizedConfig);
+		}).catch((err: Error) => {
+			throw new Error(`Failed to initialize:` + JSON.stringify(err, null, 2));
+		});
 	}
 
 	private setAuthenticator({ users }: NormalizedConfig): void {
