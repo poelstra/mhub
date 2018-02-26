@@ -13,7 +13,7 @@ import WSConnection from "./transports/wsconnection";
 import * as pubsub from "./pubsub";
 import { KeyValues } from "./types";
 
-import log from "./log";
+import { Logger } from "./logger";
 
 const DEFAULT_PORT_WS = 13900;
 const DEFAULT_PORT_WSS = 13901;
@@ -112,6 +112,7 @@ nodeClassMap["TopicState"] = TopicStore;
 export class MServer {
 	private hub: Hub;
 	private normalizedConfig: NormalizedConfig;
+	private logger: Logger | undefined = undefined;
 	private connectionId = 0;
 	constructor(
 		normalizedConfig: NormalizedConfig,
@@ -131,6 +132,16 @@ export class MServer {
 		}).catch((err: Error) => {
 			throw new Error(`Failed to initialize:` + JSON.stringify(err, null, 2));
 		});
+	}
+
+	public setLogger(logger: Logger) {
+		this.logger = logger;
+	}
+
+	private log(message: string) {
+		if (this.logger) {
+			this.logger.info(message);
+		}
 	}
 
 	private setAuthenticator({ users }: NormalizedConfig): void {
@@ -220,7 +231,7 @@ export class MServer {
 			});
 
 			server.listen(options.port, (): void => {
-				log.info("WebSocket Server started on port " + options.port, useTls ? "(TLS)" : "");
+				this.log("WebSocket Server started on port " + options.port + (useTls ? " (TLS)" : ""));
 				resolve(undefined);
 			});
 
@@ -247,7 +258,7 @@ export class MServer {
 					backlog: options.backlog,
 				},
 				(): void => {
-					log.info("TCP Server started on port " + options.port);
+					this.log("TCP Server started on port " + options.port);
 					resolve(undefined);
 				}
 			);

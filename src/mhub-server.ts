@@ -93,6 +93,7 @@ function main(): Promise<void> {
 
 	// Create server
 	const server = new MServer(config);
+	server.setLogger(log);
 	return server.init();
 }
 
