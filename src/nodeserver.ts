@@ -67,7 +67,7 @@ export interface NormalizedConfig {
 	bindings: Binding[];
 	nodes: NodesConfig;
 	storage?: string;
-	users?: { [username: string]: string };
+	users: { [username: string]: string };
 	rights: UserRights;
 }
 
@@ -204,18 +204,16 @@ export class MServer {
 
 	private setAuthenticator({ users }: NormalizedConfig): void {
 		const authenticator = new PlainAuthenticator();
-		if (typeof users === "object") {
-			Object.keys(users).forEach((username: string) => {
-				authenticator.setUser(username, users[username]);
-			});
-		}
+		Object.keys(users).forEach((username: string) => {
+			authenticator.setUser(username, users[username]);
+		});
 		this.hub.setAuthenticator(authenticator);
 	}
 
 	// Set up user permissions
 
 	private setPermissions({ rights, users }: NormalizedConfig): void {
-		if (rights === undefined && users === undefined) {
+		if (rights === undefined && Object.keys(users).length === 0) {
 			// Default rights: allow everyone to publish/subscribe.
 			this.hub.setRights({
 				"": {

@@ -140,7 +140,10 @@ function normalizeConfig(looseConfig: Config): NormalizedConfig {
 			throw new Error(`Cannot parse users file '${configFile}': ` + JSON.stringify(e, null, 2));
 		}
 	}
-	if (config.users !== undefined && typeof config.users !== "object") {
+	if (config.users === undefined) {
+		config.users = {};
+	}
+	if (typeof config.users !== "object") {
 		throw new Error(
 			"Invalid configuration: `users` should be a filename or object containting username -> password pairs"
 		);
