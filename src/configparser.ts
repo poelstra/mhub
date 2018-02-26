@@ -7,12 +7,7 @@ import {
 } from "./nodeserver";
 import { replaceKeyFiles } from "./tls";
 
-// 'Normalize' config and convert paths to their contents
-export default function normalizeConfig(config: Config, configFile: string): NormalizedConfig {
-    if (!config.nodes) {
-        throw new Error("Invalid configuration: missing `nodes`");
-    }
-
+function normalizeListen(config: Config, configFile: string): ListenOptions[] {
     // Normalize listen options, also handling port option
     if (config.port) {
         if (config.listen) {
@@ -40,6 +35,16 @@ export default function normalizeConfig(config: Config, configFile: string): Nor
             replaceKeyFiles(listen, path.dirname(configFile));
         }
     });
+    return config.listen;
+}
+
+// 'Normalize' config and convert paths to their contents
+export default function normalizeConfig(config: Config, configFile: string): NormalizedConfig {
+    if (!config.nodes) {
+        throw new Error("Invalid configuration: missing `nodes`");
+    }
+
+    config.listen = normalizeListen(config, configFile);
 
     // Initialize users
     if (typeof config.users === "string") {
