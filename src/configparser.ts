@@ -25,6 +25,7 @@ function normalizeListen(config: Config, configFile: string): ListenOption[] {
 		}];
 	}
 	if (config.listen) {
+		// Allowing for single instances as well as arrays
 		listen = listen.concat(config.listen);
 	}
 	listen.forEach((listenOption: ListenOption) => {
