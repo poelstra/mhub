@@ -13,9 +13,9 @@ import * as yargs from "yargs";
 import Promise from "ts-promise";
 import Hub from "./hub";
 import { LogLevel } from "./logger";
-import { Config, instantiateNodes, ListenOptions,
+import { Config, ListenOptions,
+	MServer,
 	NodesConfig, NormalizedConfig,
-	setAuthenticator, setPermissions, setupBindings,
 	startTransports
 } from "./nodeserver";
 import * as storage from "./storage";
@@ -189,10 +189,12 @@ function main(): Promise<void> {
 
 	const hub = new Hub();
 
-	setAuthenticator(hub, normalizedConfig);
-	setPermissions(hub, normalizedConfig);
-	instantiateNodes(hub, normalizedConfig);
-	setupBindings(hub, normalizedConfig);
+	const server = new MServer(hub);
+
+	server.setAuthenticator(normalizedConfig);
+	server.setPermissions(normalizedConfig);
+	server.instantiateNodes(normalizedConfig);
+	server.setupBindings(normalizedConfig);
 
 	return hub.init().then(() => startTransports(hub, normalizedConfig)).catch((err: Error) => {
 		throw new Error(`Failed to initialize:` + JSON.stringify(err, null, 2));

@@ -183,22 +183,27 @@ export function startTransports(hub: Hub, config: NormalizedConfig): Promise<voi
 	).return();
 }
 
-export function setAuthenticator(hub: Hub, { users }: NormalizedConfig): void {
+export class MServer {
+	constructor(public hub: Hub) {
+
+	}
+
+public setAuthenticator({ users }: NormalizedConfig): void {
 	const authenticator = new PlainAuthenticator();
 	if (typeof users === "object") {
 		Object.keys(users).forEach((username: string) => {
 			authenticator.setUser(username, users[username]);
 		});
 	}
-	hub.setAuthenticator(authenticator);
+	this.hub.setAuthenticator(authenticator);
 }
 
 // Set up user permissions
 
-export function setPermissions(hub: Hub, { rights, users }: NormalizedConfig): void {
+public setPermissions({ rights, users }: NormalizedConfig): void {
 	if (rights === undefined && users === undefined) {
 		// Default rights: allow everyone to publish/subscribe.
-		hub.setRights({
+		this.hub.setRights({
 			"": {
 				publish: true,
 				subscribe: true,
@@ -206,7 +211,7 @@ export function setPermissions(hub: Hub, { rights, users }: NormalizedConfig): v
 		});
 	} else {
 		try {
-			hub.setRights(rights || {});
+			this.hub.setRights(rights || {});
 		} catch (err) {
 			throw new Error("Invalid configuration: `rights` property: " + err.message);
 		}
@@ -215,7 +220,7 @@ export function setPermissions(hub: Hub, { rights, users }: NormalizedConfig): v
 
 // Instantiate nodes from config file
 
-export function instantiateNodes(hub: Hub, { nodes }: NormalizedConfig) {
+public instantiateNodes({ nodes }: NormalizedConfig) {
 	Object.keys(nodes).forEach((nodeName: string): void => {
 		let def = nodes[nodeName];
 		if (typeof def === "string") {
@@ -229,22 +234,23 @@ export function instantiateNodes(hub: Hub, { nodes }: NormalizedConfig) {
 			throw new Error(`Unknown node type '${typeName}' for node '${nodeName}'`);
 		}
 		const node = new nodeConstructor(nodeName, def.options);
-		hub.add(node);
+		this.hub.add(node);
 	});
 }
 
 // Setup bindings between nodes
 
-export function setupBindings(hub: Hub, { bindings }: NormalizedConfig) {
+public setupBindings({ bindings }: NormalizedConfig) {
 	bindings.forEach((binding: Binding, index: number): void => {
-		const from = hub.findSource(binding.from);
+		const from = this.hub.findSource(binding.from);
 		if (!from) {
 			throw new Error(`Unknown Source node '${binding.from}' in \`binding[${index}].from\``);
 		}
-		const to = hub.findDestination(binding.to);
+		const to = this.hub.findDestination(binding.to);
 		if (!to) {
 			throw new Error(`Unknown Destination node '${binding.to}' in \`binding[${index}].to\``);
 		}
 		from.bind(to, binding.pattern);
 	});
+}
 }
