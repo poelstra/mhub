@@ -2,12 +2,12 @@ import * as fs from "fs";
 import * as path from "path";
 
 import {
-	Binding, Config, ListenOptions, LoggingOptions,
+	Binding, Config, ListenOption, LoggingOptions,
 	NodesConfig, NormalizedConfig, UserOptions
 } from "./nodeserver";
 import { replaceKeyFiles } from "./tls";
 
-function normalizeListen(config: Config, configFile: string): ListenOptions[] {
+function normalizeListen(config: Config, configFile: string): ListenOption[] {
 	// Checks
 	if (config.port && config.listen) {
 		throw new Error("Invalid configuration: specify either `port` or `listen`");
@@ -16,7 +16,7 @@ function normalizeListen(config: Config, configFile: string): ListenOptions[] {
 		throw new Error("Invalid configuration: `port` or `listen` missing");
 	}
 
-	let listen: ListenOptions[] = [];
+	let listen: ListenOption[] = [];
 	// Normalize listen options, also handling port option
 	if (config.port) {
 		listen = [{
@@ -27,7 +27,7 @@ function normalizeListen(config: Config, configFile: string): ListenOptions[] {
 	if (config.listen) {
 		listen = listen.concat(config.listen);
 	}
-	listen.forEach((listenOption: ListenOptions) => {
+	listen.forEach((listenOption: ListenOption) => {
 		if (!listenOption.type) {
 			// Default to WebSocket, for backward compatibility
 			listenOption!.type = "websocket";

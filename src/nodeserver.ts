@@ -46,7 +46,7 @@ export interface NodesConfig {
 	[nodeName: string]: string | NodeDefinition;
 }
 
-export type ListenOptions = WSServerOptions | TcpServerOptions;
+export type ListenOption = WSServerOptions | TcpServerOptions;
 
 export interface UserOptions {
 	[username: string]: string;
@@ -55,7 +55,7 @@ export interface UserOptions {
 export type LoggingOptions = "none" | "fatal" | "error" | "warning" | "info" | "debug";
 
 export interface Config {
-	listen?: ListenOptions | ListenOptions[];
+	listen?: ListenOption | ListenOption[];
 	port?: number;
 	verbose?: boolean;
 	logging?: LoggingOptions;
@@ -67,7 +67,7 @@ export interface Config {
 }
 
 export interface NormalizedConfig {
-	listen: ListenOptions[];
+	listen: ListenOption[];
 	logging: LoggingOptions;
 	bindings: Binding[];
 	nodes: NodesConfig;
@@ -272,7 +272,7 @@ export class MServer {
 	private startTransports(hub: Hub, config: NormalizedConfig): Promise<void> {
 		const serverOptions = Array.isArray(config.listen) ? config.listen : [config.listen];
 		return Promise.all(
-			serverOptions.map((options: ListenOptions) => {
+			serverOptions.map((options: ListenOption) => {
 				switch (options.type) {
 					case "websocket":
 						return this.startWebSocketServer(hub, <WSServerOptions>options);
