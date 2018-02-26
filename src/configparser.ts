@@ -3,7 +3,7 @@ import * as path from "path";
 
 import {
     Config, ListenOptions,
-    NodesConfig, NormalizedConfig
+    NodesConfig, NormalizedConfig, UserOptions
 } from "./nodeserver";
 import { replaceKeyFiles } from "./tls";
 
@@ -40,6 +40,33 @@ function normalizeListen(config: Config, configFile: string): ListenOptions[] {
     return listen;
 }
 
+function normalizeUsers(config: Config, configFile: string): UserOptions {
+    // Checks
+    if (
+        (config.users !== undefined) &&
+        (typeof config.users !== "string") &&
+        (typeof config.users !== "object")
+    ) {
+        throw new Error(
+            "Invalid configuration: `users` should be a filename or object containting username -> password pairs"
+        );
+    }
+
+    // Initialize users
+    let users: UserOptions = {};
+    if (typeof config.users === "string") {
+        const usersFile = path.resolve(path.dirname(configFile), config.users);
+        try {
+            users = JSON.parse(fs.readFileSync(usersFile, "utf8"));
+        } catch (e) {
+            throw new Error(`Cannot parse users file '${configFile}': ` + JSON.stringify(e, null, 2));
+        }
+    } else if (typeof config.users === "object") {
+        users = config.users;
+    }
+    return users;
+}
+
 // 'Normalize' config and convert paths to their contents
 export default function normalizeConfig(config: Config, configFile: string): NormalizedConfig {
     if (!config.nodes) {
@@ -47,24 +74,7 @@ export default function normalizeConfig(config: Config, configFile: string): Nor
     }
 
     config.listen = normalizeListen(config, configFile);
-
-    // Initialize users
-    if (typeof config.users === "string") {
-        const usersFile = path.resolve(path.dirname(configFile), config.users);
-        try {
-            config.users = JSON.parse(fs.readFileSync(usersFile, "utf8"));
-        } catch (e) {
-            throw new Error(`Cannot parse users file '${configFile}': ` + JSON.stringify(e, null, 2));
-        }
-    }
-    if (config.users === undefined) {
-        config.users = {};
-    }
-    if (typeof config.users !== "object") {
-        throw new Error(
-            "Invalid configuration: `users` should be a filename or object containting username -> password pairs"
-        );
-    }
+    config.users = normalizeUsers(config, configFile);
 
     // Make bindings non optional
     if (!config.bindings) {

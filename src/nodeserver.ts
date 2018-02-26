@@ -48,6 +48,10 @@ export interface NodesConfig {
 
 export type ListenOptions = WSServerOptions | TcpServerOptions;
 
+export interface UserOptions {
+	[username: string]: string;
+}
+
 export interface Config {
 	listen?: ListenOptions | ListenOptions[];
 	port?: number;
@@ -56,7 +60,7 @@ export interface Config {
 	bindings?: Binding[];
 	nodes: string[] | NodesConfig;
 	storage?: string;
-	users?: string | { [username: string]: string };
+	users?: string | UserOptions;
 	rights: UserRights;
 }
 
@@ -67,7 +71,7 @@ export interface NormalizedConfig {
 	bindings: Binding[];
 	nodes: NodesConfig;
 	storage: string;
-	users: { [username: string]: string };
+	users: UserOptions;
 	rights: UserRights;
 }
 
