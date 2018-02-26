@@ -184,11 +184,14 @@ export function startTransports(hub: Hub, config: NormalizedConfig): Promise<voi
 }
 
 export class MServer {
-	constructor(public hub: Hub) {
-
+	constructor(public hub: Hub, normalizedConfig: NormalizedConfig) {
+		this.setAuthenticator(normalizedConfig);
+		this.setPermissions(normalizedConfig);
+		this.instantiateNodes(normalizedConfig);
+		this.setupBindings(normalizedConfig);
 	}
 
-	public setAuthenticator({ users }: NormalizedConfig): void {
+	private setAuthenticator({ users }: NormalizedConfig): void {
 		const authenticator = new PlainAuthenticator();
 		if (typeof users === "object") {
 			Object.keys(users).forEach((username: string) => {
@@ -200,7 +203,7 @@ export class MServer {
 
 	// Set up user permissions
 
-	public setPermissions({ rights, users }: NormalizedConfig): void {
+	private setPermissions({ rights, users }: NormalizedConfig): void {
 		if (rights === undefined && users === undefined) {
 			// Default rights: allow everyone to publish/subscribe.
 			this.hub.setRights({
@@ -220,7 +223,7 @@ export class MServer {
 
 	// Instantiate nodes from config file
 
-	public instantiateNodes({ nodes }: NormalizedConfig) {
+	private instantiateNodes({ nodes }: NormalizedConfig) {
 		Object.keys(nodes).forEach((nodeName: string): void => {
 			let def = nodes[nodeName];
 			if (typeof def === "string") {
@@ -240,7 +243,7 @@ export class MServer {
 
 	// Setup bindings between nodes
 
-	public setupBindings({ bindings }: NormalizedConfig) {
+	private setupBindings({ bindings }: NormalizedConfig) {
 		bindings.forEach((binding: Binding, index: number): void => {
 			const from = this.hub.findSource(binding.from);
 			if (!from) {

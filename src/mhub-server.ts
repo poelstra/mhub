@@ -189,12 +189,7 @@ function main(): Promise<void> {
 
 	const hub = new Hub();
 
-	const server = new MServer(hub);
-
-	server.setAuthenticator(normalizedConfig);
-	server.setPermissions(normalizedConfig);
-	server.instantiateNodes(normalizedConfig);
-	server.setupBindings(normalizedConfig);
+	const server = new MServer(hub, normalizedConfig);
 
 	return hub.init().then(() => startTransports(hub, normalizedConfig)).catch((err: Error) => {
 		throw new Error(`Failed to initialize:` + JSON.stringify(err, null, 2));
