@@ -52,11 +52,13 @@ export interface UserOptions {
 	[username: string]: string;
 }
 
+export type LoggingOptions = "none" | "fatal" | "error" | "warning" | "info" | "debug";
+
 export interface Config {
 	listen?: ListenOptions | ListenOptions[];
 	port?: number;
 	verbose?: boolean;
-	logging?: "none" | "fatal" | "error" | "warning" | "info" | "debug";
+	logging?: LoggingOptions;
 	bindings?: Binding[];
 	nodes: string[] | NodesConfig;
 	storage?: string;
@@ -66,8 +68,7 @@ export interface Config {
 
 export interface NormalizedConfig {
 	listen: ListenOptions[];
-	verbose?: boolean;
-	logging?: "none" | "fatal" | "error" | "warning" | "info" | "debug";
+	logging: LoggingOptions;
 	bindings: Binding[];
 	nodes: NodesConfig;
 	storage: string;

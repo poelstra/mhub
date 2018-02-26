@@ -3,7 +3,7 @@ import * as path from "path";
 
 import {
     Binding, Config, ListenOptions,
-    NodesConfig, NormalizedConfig, UserOptions
+    NodesConfig, NormalizedConfig, UserOptions, LoggingOptions
 } from "./nodeserver";
 import { replaceKeyFiles } from "./tls";
 
@@ -99,6 +99,15 @@ function normalizeStorage(config: Config): string {
     return config.storage || "./storage";
 }
 
+function normalizeLogging(config: Config): LoggingOptions {
+    if (config.logging) {
+        return config.logging;
+    } else if (config.verbose === undefined || config.verbose) {
+        return "debug";
+    }
+    return "info";
+}
+
 function readConfigFile(filePath: string): Config {
     try {
         return JSON.parse(fs.readFileSync(filePath, "utf8"));
@@ -117,7 +126,6 @@ export default function parseConfigFile(configFile: string): NormalizedConfig {
         nodes: normalizeNodes(config),
         storage: normalizeStorage(config),
         rights: config.rights,
-        verbose: config.verbose,
-        logging: config.logging,
+        logging: normalizeLogging(config),
     };
 }

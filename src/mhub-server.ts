@@ -64,20 +64,15 @@ if (!args.config) {
 // This can then be overriden using the commandline.
 function setLogLevel(config: NormalizedConfig) {
 	const logLevelName = args.loglevel || config.logging;
-	if (logLevelName) {
-		// Convert config.logging to a LogLevel
-		const matching = Object.keys(LogLevel).filter((s) => {
-			return s.toLowerCase() === logLevelName;
-		})[0];
-		if (matching) {
-			log.logLevel = (<any>LogLevel)[matching] as LogLevel;
-		} else {
-			die(`Invalid log level '${logLevelName}', expected one of: ${logLevelNames.join(", ")}`);
-		}
-	} else if (config.verbose === undefined || config.verbose) {
-		log.logLevel = LogLevel.Debug;
+	// Convert config.logging to a LogLevel
+	const matching = Object.keys(LogLevel).filter((s) => {
+		return s.toLowerCase() === logLevelName;
+	})[0];
+	if (matching) {
+		log.logLevel = (<any>LogLevel)[matching] as LogLevel;
+	} else {
+		die(`Invalid log level '${logLevelName}', expected one of: ${logLevelNames.join(", ")}`);
 	}
-	// else the logLevel is left to the default of the log
 }
 
 // Create default storage
