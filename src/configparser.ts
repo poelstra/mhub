@@ -72,33 +72,34 @@ function normalizeBindings(config: Config): Binding[] {
     return config.bindings || [];
 }
 
-// 'Normalize' config and convert paths to their contents
-export default function normalizeConfig(config: Config, configFile: string): NormalizedConfig {
+function normalizeNodes(config: Config): NodesConfig {
+    // Checks
     if (!config.nodes) {
         throw new Error("Invalid configuration: missing `nodes`");
     }
+    if (!(Array.isArray(config.nodes) || typeof config.nodes === "object")) {
+        throw new Error("Invalid configuration: `nodes` should be a NodeDefinition map, or an array of strings");
+    }
 
-    config.listen = normalizeListen(config, configFile);
-    config.users = normalizeUsers(config, configFile);
-    config.bindings = normalizeBindings(config);
-
-    if (Array.isArray(config.nodes)) { // Backward compatibility, convert to new format
-        const oldNodes = <string[]>config.nodes;
-        const newNodes: NodesConfig = {};
-        oldNodes.forEach((n: string) => {
+    if (Array.isArray(config.nodes)) {
+        // Backward compatibility, convert to new format
+        return config.nodes.reduce((newNodes: NodesConfig, n: string) => {
             if (typeof n !== "string") {
                 throw new Error("Invalid configuration: `nodes` is given as array, and must then contain only strings");
             }
-            newNodes[n] = {
-                type: "Exchange",
-            };
-        });
-        config.nodes = newNodes;
+            return {...newNodes, [n]: {type: "exchange"}};
+        }, {});
+    } else {
+        return config.nodes;
     }
+}
 
-    if (typeof config.nodes !== "object") {
-        throw new Error("Invalid configuration: `nodes` should be a NodeDefinition map, or an array of strings");
-    }
+// 'Normalize' config and convert paths to their contents
+export default function normalizeConfig(config: Config, configFile: string): NormalizedConfig {
+    config.listen = normalizeListen(config, configFile);
+    config.users = normalizeUsers(config, configFile);
+    config.bindings = normalizeBindings(config);
+    config.nodes = normalizeNodes(config);
 
     // defaults for storage
     config.storage = config.storage || "./storage";
