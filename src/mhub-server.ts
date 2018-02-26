@@ -12,7 +12,7 @@ import * as yargs from "yargs";
 import Promise from "ts-promise";
 import parseConfigFile from "./configparser";
 import { LogLevel } from "./logger";
-import { MServer, NormalizedConfig } from "./nodeserver";
+import { LoggingOptions, MServer, NormalizedConfig } from "./nodeserver";
 import * as storage from "./storage";
 
 import log from "./log";
@@ -62,8 +62,8 @@ if (!args.config) {
 // Now, we have the config.logging option which is more flexible and is used
 // whenever available.
 // This can then be overriden using the commandline.
-function setLogLevel(config: NormalizedConfig) {
-	const logLevelName = args.loglevel || config.logging;
+function setLogLevel(config: NormalizedConfig, override?: LoggingOptions) {
+	const logLevelName = override || config.logging;
 	// Convert config.logging to a LogLevel
 	const matching = Object.keys(LogLevel).filter((s) => {
 		return s.toLowerCase() === logLevelName;
@@ -86,7 +86,7 @@ function createDefaultStorage({ storage: storageConfig }: NormalizedConfig) {
 function main(): Promise<void> {
 	const config = parseConfigFile(configFile);
 
-	setLogLevel(config);
+	setLogLevel(config, args.loglevel);
 	log.info("Using config file " + configFile);
 
 	createDefaultStorage(config);
