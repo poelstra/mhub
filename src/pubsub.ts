@@ -53,7 +53,7 @@ export class BaseSource implements Source {
 
 	private _bindings: Binding[] = [];
 
-	constructor(name: string, options?: BaseSourceOptions) {
+	constructor(name: string) {
 		this.name = name;
 	}
 

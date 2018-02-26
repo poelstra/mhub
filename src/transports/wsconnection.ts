@@ -10,13 +10,11 @@ import log from "../log";
 import * as protocol from "../protocol";
 
 export class WSConnection {
-	private _hub: Hub;
 	private _socket: ws;
 	private _name: string;
 	private _client: HubClient;
 
 	constructor(hub: Hub, socket: ws, name: string) {
-		this._hub = hub;
 		this._socket = socket;
 		this._name = name;
 

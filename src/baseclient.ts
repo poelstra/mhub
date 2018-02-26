@@ -152,7 +152,7 @@ export abstract class BaseClient extends events.EventEmitter {
 	 */
 	public close(error?: Error): Promise<void> {
 		if (!this._closing) {
-			this._closing = new Promise<void>((resolve, reject) => {
+			this._closing = new Promise<void>((resolve) => {
 				// Announce error if necessary
 				if (error) {
 					this._asyncEmit("error", error);

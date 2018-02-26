@@ -154,7 +154,7 @@ export class MServer {
 
 	// Set up user permissions
 
-	private setPermissions({ rights, users }: NormalizedConfig): void {
+	private setPermissions({ rights }: NormalizedConfig): void {
 		try {
 			this.hub.setRights(rights);
 		} catch (err) {
