@@ -63,7 +63,7 @@ export interface Config {
 	nodes: string[] | NodesConfig;
 	storage?: string;
 	users?: string | UserOptions;
-	rights: UserRights;
+	rights?: UserRights;
 }
 
 export interface NormalizedConfig {
