@@ -188,69 +188,69 @@ export class MServer {
 
 	}
 
-public setAuthenticator({ users }: NormalizedConfig): void {
-	const authenticator = new PlainAuthenticator();
-	if (typeof users === "object") {
-		Object.keys(users).forEach((username: string) => {
-			authenticator.setUser(username, users[username]);
+	public setAuthenticator({ users }: NormalizedConfig): void {
+		const authenticator = new PlainAuthenticator();
+		if (typeof users === "object") {
+			Object.keys(users).forEach((username: string) => {
+				authenticator.setUser(username, users[username]);
+			});
+		}
+		this.hub.setAuthenticator(authenticator);
+	}
+
+	// Set up user permissions
+
+	public setPermissions({ rights, users }: NormalizedConfig): void {
+		if (rights === undefined && users === undefined) {
+			// Default rights: allow everyone to publish/subscribe.
+			this.hub.setRights({
+				"": {
+					publish: true,
+					subscribe: true,
+				},
+			});
+		} else {
+			try {
+				this.hub.setRights(rights || {});
+			} catch (err) {
+				throw new Error("Invalid configuration: `rights` property: " + err.message);
+			}
+		}
+	}
+
+	// Instantiate nodes from config file
+
+	public instantiateNodes({ nodes }: NormalizedConfig) {
+		Object.keys(nodes).forEach((nodeName: string): void => {
+			let def = nodes[nodeName];
+			if (typeof def === "string") {
+				def = <NodeDefinition>{
+					type: def,
+				};
+			}
+			const typeName = def.type;
+			const nodeConstructor = nodeClassMap[typeName];
+			if (!nodeConstructor) {
+				throw new Error(`Unknown node type '${typeName}' for node '${nodeName}'`);
+			}
+			const node = new nodeConstructor(nodeName, def.options);
+			this.hub.add(node);
 		});
 	}
-	this.hub.setAuthenticator(authenticator);
-}
 
-// Set up user permissions
+	// Setup bindings between nodes
 
-public setPermissions({ rights, users }: NormalizedConfig): void {
-	if (rights === undefined && users === undefined) {
-		// Default rights: allow everyone to publish/subscribe.
-		this.hub.setRights({
-			"": {
-				publish: true,
-				subscribe: true,
-			},
+	public setupBindings({ bindings }: NormalizedConfig) {
+		bindings.forEach((binding: Binding, index: number): void => {
+			const from = this.hub.findSource(binding.from);
+			if (!from) {
+				throw new Error(`Unknown Source node '${binding.from}' in \`binding[${index}].from\``);
+			}
+			const to = this.hub.findDestination(binding.to);
+			if (!to) {
+				throw new Error(`Unknown Destination node '${binding.to}' in \`binding[${index}].to\``);
+			}
+			from.bind(to, binding.pattern);
 		});
-	} else {
-		try {
-			this.hub.setRights(rights || {});
-		} catch (err) {
-			throw new Error("Invalid configuration: `rights` property: " + err.message);
-		}
 	}
-}
-
-// Instantiate nodes from config file
-
-public instantiateNodes({ nodes }: NormalizedConfig) {
-	Object.keys(nodes).forEach((nodeName: string): void => {
-		let def = nodes[nodeName];
-		if (typeof def === "string") {
-			def = <NodeDefinition>{
-				type: def,
-			};
-		}
-		const typeName = def.type;
-		const nodeConstructor = nodeClassMap[typeName];
-		if (!nodeConstructor) {
-			throw new Error(`Unknown node type '${typeName}' for node '${nodeName}'`);
-		}
-		const node = new nodeConstructor(nodeName, def.options);
-		this.hub.add(node);
-	});
-}
-
-// Setup bindings between nodes
-
-public setupBindings({ bindings }: NormalizedConfig) {
-	bindings.forEach((binding: Binding, index: number): void => {
-		const from = this.hub.findSource(binding.from);
-		if (!from) {
-			throw new Error(`Unknown Source node '${binding.from}' in \`binding[${index}].from\``);
-		}
-		const to = this.hub.findDestination(binding.to);
-		if (!to) {
-			throw new Error(`Unknown Destination node '${binding.to}' in \`binding[${index}].to\``);
-		}
-		from.bind(to, binding.pattern);
-	});
-}
 }
