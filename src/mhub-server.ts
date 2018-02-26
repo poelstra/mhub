@@ -114,7 +114,7 @@ const config = parseConfigFile(configFile);
 // This can then be overriden using the commandline.
 function setLogLevel() {
 	const logLevelName = args.loglevel || config.logging;
-	if (config.logging) {
+	if (logLevelName) {
 		// Convert config.logging to a LogLevel
 		const matching = Object.keys(LogLevel).filter((s) => {
 			return s.toLowerCase() === logLevelName;
