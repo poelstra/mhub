@@ -221,7 +221,7 @@ export class MServer {
 			});
 
 			server.listen(options.port, (): void => {
-				this.log("WebSocket Server started on port " + options.port + (useTls ? " (TLS)" : ""));
+				this.log(`WebSocket Server started on port ${options.port}${useTls ? " (TLS)" : ""}`);
 				resolve(undefined);
 			});
 
