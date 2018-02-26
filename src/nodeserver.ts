@@ -4,10 +4,14 @@ import * as net from "net";
 import * as ws from "ws";
 
 import Promise from "ts-promise";
+import { PlainAuthenticator } from "./authenticator";
 import Hub, { UserRights } from "./hub";
 import { TlsOptions } from "./tls";
 import TcpConnection from "./transports/tcpconnection";
 import WSConnection from "./transports/wsconnection";
+
+import * as pubsub from "./pubsub";
+import { KeyValues } from "./types";
 
 import log from "./log";
 
@@ -66,6 +70,39 @@ export interface NormalizedConfig {
 	users?: { [username: string]: string };
 	rights: UserRights;
 }
+
+// Register known node types
+
+import ConsoleDestination from "./nodes/consoleDestination";
+import Exchange from "./nodes/exchange";
+import PingResponder from "./nodes/pingResponder";
+import Queue from "./nodes/queue";
+import TestSource from "./nodes/testSource";
+import TopicStore from "./nodes/topicStore";
+
+interface ConstructableNode {
+	new(name: string, options?: KeyValues<any>): pubsub.Source | pubsub.Destination;
+}
+
+const nodeClasses: ConstructableNode[] = [
+	ConsoleDestination,
+	Exchange,
+	PingResponder,
+	Queue,
+	TestSource,
+	TopicStore,
+];
+
+const nodeClassMap: { [className: string]: ConstructableNode } = {};
+nodeClasses.forEach((c) => {
+	nodeClassMap[(<any>c).name] = c;
+});
+
+// For backward compatibility
+/* tslint:disable:no-string-literal */
+nodeClassMap["TopicQueue"] = TopicStore;
+nodeClassMap["TopicState"] = TopicStore;
+/* tslint:enable:no-string-literal */
 
 // Initialize and start server
 
@@ -144,4 +181,70 @@ export function startTransports(hub: Hub, config: NormalizedConfig): Promise<voi
 			}
 		})
 	).return();
+}
+
+export function setAuthenticator(hub: Hub, { users }: NormalizedConfig): void {
+	const authenticator = new PlainAuthenticator();
+	if (typeof users === "object") {
+		Object.keys(users).forEach((username: string) => {
+			authenticator.setUser(username, users[username]);
+		});
+	}
+	hub.setAuthenticator(authenticator);
+}
+
+// Set up user permissions
+
+export function setPermissions(hub: Hub, { rights, users }: NormalizedConfig): void {
+	if (rights === undefined && users === undefined) {
+		// Default rights: allow everyone to publish/subscribe.
+		hub.setRights({
+			"": {
+				publish: true,
+				subscribe: true,
+			},
+		});
+	} else {
+		try {
+			hub.setRights(rights || {});
+		} catch (err) {
+			throw new Error("Invalid configuration: `rights` property: " + err.message);
+		}
+	}
+}
+
+// Instantiate nodes from config file
+
+export function instantiateNodes(hub: Hub, { nodes }: NormalizedConfig) {
+	Object.keys(nodes).forEach((nodeName: string): void => {
+		let def = nodes[nodeName];
+		if (typeof def === "string") {
+			def = <NodeDefinition>{
+				type: def,
+			};
+		}
+		const typeName = def.type;
+		const nodeConstructor = nodeClassMap[typeName];
+		if (!nodeConstructor) {
+			throw new Error(`Unknown node type '${typeName}' for node '${nodeName}'`);
+		}
+		const node = new nodeConstructor(nodeName, def.options);
+		hub.add(node);
+	});
+}
+
+// Setup bindings between nodes
+
+export function setupBindings(hub: Hub, { bindings }: NormalizedConfig) {
+	bindings.forEach((binding: Binding, index: number): void => {
+		const from = hub.findSource(binding.from);
+		if (!from) {
+			throw new Error(`Unknown Source node '${binding.from}' in \`binding[${index}].from\``);
+		}
+		const to = hub.findDestination(binding.to);
+		if (!to) {
+			throw new Error(`Unknown Destination node '${binding.to}' in \`binding[${index}].to\``);
+		}
+		from.bind(to, binding.pattern);
+	});
 }

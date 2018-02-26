@@ -11,16 +11,15 @@ import * as path from "path";
 import * as yargs from "yargs";
 
 import Promise from "ts-promise";
-import { PlainAuthenticator } from "./authenticator";
 import Hub from "./hub";
 import { LogLevel } from "./logger";
-import { Binding, Config, ListenOptions, NodeDefinition,
-	NodesConfig, NormalizedConfig, startTransports
+import { Config, instantiateNodes, ListenOptions,
+	NodesConfig, NormalizedConfig,
+	setAuthenticator, setPermissions, setupBindings,
+	startTransports
 } from "./nodeserver";
-import * as pubsub from "./pubsub";
 import * as storage from "./storage";
 import { replaceKeyFiles } from "./tls";
-import { KeyValues } from "./types";
 
 import log from "./log";
 
@@ -29,39 +28,6 @@ function die(...args: any[]): void {
 	log.fatal.apply(log, args);
 	process.exit(1);
 }
-
-// Register known node types
-
-import ConsoleDestination from "./nodes/consoleDestination";
-import Exchange from "./nodes/exchange";
-import PingResponder from "./nodes/pingResponder";
-import Queue from "./nodes/queue";
-import TestSource from "./nodes/testSource";
-import TopicStore from "./nodes/topicStore";
-
-interface ConstructableNode {
-	new(name: string, options?: KeyValues<any>): pubsub.Source | pubsub.Destination;
-}
-
-const nodeClasses: ConstructableNode[] = [
-	ConsoleDestination,
-	Exchange,
-	PingResponder,
-	Queue,
-	TestSource,
-	TopicStore,
-];
-
-const nodeClassMap: { [className: string]: ConstructableNode } = {};
-nodeClasses.forEach((c) => {
-	nodeClassMap[(<any>c).name] = c;
-});
-
-// For backward compatibility
-/* tslint:disable:no-string-literal */
-nodeClassMap["TopicQueue"] = TopicStore;
-nodeClassMap["TopicState"] = TopicStore;
-/* tslint:enable:no-string-literal */
 
 // Build list of valid log level names (e.g. none, fatal, error, ...)
 const logLevelNames = Object.keys(LogLevel).filter((s) => !/\d+/.test(s)).map((s) => s.toLowerCase());
@@ -212,72 +178,6 @@ function createDefaultStorage({ storage: storageConfig }: NormalizedConfig) {
 	const storageRoot = path.resolve(path.dirname(configFile), storageConfig || "./storage");
 	const simpleStorage = new storage.ThrottledStorage(new storage.SimpleFileStorage<any>(storageRoot));
 	storage.setDefaultStorage(simpleStorage);
-}
-
-function setAuthenticator(hub: Hub, { users }: NormalizedConfig): void {
-	const authenticator = new PlainAuthenticator();
-	if (typeof users === "object") {
-		Object.keys(users).forEach((username: string) => {
-			authenticator.setUser(username, users[username]);
-		});
-	}
-	hub.setAuthenticator(authenticator);
-}
-
-// Set up user permissions
-
-function setPermissions(hub: Hub, { rights, users }: NormalizedConfig): void {
-	if (rights === undefined && users === undefined) {
-		// Default rights: allow everyone to publish/subscribe.
-		hub.setRights({
-			"": {
-				publish: true,
-				subscribe: true,
-			},
-		});
-	} else {
-		try {
-			hub.setRights(rights || {});
-		} catch (err) {
-			throw new Error("Invalid configuration: `rights` property: " + err.message);
-		}
-	}
-}
-
-// Instantiate nodes from config file
-
-function instantiateNodes(hub: Hub, { nodes }: NormalizedConfig) {
-	Object.keys(nodes).forEach((nodeName: string): void => {
-		let def = nodes[nodeName];
-		if (typeof def === "string") {
-			def = <NodeDefinition>{
-				type: def,
-			};
-		}
-		const typeName = def.type;
-		const nodeConstructor = nodeClassMap[typeName];
-		if (!nodeConstructor) {
-			throw new Error(`Unknown node type '${typeName}' for node '${nodeName}'`);
-		}
-		const node = new nodeConstructor(nodeName, def.options);
-		hub.add(node);
-	});
-}
-
-// Setup bindings between nodes
-
-function setupBindings(hub: Hub, { bindings }: NormalizedConfig) {
-	bindings.forEach((binding: Binding, index: number): void => {
-		const from = hub.findSource(binding.from);
-		if (!from) {
-			throw new Error(`Unknown Source node '${binding.from}' in \`binding[${index}].from\``);
-		}
-		const to = hub.findDestination(binding.to);
-		if (!to) {
-			throw new Error(`Unknown Destination node '${binding.to}' in \`binding[${index}].to\``);
-		}
-		from.bind(to, binding.pattern);
-	});
 }
 
 function main(): Promise<void> {
