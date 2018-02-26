@@ -148,16 +148,3 @@ export class ThrottledStorage<T> implements Storage<T> {
 		return this._slave.load(key);
 	}
 }
-
-// TODO This global storage is basically a kludge, and needs to be moved
-// to e.g. a Hub class, which can then be passed to all created nodes.
-
-let defaultStorage: Storage<any>;
-
-export function getDefaultStorage(): Storage<any> {
-	return defaultStorage;
-}
-
-export function setDefaultStorage(storage: Storage<any>): void {
-	defaultStorage = storage;
-}

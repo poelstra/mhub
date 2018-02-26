@@ -3,8 +3,9 @@ import Promise from "ts-promise";
 import { getMatcher, Matcher, MatchSpec } from "../match";
 import Message from "../message";
 import * as pubsub from "../pubsub";
-import { getDefaultStorage, Storage } from "../storage";
+import { Storage } from "../storage";
 
+import Hub from "../hub";
 import log from "../log";
 
 export interface QueueOptions {
@@ -22,25 +23,27 @@ interface QueueStorage {
 	queue: Message[];
 }
 
-export class Queue extends pubsub.BaseSource {
+export class Queue extends pubsub.BaseSource implements pubsub.Initializable {
 	public name: string;
 	public capacity: number;
 
 	private _queue: Message[] = [];
 	private _matcher: Matcher;
 	private _storage: Storage<QueueStorage> | undefined;
+	private _options: QueueOptions;
 
 	constructor(name: string, options?: QueueOptions) {
 		super(name);
 		this.name = name;
 		this.capacity = options && options.capacity || 10;
 		this._matcher = getMatcher(options && options.pattern);
-		if (options && options.persistent) {
-			this._storage = getDefaultStorage();
-		}
+		this._options = options || {};
 	}
 
-	public init(): Promise<void> {
+	public init(hub: Hub): Promise<void> {
+		if (this._options.persistent) {
+			this._storage = hub.getStorage();
+		}
 		if (!this._storage) {
 			return Promise.resolve(undefined);
 		}

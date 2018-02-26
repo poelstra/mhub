@@ -96,9 +96,9 @@ function normalizeNodes(config: Config): NodesConfig {
 	}
 }
 
-function normalizeStorage(config: Config): string {
+function normalizeStorage(config: Config, rootDir: string): string {
 	// defaults for storage
-	return config.storage || "./storage";
+	return path.resolve(rootDir, config.storage || "./storage");
 }
 
 // Historically, verbose logging was the default.
@@ -145,7 +145,7 @@ export default function parseConfigFile(configFile: string): NormalizedConfig {
 		users: normalizeUsers(config, rootDir),
 		bindings: normalizeBindings(config),
 		nodes: normalizeNodes(config),
-		storage: normalizeStorage(config),
+		storage: normalizeStorage(config, rootDir),
 		rights: normalizeRights(config),
 		logging: normalizeLogging(config),
 	};

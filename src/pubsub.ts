@@ -5,9 +5,9 @@
 
 import Promise from "ts-promise";
 
-import Message from "./message";
-
+import Hub from "./hub";
 import { getMatcher, Matcher, MatchSpec } from "./match";
+import Message from "./message";
 
 interface MatchDef {
 	pattern: MatchSpec;
@@ -20,7 +20,7 @@ interface Binding {
 }
 
 export interface Initializable {
-	init?(): Promise<void>;
+	init?(hub: Hub): Promise<void>;
 }
 
 export interface Destination extends Initializable {

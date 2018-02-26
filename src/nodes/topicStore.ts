@@ -3,9 +3,10 @@ import Promise from "ts-promise";
 import { getMatcher, Matcher, MatchSpec } from "../match";
 import Message from "../message";
 import * as pubsub from "../pubsub";
-import { getDefaultStorage, Storage } from "../storage";
+import { Storage } from "../storage";
 import { KeyValues } from "../types";
 
+import Hub from "../hub";
 import log from "../log";
 
 export interface TopicStoreOptions {
@@ -32,24 +33,26 @@ interface TopicStoreStorage {
  * When a new Destination binds to this, all currently remembered topics are
  * sent to it.
  */
-export class TopicStore extends pubsub.BaseSource {
+export class TopicStore extends pubsub.BaseSource implements pubsub.Initializable {
 	public name: string;
 
 	// tslint:disable-next-line:no-null-keyword
 	private _state: KeyValues<Message> = Object.create(null);
 	private _matcher: Matcher;
 	private _storage: Storage<TopicStoreStorage> | undefined;
+	private _options: TopicStoreOptions;
 
 	constructor(name: string, options?: TopicStoreOptions) {
 		super(name);
 		this.name = name;
 		this._matcher = getMatcher(options && options.pattern);
-		if (options && options.persistent) {
-			this._storage = getDefaultStorage();
-		}
+		this._options = options || {};
 	}
 
-	public init(): Promise<void> {
+	public init(hub: Hub): Promise<void> {
+		if (this._options.persistent) {
+			this._storage = hub.getStorage();
+		}
 		if (!this._storage) {
 			return Promise.resolve(undefined);
 		}

@@ -12,8 +12,7 @@ import * as yargs from "yargs";
 import Promise from "ts-promise";
 import parseConfigFile from "./configparser";
 import { LogLevel } from "./logger";
-import { LoggingOptions, MServer, NormalizedConfig } from "./nodeserver";
-import * as storage from "./storage";
+import { LoggingOptions, MServer } from "./nodeserver";
 
 import log from "./log";
 
@@ -69,21 +68,11 @@ function setLogLevel(logLevelName: LoggingOptions) {
 	}
 }
 
-// Create default storage
-
-function createDefaultStorage({ storage: storageConfig }: NormalizedConfig) {
-	const storageRoot = path.resolve(path.dirname(configFile), storageConfig);
-	const simpleStorage = new storage.ThrottledStorage(new storage.SimpleFileStorage<any>(storageRoot));
-	storage.setDefaultStorage(simpleStorage);
-}
-
 function main(): Promise<void> {
 	const config = parseConfigFile(configFile);
 
 	setLogLevel(args.loglevel || config.logging);
 	log.info("Using config file " + configFile);
-
-	createDefaultStorage(config);
 
 	// Create server
 	const server = new MServer(config);
