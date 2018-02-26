@@ -61,7 +61,7 @@ export interface Config {
 }
 
 export interface NormalizedConfig {
-	listen: ListenOptions | ListenOptions[];
+	listen: ListenOptions[];
 	verbose?: boolean;
 	logging?: "none" | "fatal" | "error" | "warning" | "info" | "debug";
 	bindings: Binding[];
