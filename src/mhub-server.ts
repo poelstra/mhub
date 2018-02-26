@@ -299,6 +299,6 @@ function main(): Promise<void> {
 	});
 }
 
-main().catch((err: Error) => {
+Promise.resolve().then(main).catch((err: Error) => {
 	die(err);
 });
