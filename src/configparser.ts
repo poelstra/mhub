@@ -101,11 +101,14 @@ function normalizeStorage(config: Config): string {
 
 // 'Normalize' config and convert paths to their contents
 export default function normalizeConfig(config: Config, configFile: string): NormalizedConfig {
-    config.listen = normalizeListen(config, configFile);
-    config.users = normalizeUsers(config, configFile);
-    config.bindings = normalizeBindings(config);
-    config.nodes = normalizeNodes(config);
-    config.storage = normalizeStorage(config);
-
-    return <NormalizedConfig>config;
+    return {
+        listen: normalizeListen(config, configFile),
+        users: normalizeUsers(config, configFile),
+        bindings: normalizeBindings(config),
+        nodes: normalizeNodes(config),
+        storage: normalizeStorage(config),
+        rights: config.rights,
+        verbose: config.verbose,
+        logging: config.logging,
+    };
 }
