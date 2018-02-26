@@ -7,7 +7,7 @@ import {
 } from "./nodeserver";
 import { replaceKeyFiles } from "./tls";
 
-function normalizeListen(config: Config, configFile: string): ListenOption[] {
+function normalizeListen(config: Config, rootDir: string): ListenOption[] {
 	// Checks
 	if (config.port && config.listen) {
 		throw new Error("Invalid configuration: specify either `port` or `listen`");
@@ -35,13 +35,13 @@ function normalizeListen(config: Config, configFile: string): ListenOption[] {
 		}
 		if (listenOption.type === "websocket") {
 			// Read TLS key, cert, etc
-			replaceKeyFiles(listenOption, path.dirname(configFile));
+			replaceKeyFiles(listenOption, rootDir);
 		}
 	});
 	return listen;
 }
 
-function normalizeUsers(config: Config, configFile: string): UserOptions {
+function normalizeUsers(config: Config, rootDir: string): UserOptions {
 	// Checks
 	if (
 		(config.users !== undefined) &&
@@ -56,7 +56,7 @@ function normalizeUsers(config: Config, configFile: string): UserOptions {
 	// Initialize users
 	let users: UserOptions = {};
 	if (typeof config.users === "string") {
-		const usersFile = path.resolve(path.dirname(configFile), config.users);
+		const usersFile = path.resolve(rootDir, config.users);
 		try {
 			users = JSON.parse(fs.readFileSync(usersFile, "utf8"));
 		} catch (e) {
@@ -125,9 +125,10 @@ function readConfigFile(filePath: string): Config {
 // 'Normalize' config and convert paths to their contents
 export default function parseConfigFile(configFile: string): NormalizedConfig {
 	const config = readConfigFile(configFile);
+	const rootDir = path.dirname(configFile);
 	return {
-		listen: normalizeListen(config, configFile),
-		users: normalizeUsers(config, configFile),
+		listen: normalizeListen(config, rootDir),
+		users: normalizeUsers(config, rootDir),
 		bindings: normalizeBindings(config),
 		nodes: normalizeNodes(config),
 		storage: normalizeStorage(config),
