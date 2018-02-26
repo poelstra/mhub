@@ -6,13 +6,11 @@
 
 import "source-map-support/register";
 
-import * as fs from "fs";
 import * as path from "path";
 import * as yargs from "yargs";
 
 import Promise from "ts-promise";
 import parseConfigFile from "./configparser";
-import Hub from "./hub";
 import { LogLevel } from "./logger";
 import { MServer, NormalizedConfig } from "./nodeserver";
 import * as storage from "./storage";
