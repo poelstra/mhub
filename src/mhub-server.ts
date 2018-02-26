@@ -111,12 +111,8 @@ function main(): Promise<void> {
 
 	createDefaultStorage(normalizedConfig);
 
-	// Create hub
-
-	const hub = new Hub();
-
-	const server = new MServer(hub, normalizedConfig);
-
+	// Create server
+	const server = new MServer(normalizedConfig);
 	return server.init();
 }
 
