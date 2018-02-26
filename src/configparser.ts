@@ -8,34 +8,36 @@ import {
 import { replaceKeyFiles } from "./tls";
 
 function normalizeListen(config: Config, configFile: string): ListenOptions[] {
-    // Normalize listen options, also handling port option
-    if (config.port) {
-        if (config.listen) {
-            throw new Error("Invalid configuration: specify either `port` or `listen`");
-        }
-        config.listen = {
-            type: "websocket",
-            port: config.port,
-        };
-        delete config.port;
+    // Checks
+    if (config.port && config.listen) {
+        throw new Error("Invalid configuration: specify either `port` or `listen`");
     }
-    if (!config.listen) {
+    if (!(config.port || config.listen)) {
         throw new Error("Invalid configuration: `port` or `listen` missing");
     }
-    if (!Array.isArray(config.listen)) {
-        config.listen = [config.listen];
+
+    let listen: ListenOptions[] = [];
+    // Normalize listen options, also handling port option
+    if (config.port) {
+        listen = [{
+            type: "websocket",
+            port: config.port,
+        }];
     }
-    config.listen.forEach((listen: ListenOptions) => {
-        if (!listen.type) {
+    if (config.listen) {
+        listen = listen.concat(config.listen);
+    }
+    listen.forEach((listenOption: ListenOptions) => {
+        if (!listenOption.type) {
             // Default to WebSocket, for backward compatibility
-            listen!.type = "websocket";
+            listenOption!.type = "websocket";
         }
-        if (listen.type === "websocket") {
+        if (listenOption.type === "websocket") {
             // Read TLS key, cert, etc
-            replaceKeyFiles(listen, path.dirname(configFile));
+            replaceKeyFiles(listenOption, path.dirname(configFile));
         }
     });
-    return config.listen;
+    return listen;
 }
 
 // 'Normalize' config and convert paths to their contents
