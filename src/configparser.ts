@@ -2,7 +2,7 @@ import * as fs from "fs";
 import * as path from "path";
 
 import {
-    Config, ListenOptions,
+    Binding, Config, ListenOptions,
     NodesConfig, NormalizedConfig, UserOptions
 } from "./nodeserver";
 import { replaceKeyFiles } from "./tls";
@@ -67,6 +67,11 @@ function normalizeUsers(config: Config, configFile: string): UserOptions {
     return users;
 }
 
+function normalizeBindings(config: Config): Binding[] {
+    // Make bindings non optional
+    return config.bindings || [];
+}
+
 // 'Normalize' config and convert paths to their contents
 export default function normalizeConfig(config: Config, configFile: string): NormalizedConfig {
     if (!config.nodes) {
@@ -75,11 +80,7 @@ export default function normalizeConfig(config: Config, configFile: string): Nor
 
     config.listen = normalizeListen(config, configFile);
     config.users = normalizeUsers(config, configFile);
-
-    // Make bindings non optional
-    if (!config.bindings) {
-        config.bindings = [];
-    }
+    config.bindings = normalizeBindings(config);
 
     if (Array.isArray(config.nodes)) { // Backward compatibility, convert to new format
         const oldNodes = <string[]>config.nodes;
