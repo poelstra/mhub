@@ -84,16 +84,15 @@ function createDefaultStorage({ storage: storageConfig }: NormalizedConfig) {
 }
 
 function main(): Promise<void> {
+	const config = parseConfigFile(configFile);
 
-	const normalizedConfig = parseConfigFile(configFile);
-
-	setLogLevel(normalizedConfig);
+	setLogLevel(config);
 	log.info("Using config file " + configFile);
 
-	createDefaultStorage(normalizedConfig);
+	createDefaultStorage(config);
 
 	// Create server
-	const server = new MServer(normalizedConfig);
+	const server = new MServer(config);
 	return server.init();
 }
 
