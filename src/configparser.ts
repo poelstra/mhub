@@ -1,6 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
 
+import { UserRights } from "./hub";
 import {
 	Binding, Config, ListenOption, LoggingOptions,
 	NodesConfig, NormalizedConfig, UserOptions
@@ -114,6 +115,19 @@ function normalizeLogging(config: Config): LoggingOptions {
 	return "info";
 }
 
+function normalizeRights(config: Config): UserRights {
+	if (config.rights === undefined && config.users === undefined) {
+		// Default rights: allow everyone to publish/subscribe.
+		return {
+			"": {
+				publish: true,
+				subscribe: true,
+			},
+		};
+	}
+	return config.rights || {};
+}
+
 function readConfigFile(filePath: string): Config {
 	try {
 		return JSON.parse(fs.readFileSync(filePath, "utf8"));
@@ -132,7 +146,7 @@ export default function parseConfigFile(configFile: string): NormalizedConfig {
 		bindings: normalizeBindings(config),
 		nodes: normalizeNodes(config),
 		storage: normalizeStorage(config),
-		rights: config.rights,
+		rights: normalizeRights(config),
 		logging: normalizeLogging(config),
 	};
 }

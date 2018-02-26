@@ -155,20 +155,10 @@ export class MServer {
 	// Set up user permissions
 
 	private setPermissions({ rights, users }: NormalizedConfig): void {
-		if (rights === undefined && Object.keys(users).length === 0) {
-			// Default rights: allow everyone to publish/subscribe.
-			this.hub.setRights({
-				"": {
-					publish: true,
-					subscribe: true,
-				},
-			});
-		} else {
-			try {
-				this.hub.setRights(rights || {});
-			} catch (err) {
-				throw new Error("Invalid configuration: `rights` property: " + err.message);
-			}
+		try {
+			this.hub.setRights(rights);
+		} catch (err) {
+			throw new Error("Invalid configuration: `rights` property: " + err.message);
 		}
 	}
 
