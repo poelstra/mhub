@@ -57,11 +57,6 @@ if (!args.config) {
 	configFile = path.resolve(args.config);
 }
 
-// Historically, verbose logging was the default.
-// Then, the config.verbose option was introduced, again kept as the default.
-// Now, we have the config.logging option which is more flexible and is used
-// whenever available.
-// This can then be overriden using the commandline.
 function setLogLevel(config: NormalizedConfig, override?: LoggingOptions) {
 	const logLevelName = override || config.logging;
 	// Convert config.logging to a LogLevel

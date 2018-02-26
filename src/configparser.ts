@@ -99,6 +99,11 @@ function normalizeStorage(config: Config): string {
 	return config.storage || "./storage";
 }
 
+// Historically, verbose logging was the default.
+// Then, the config.verbose option was introduced, again kept as the default.
+// Now, we have the config.logging option which is more flexible and is used
+// whenever available.
+// This can then be overriden using the commandline.
 function normalizeLogging(config: Config): LoggingOptions {
 	if (config.logging) {
 		return config.logging;
