@@ -109,88 +109,10 @@ nodeClassMap["TopicQueue"] = TopicStore;
 nodeClassMap["TopicState"] = TopicStore;
 /* tslint:enable:no-string-literal */
 
-// Initialize and start server
-
-let connectionId = 0;
-function startWebSocketServer(hub: Hub, options: WSServerOptions): Promise<void> {
-	return new Promise<void>((resolve, reject) => {
-		options = { ...options }; // clone
-
-		let server: http.Server | https.Server;
-		const useTls = !!(options.key || options.pfx);
-
-		options.port = options.port || (useTls ? DEFAULT_PORT_WSS : DEFAULT_PORT_WS);
-
-		if (useTls) {
-			server = https.createServer(options);
-		} else {
-			server = http.createServer();
-		}
-
-		const wss = new ws.Server({ server: <any>server, path: "/" });
-		wss.on("connection", (conn: ws) => {
-			// tslint:disable-next-line:no-unused-expression
-			new WSConnection(hub, conn, "websocket" + connectionId++);
-		});
-
-		server.listen(options.port, (): void => {
-			log.info("WebSocket Server started on port " + options.port, useTls ? "(TLS)" : "");
-			resolve(undefined);
-		});
-
-		server.on("error", (e: Error): void => {
-			reject(e);
-		});
-	});
-}
-
-function startTcpServer(hub: Hub, options: TcpServerOptions): Promise<void> {
-	return new Promise<void>((resolve, reject) => {
-		options = { ...options }; // clone
-		options.port = options.port || DEFAULT_PORT_TCP;
-
-		const server = net.createServer((socket: net.Socket) => {
-			// tslint:disable-next-line:no-unused-expression
-			new TcpConnection(hub, socket, "tcp" + connectionId++);
-		});
-
-		server.listen(
-			{
-				port: options.port,
-				host: options.host,
-				backlog: options.backlog,
-			},
-			(): void => {
-				log.info("TCP Server started on port " + options.port);
-				resolve(undefined);
-			}
-		);
-
-		server.on("error", (e: Error): void => {
-			reject(e);
-		});
-	});
-}
-
-function startTransports(hub: Hub, config: NormalizedConfig): Promise<void> {
-	const serverOptions = Array.isArray(config.listen) ? config.listen : [config.listen];
-	return Promise.all(
-		serverOptions.map((options: ListenOptions) => {
-			switch (options.type) {
-				case "websocket":
-					return startWebSocketServer(hub, <WSServerOptions>options);
-				case "tcp":
-					return startTcpServer(hub, <TcpServerOptions>options);
-				default:
-					throw new Error(`unsupported transport '${options!.type}'`);
-			}
-		})
-	).return();
-}
-
 export class MServer {
 	private hub: Hub;
 	private normalizedConfig: NormalizedConfig;
+	private connectionId = 0;
 	constructor(
 		normalizedConfig: NormalizedConfig,
 		hub?: Hub
@@ -205,7 +127,7 @@ export class MServer {
 
 	public init(): Promise<void> {
 		return this.hub.init().then(() => {
-			return startTransports(this.hub, this.normalizedConfig);
+			return this.startTransports(this.hub, this.normalizedConfig);
 		}).catch((err: Error) => {
 			throw new Error(`Failed to initialize:` + JSON.stringify(err, null, 2));
 		});
@@ -273,5 +195,82 @@ export class MServer {
 			}
 			from.bind(to, binding.pattern);
 		});
+	}
+
+	// Initialize and start server
+	private startWebSocketServer(hub: Hub, options: WSServerOptions): Promise<void> {
+		return new Promise<void>((resolve, reject) => {
+			options = { ...options }; // clone
+
+			let server: http.Server | https.Server;
+			const useTls = !!(options.key || options.pfx);
+
+			options.port = options.port || (useTls ? DEFAULT_PORT_WSS : DEFAULT_PORT_WS);
+
+			if (useTls) {
+				server = https.createServer(options);
+			} else {
+				server = http.createServer();
+			}
+
+			const wss = new ws.Server({ server: <any>server, path: "/" });
+			wss.on("connection", (conn: ws) => {
+				// tslint:disable-next-line:no-unused-expression
+				new WSConnection(hub, conn, "websocket" + this.connectionId++);
+			});
+
+			server.listen(options.port, (): void => {
+				log.info("WebSocket Server started on port " + options.port, useTls ? "(TLS)" : "");
+				resolve(undefined);
+			});
+
+			server.on("error", (e: Error): void => {
+				reject(e);
+			});
+		});
+	}
+
+	private startTcpServer(hub: Hub, options: TcpServerOptions): Promise<void> {
+		return new Promise<void>((resolve, reject) => {
+			options = { ...options }; // clone
+			options.port = options.port || DEFAULT_PORT_TCP;
+
+			const server = net.createServer((socket: net.Socket) => {
+				// tslint:disable-next-line:no-unused-expression
+				new TcpConnection(hub, socket, "tcp" + this.connectionId++);
+			});
+
+			server.listen(
+				{
+					port: options.port,
+					host: options.host,
+					backlog: options.backlog,
+				},
+				(): void => {
+					log.info("TCP Server started on port " + options.port);
+					resolve(undefined);
+				}
+			);
+
+			server.on("error", (e: Error): void => {
+				reject(e);
+			});
+		});
+	}
+
+	private startTransports(hub: Hub, config: NormalizedConfig): Promise<void> {
+		const serverOptions = Array.isArray(config.listen) ? config.listen : [config.listen];
+		return Promise.all(
+			serverOptions.map((options: ListenOptions) => {
+				switch (options.type) {
+					case "websocket":
+						return this.startWebSocketServer(hub, <WSServerOptions>options);
+					case "tcp":
+						return this.startTcpServer(hub, <TcpServerOptions>options);
+					default:
+						throw new Error(`unsupported transport '${options!.type}'`);
+				}
+			})
+		).return();
 	}
 }
