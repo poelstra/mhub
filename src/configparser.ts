@@ -59,7 +59,7 @@ function normalizeUsers(config: Config, configFile: string): UserOptions {
 		try {
 			users = JSON.parse(fs.readFileSync(usersFile, "utf8"));
 		} catch (e) {
-			throw new Error(`Cannot parse users file '${configFile}': ` + JSON.stringify(e, null, 2));
+			throw new Error(`Cannot parse users file '${usersFile}': ` + JSON.stringify(e, null, 2));
 		}
 	} else if (typeof config.users === "object") {
 		users = config.users;
