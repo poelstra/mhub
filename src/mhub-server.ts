@@ -11,13 +11,10 @@ import * as path from "path";
 import * as yargs from "yargs";
 
 import Promise from "ts-promise";
-import normalizeConfig from "./configparser";
+import parseConfigFile from "./configparser";
 import Hub from "./hub";
 import { LogLevel } from "./logger";
-import { Config,
-	MServer,
-	NormalizedConfig
-} from "./nodeserver";
+import { MServer, NormalizedConfig } from "./nodeserver";
 import * as storage from "./storage";
 
 import log from "./log";
@@ -62,20 +59,12 @@ if (!args.config) {
 	configFile = path.resolve(args.config);
 }
 
-function parseConfigFile(filePath: string): Config {
-	try {
-		return JSON.parse(fs.readFileSync(filePath, "utf8"));
-	} catch (e) {
-		throw die(`Cannot parse config file '${filePath}':`, e);
-	}
-}
-
 // Historically, verbose logging was the default.
 // Then, the config.verbose option was introduced, again kept as the default.
 // Now, we have the config.logging option which is more flexible and is used
 // whenever available.
 // This can then be overriden using the commandline.
-function setLogLevel(config: Config) {
+function setLogLevel(config: NormalizedConfig) {
 	const logLevelName = args.loglevel || config.logging;
 	if (logLevelName) {
 		// Convert config.logging to a LogLevel
@@ -102,12 +91,11 @@ function createDefaultStorage({ storage: storageConfig }: NormalizedConfig) {
 }
 
 function main(): Promise<void> {
-	const config = parseConfigFile(configFile);
 
-	setLogLevel(config);
+	const normalizedConfig = parseConfigFile(configFile);
+
+	setLogLevel(normalizedConfig);
 	log.info("Using config file " + configFile);
-
-	const normalizedConfig = normalizeConfig(config, configFile);
 
 	createDefaultStorage(normalizedConfig);
 

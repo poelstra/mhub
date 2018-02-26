@@ -99,8 +99,17 @@ function normalizeStorage(config: Config): string {
     return config.storage || "./storage";
 }
 
+function readConfigFile(filePath: string): Config {
+    try {
+        return JSON.parse(fs.readFileSync(filePath, "utf8"));
+    } catch (e) {
+        throw new Error(`Cannot parse config file '${filePath}':` + e.message);
+    }
+}
+
 // 'Normalize' config and convert paths to their contents
-export default function normalizeConfig(config: Config, configFile: string): NormalizedConfig {
+export default function parseConfigFile(configFile: string): NormalizedConfig {
+    const config = readConfigFile(configFile);
     return {
         listen: normalizeListen(config, configFile),
         users: normalizeUsers(config, configFile),
