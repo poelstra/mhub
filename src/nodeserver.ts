@@ -134,13 +134,13 @@ export class MServer {
 		});
 	}
 
-	public setLogger(logger: Logger) {
+	public setLogger(logger: Logger): void {
 		this.logger = logger;
 	}
 
-	private log(message: string) {
+	private log(fmt: string, ...args: any[]): void {
 		if (this.logger) {
-			this.logger.info(message);
+			this.logger.info(fmt, ...args);
 		}
 	}
 
