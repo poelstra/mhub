@@ -171,13 +171,16 @@ function normalizeConfig(looseConfig: Config): NormalizedConfig {
 		throw new Error("Invalid configuration: `nodes` should be a NodeDefinition map, or an array of strings");
 	}
 
+	// defaults for storage
+	config.storage = config.storage || "./storage";
+
 	return <NormalizedConfig>config;
 }
 
 // Create default storage
 
 function createDefaultStorage({ storage: storageConfig }: NormalizedConfig) {
-	const storageRoot = path.resolve(path.dirname(configFile), storageConfig || "./storage");
+	const storageRoot = path.resolve(path.dirname(configFile), storageConfig);
 	const simpleStorage = new storage.ThrottledStorage(new storage.SimpleFileStorage<any>(storageRoot));
 	storage.setDefaultStorage(simpleStorage);
 }

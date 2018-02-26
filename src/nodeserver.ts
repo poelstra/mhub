@@ -66,7 +66,7 @@ export interface NormalizedConfig {
 	logging?: "none" | "fatal" | "error" | "warning" | "info" | "debug";
 	bindings: Binding[];
 	nodes: NodesConfig;
-	storage?: string;
+	storage: string;
 	users: { [username: string]: string };
 	rights: UserRights;
 }
