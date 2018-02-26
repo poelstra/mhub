@@ -57,8 +57,7 @@ if (!args.config) {
 	configFile = path.resolve(args.config);
 }
 
-function setLogLevel(config: NormalizedConfig, override?: LoggingOptions) {
-	const logLevelName = override || config.logging;
+function setLogLevel(logLevelName: LoggingOptions) {
 	// Convert config.logging to a LogLevel
 	const matching = Object.keys(LogLevel).filter((s) => {
 		return s.toLowerCase() === logLevelName;
@@ -81,7 +80,7 @@ function createDefaultStorage({ storage: storageConfig }: NormalizedConfig) {
 function main(): Promise<void> {
 	const config = parseConfigFile(configFile);
 
-	setLogLevel(config, args.loglevel);
+	setLogLevel(args.loglevel || config.logging);
 	log.info("Using config file " + configFile);
 
 	createDefaultStorage(config);
