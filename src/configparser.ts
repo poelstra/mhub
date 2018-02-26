@@ -94,15 +94,18 @@ function normalizeNodes(config: Config): NodesConfig {
     }
 }
 
+function normalizeStorage(config: Config): string {
+    // defaults for storage
+    return config.storage || "./storage";
+}
+
 // 'Normalize' config and convert paths to their contents
 export default function normalizeConfig(config: Config, configFile: string): NormalizedConfig {
     config.listen = normalizeListen(config, configFile);
     config.users = normalizeUsers(config, configFile);
     config.bindings = normalizeBindings(config);
     config.nodes = normalizeNodes(config);
-
-    // defaults for storage
-    config.storage = config.storage || "./storage";
+    config.storage = normalizeStorage(config);
 
     return <NormalizedConfig>config;
 }
