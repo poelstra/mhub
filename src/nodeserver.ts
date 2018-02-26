@@ -190,11 +190,13 @@ function startTransports(hub: Hub, config: NormalizedConfig): Promise<void> {
 
 export class MServer {
 	private hub: Hub;
+	private normalizedConfig: NormalizedConfig;
 	constructor(
-		private normalizedConfig: NormalizedConfig,
+		normalizedConfig: NormalizedConfig,
 		hub?: Hub
 	) {
 		this.hub = hub || new Hub();
+		this.normalizedConfig = normalizedConfig;
 		this.setAuthenticator(normalizedConfig);
 		this.setPermissions(normalizedConfig);
 		this.instantiateNodes(normalizedConfig);
