@@ -70,6 +70,7 @@ function parseConfigFile(filePath: string): Config {
 	}
 }
 
+log.info("Using config file " + configFile);
 const config = parseConfigFile(configFile);
 
 // Historically, verbose logging was the default.
@@ -93,10 +94,6 @@ function setLogLevel() {
 		log.logLevel = LogLevel.Debug;
 	}
 }
-
-setLogLevel();
-
-log.info("Using config file " + configFile);
 
 // 'Normalize' config and convert paths to their contents
 function normalizeConfig(looseConfig: Config): NormalizedConfig {
@@ -186,6 +183,7 @@ function createDefaultStorage({ storage: storageConfig }: NormalizedConfig) {
 }
 
 function main(): Promise<void> {
+	setLogLevel();
 	const normalizedConfig = normalizeConfig(config);
 
 	createDefaultStorage(normalizedConfig);
