@@ -49,8 +49,7 @@ export class Queue extends pubsub.BaseSource {
 				return;
 			}
 			if (data.type !== QUEUE_STORAGE_ID || data.version !== QUEUE_STORAGE_VERSION) {
-				// tslint:disable-next-line:no-console
-				console.error(`Warning: discarding invalid storage ID / version for node '${this.name}'`);
+				log.warning(`Warning: discarding invalid storage ID / version for node '${this.name}'`);
 				return;
 			}
 			for (const msg of data.queue) {

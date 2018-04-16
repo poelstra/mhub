@@ -61,8 +61,7 @@ export class TopicStore extends pubsub.BaseSource {
 					(data.type !== TOPIC_STORE_STORAGE_ID && data.type !== "TopicStateStorage") ||
 					data.version !== TOPIC_STORE_STORAGE_VERSION
 				) {
-				// tslint:disable-next-line:no-console
-				console.log(`Warning: discarding invalid storage ID / version for node '${this.name}'`);
+				log.warning(`Warning: discarding invalid storage ID / version for node '${this.name}'`);
 				return;
 			}
 			// tslint:disable-next-line:forin
