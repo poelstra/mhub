@@ -160,12 +160,11 @@ export abstract class BaseClient extends events.EventEmitter {
 
 				// Abort pending transactions
 				const transactionError = error || new Error("connection closed");
-				const closedRejection = Promise.reject<never>(transactionError);
 				for (const t in this._transactions) {
 					if (!this._transactions[t]) {
 						continue;
 					}
-					this._transactions[t](closedRejection);
+					this._transactions[t](Promise.reject<protocol.Response>(transactionError));
 				}
 				this._transactions = {};
 
