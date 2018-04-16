@@ -75,6 +75,10 @@ export class Queue extends pubsub.BaseSource {
 					type: QUEUE_STORAGE_ID,
 					version: QUEUE_STORAGE_VERSION,
 					queue: this._queue,
+				}).catch((err) => {
+					log.error(`Error saving topic data in node '${this.name}': ${err}`);
+					// TODO replace with a more appropriate mechanism
+					process.exit(1);
 				});
 			}
 		}

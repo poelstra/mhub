@@ -90,6 +90,10 @@ export class TopicStore extends pubsub.BaseSource {
 					type: TOPIC_STORE_STORAGE_ID,
 					version: TOPIC_STORE_STORAGE_VERSION,
 					state: this._state,
+				}).catch((err) => {
+					log.error(`Error saving topic data in node '${this.name}': ${err}`);
+					// TODO replace with a more appropriate mechanism
+					process.exit(1);
 				});
 			}
 		}
