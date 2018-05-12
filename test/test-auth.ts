@@ -557,41 +557,6 @@ describe("auth", (): void => {
 		});
 	});
 
-	describe("pubsub", () => {
-		beforeEach((): Promise<void> => {
-			auth.setUser("testUser", "");
-			hub.setRights({
-				"testUser": true,
-			});
-			return client.login("testUser", "");
-		});
-
-		it("can receive everything", () => {
-			const msgs: Message[] = [];
-			return client.subscribe("default")
-				.then(() => client.on("message", (msg: Message) => msgs.push(msg)))
-				.then(() => client.publish("default", "/foo/bar/baz"))
-				.then(() => client.publish("default", "/bar"))
-				.then(() => {
-					expect(msgs).to.deep.equal([
-						new Message("/foo/bar/baz", undefined, {}),
-						new Message("/bar", undefined, {}),
-					]);
-				});
-		});
-
-		it("can filter on a topic", () => {
-			const msgs: Message[] = [];
-			return client.subscribe("default", "/bar")
-				.then(() => client.on("message", (msg: Message) => msgs.push(msg)))
-				.then(() => client.publish("default", "/foo/bar/baz"))
-				.then(() => client.publish("default", "/bar"))
-				.then(() => {
-					expect(msgs).to.deep.equal([new Message("/bar", undefined, {})]);
-				});
-		});
-	});
-
 	describe("unsubscribe", () => {
 		it("doesn't give away node (non)-existence", () => {
 			return expectPermissionDenied(client.unsubscribe("nonexistent"));
