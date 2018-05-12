@@ -591,4 +591,10 @@ describe("auth", (): void => {
 				});
 		});
 	});
+
+	describe("unsubscribe", () => {
+		it("doesn't give away node (non)-existence", () => {
+			return expectPermissionDenied(client.unsubscribe("nonexistent"));
+		});
+	});
 });

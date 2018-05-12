@@ -16,16 +16,19 @@ import * as pubsub from "./pubsub";
 
 type ResponseHandler = (response: protocol.Response) => void;
 
+interface SubscriptionBinding {
+	node: pubsub.Source;
+	patterns: Dict<MatchSpec>;
+}
+
 class SubscriptionNode implements pubsub.Destination {
 	public name: string;
-	private _conn: HubClient;
 	private _id: string;
-	private _nodes: pubsub.Source[] = [];
+	private _bindings: Dict<SubscriptionBinding> = new Dict();
 	private _onResponse: ResponseHandler;
 
 	constructor(conn: HubClient, id: string, onResponse: ResponseHandler) {
-		this._conn = conn;
-		this.name = this._conn.name + "_" + id;
+		this.name = conn.name + "_" + id;
 		this._id = id;
 		this._onResponse = onResponse;
 	}
@@ -42,18 +45,42 @@ class SubscriptionNode implements pubsub.Destination {
 		this._onResponse(response);
 	}
 
-	public bind(node: pubsub.Source, pattern?: MatchSpec): void {
-		if (this._nodes.indexOf(node) < 0) {
-			this._nodes.push(node);
+	public subscribe(node: pubsub.Source, pattern: string | undefined, matcher: MatchSpec): void {
+		let bindings = this._bindings.get(node.name);
+		if (!bindings) {
+			bindings = {
+				node,
+				patterns: new Dict(),
+			};
+			this._bindings.set(node.name, bindings);
 		}
-		node.bind(this, pattern);
+		pattern = pattern || "";
+		// Only bind if not already bound using this exact pattern
+		if (!bindings.patterns.get(pattern)) {
+			bindings.patterns.set(pattern, matcher);
+			node.bind(this, matcher);
+		}
+	}
+
+	public unsubscribe(node: pubsub.Source, pattern: string | undefined): void {
+		const bindings = this._bindings.get(node.name);
+		if (!bindings) {
+			return;
+		}
+		pattern = pattern || "";
+		const matcher = bindings.patterns.get(pattern);
+		if (!matcher) {
+			return;
+		}
+		bindings.patterns.remove(pattern);
+		node.unbind(this, matcher);
 	}
 
 	public destroy(): void {
-		this._nodes.forEach((node: pubsub.Source): void => {
-			node.unbind(this);
+		this._bindings.forEach((binding): void => {
+			binding.node.unbind(this);
 		});
-		this._nodes = [];
+		this._bindings.clear();
 	}
 }
 
@@ -131,6 +158,9 @@ export class HubClient extends events.EventEmitter {
 				case "subscribe":
 					response = this._handleSubscribe(msg);
 					break;
+				case "unsubscribe":
+					response = this._handleUnsubscribe(msg);
+					break;
 				case "ping":
 					response = this._handlePing(msg);
 					break;
@@ -181,6 +211,8 @@ export class HubClient extends events.EventEmitter {
 	}
 
 	private _handleSubscribe(msg: protocol.SubscribeCommand): protocol.SubAckResponse | undefined {
+		// First check whether (un-)subscribing is allowed at all, to
+		// prevent giving away info about (non-)existence of nodes.
 		const authResult = this._authorizer.canSubscribe(msg.node, msg.pattern);
 		if (!authResult) {
 			throw new Error("permission denied");
@@ -212,11 +244,42 @@ export class HubClient extends events.EventEmitter {
 			// authResult is true
 			finalMatcher = patternMatcher;
 		}
-		sub.bind(node, finalMatcher);
+		sub.subscribe(node, msg.pattern, finalMatcher);
 
 		if (protocol.hasSequenceNumber(msg)) {
 			return {
 				type: "suback",
+				seq: msg.seq,
+			};
+		}
+	}
+
+	private _handleUnsubscribe(msg: protocol.UnsubscribeCommand): protocol.UnsubAckResponse | undefined {
+		// First check whether (un-)subscribing is allowed at all, to
+		// prevent giving away info about (non-)existence of nodes.
+		const authResult = this._authorizer.canSubscribe(msg.node, msg.pattern);
+		if (!authResult) {
+			throw new Error("permission denied");
+		}
+
+		const node = this._hub.find(msg.node);
+		if (!node) {
+			throw new Error(`unknown node '${msg.node}'`);
+		}
+
+		if (!pubsub.isSource(node)) {
+			throw new Error(`node '${msg.node}' is not a Source`);
+		}
+
+		const id = msg.id || "default";
+		const sub = this._subscriptions.get(id);
+		if (sub) {
+			sub.unsubscribe(node, msg.pattern);
+		}
+
+		if (protocol.hasSequenceNumber(msg)) {
+			return {
+				type: "unsuback",
 				seq: msg.seq,
 			};
 		}

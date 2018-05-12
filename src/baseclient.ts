@@ -209,16 +209,37 @@ export abstract class BaseClient extends events.EventEmitter {
 	}
 
 	/**
-	 * Subscribe to a node. Emits the "message" event when a message is received for this
-	 * subscription.
+	 * Subscribe to a node.
+	 *
+	 * Emits the "message" event when a message is received for this subscription.
+	 * First argument of that event is the message, second is the subscription id
+	 * (or "default" if no id was given).
 	 *
 	 * @param nodeName Name of node in MServer to subscribe to (e.g. "default")
-	 * @param pattern  Optional pattern glob (e.g. "namespace:*"), matches all messages if not given
+	 * @param pattern  Optional pattern glob (e.g. "/some/foo*"). Matches all topics if omitted.
 	 * @param id       Optional subscription ID sent back with all matching messages
 	 */
 	public subscribe(nodeName: string, pattern?: string, id?: string): Promise<void> {
 		return this._send(<protocol.SubscribeCommand>{
 			type: "subscribe",
+			node: nodeName,
+			pattern,
+			id,
+		}).return();
+	}
+
+	/**
+	 * Unsubscribe `pattern` (or all if omitted) from given `node` and `id`.
+	 * Subscription id "default" is used if `id` is omitted.
+	 *
+	 * @param nodeName Name of node in MServer to unsubscribe from (e.g. "default")
+	 * @param pattern  Optional pattern glob (e.g. "/some/foo*"). Unsubscribes all (on `node` and `id`)
+	 *                 if omitted.
+	 * @param id       Subscription ID, or "default"
+	 */
+	public unsubscribe(nodeName: string, pattern?: string, id?: string): Promise<void> {
+		return this._send(<protocol.UnsubscribeCommand>{
+			type: "unsubscribe",
 			node: nodeName,
 			pattern,
 			id,
@@ -351,9 +372,11 @@ export abstract class BaseClient extends events.EventEmitter {
 					}
 					break;
 				case "suback":
+				case "unsuback":
 				case "puback":
 				case "loginack":
-					const ackDec = <protocol.PubAckResponse | protocol.SubAckResponse | protocol.LoginAckResponse>response;
+					const ackDec = <protocol.PubAckResponse | protocol.SubAckResponse | protocol.UnsubAckResponse |
+							protocol.LoginAckResponse>response;
 					if (protocol.hasSequenceNumber(ackDec)) {
 						this._release(ackDec.seq, undefined, ackDec);
 					}

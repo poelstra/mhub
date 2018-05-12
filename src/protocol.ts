@@ -10,15 +10,33 @@
 /**
  * Subscribe to `node` using `pattern`.
  *
- * Messages sent by that node matching the pattern (or any message if pattern is
- * undefined) will be sent to the client in the form of `MessageResponse`
+ * Messages sent by that node matching the `pattern` (or any message if `pattern`
+ * is omitted) will be sent to the client in the form of `MessageResponse`
  * messages.
  *
  * The `id` field (or `"default"`) will be set as the `subscription`
  * field in each matching message. This is helpful to route a number of
  * subscriptions to the appropriate part of your application (e.g. if your app
- * again consists of modules). Note that it is possible to have more than one
- * subscription with the same ID, e.g. to subscribe to multiple nodes.
+ * again consists of modules).
+ *
+ * Multiple subscriptions with the exact same `pattern` and `id` will be ignored.
+ *
+ * When subscribing using the same or overlapping patterns, any matching
+ * message will be sent just once to a single subscription ID.
+ * For example, when sending:
+ * - { type: "subscribe", node: "default", pattern: "ja*", id: "subscription 1" }
+ * - { type: "subscribe", node: "default", pattern: "*ja", id: "subscription 1" }
+ * - { type: "subscribe", node: "default", pattern: "ja*", id: "subscription 2" }
+ * - { type: "publish", node: "default", topic: "jaja" }
+ * The following will be received:
+ * - { type: "message", topic: "jaja", id: "subscription 1" }
+ * - { type: "message", topic: "jaja", id: "subscription 2" }
+ *
+ * If no `pattern` is given, this is mostly equivalent to the pattern `"**"` (which
+ * also matches everything), except that when unsubscribing without a pattern,
+ * everything will be unsubscribed (for that node and id), whereas unsubscribing
+ * `"**"` will leave any other patterns intact. (It's not very useful to have other
+ * subscriptions when subscribing using an empty pattern or "**", of course.)
  *
  * If a sequence number is given, a `SubAckResponse` will be sent (or an
  * `ErrorResponse`) with that sequence number.
@@ -53,7 +71,52 @@ export interface SubscribeCommand {
 	/**
 	 * Optional identifier to use when sending matching messages to the client.
 	 * It will be set as the `subscription` field of each `MessageResponse`.
-	 * If no identifier is given, `default` is used instead.
+	 * If no identifier is given, `"default"` is used instead.
+	 */
+	id?: string;
+}
+
+/**
+ * Unsubscribe from `node` using `pattern`.
+ *
+ * If `pattern` is omitted all subscriptions on given `node`
+ * for given `id` (or `"default"`) will be unsubscribed.
+ *
+ * If `id` is omitted, `"default"` is used.
+ *
+ * If a sequence number is given, a `UnsubAckResponse` will be sent (or an
+ * `ErrorResponse`) with that sequence number.
+ *
+ * If combination of `id` and `pattern` aren't found, this will be
+ * ignored (i.e. it's not an error, and `UnsubAckResponse` will be sent).
+ */
+export interface UnsubscribeCommand {
+	/**
+	 * Type of command.
+	 */
+	type: "unsubscribe";
+	/**
+	 * Optional sequence number.
+	 * If a sequence number is given, a `UnsubAckResponse` or `ErrorResponse` will
+	 * be returned with the same sequence number.
+	 * If no sequence number is given, nothing will be returned, unless an error
+	 * occurred, in which case an `ErrorResponse` will be sent.
+	 */
+	seq?: number;
+	/**
+	 * Name of node to unsubscribe from.
+	 * The node must be a Source (e.g. an Exchange, Queue, TestSource, etc.).
+	 */
+	node: string;
+	/**
+	 * Optional pattern to unsubscribe.
+	 * If no pattern is given, all subscriptions on given `node` and `id` will be
+	 * unsubscribed.
+	 */
+	pattern?: string;
+	/**
+	 * Optional identifier for matching a subscription.
+	 * If no identifier is given, `"default"` is used instead.
 	 */
 	id?: string;
 }
@@ -198,6 +261,21 @@ export interface SubAckResponse {
 }
 
 /**
+ * Response to a successful `UnsubscribeCommand`.
+ * Only sent if the `UnsubscribeCommand` included a `seq` number.
+ */
+export interface UnsubAckResponse {
+	/**
+	 * Type of response.
+	 */
+	type: "unsuback";
+	/**
+	 * Sequence number of original `UnsubscribeCommand.seq`.
+	 */
+	seq: number;
+}
+
+/**
  * Response to a successful `PublishCommand`.
  * Only sent if the `PublishCommand` included a `seq` number.
  */
@@ -272,13 +350,13 @@ export interface ErrorResponse {
 /**
  * All supported commands (i.e. client to server).
  */
-export type Command = SubscribeCommand | PublishCommand | PingCommand | LoginCommand;
+export type Command = SubscribeCommand | UnsubscribeCommand | PublishCommand | PingCommand | LoginCommand;
 
 /**
  * All supported responses (i.e. server to client)
  */
-export type Response = MessageResponse | SubAckResponse | PubAckResponse | PingAckResponse |
-		LoginAckResponse | ErrorResponse;
+export type Response = MessageResponse | SubAckResponse | UnsubAckResponse | PubAckResponse |
+		PingAckResponse | LoginAckResponse | ErrorResponse;
 
 /**
  * Interface that helps with strict null checks.
