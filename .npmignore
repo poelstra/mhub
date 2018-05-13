@@ -2,6 +2,7 @@
 /support
 /test
 /dist/test
+/coverage/
 /typings
 /tsd.json
 /tslint.json
@@ -9,6 +10,7 @@
 /.gitattributes
 /.gitignore
 /.npmignore
+/.coveralls.yml
 /.travis.yml
 /.vscode/
 /todo.txt

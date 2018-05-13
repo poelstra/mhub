@@ -13,9 +13,10 @@
   },
   "scripts": {
     "test": "npm run -s build && npm run -s lint && npm run -s mocha",
-    "mocha": "mocha -R spec dist/test/",
+    "mocha": "mocha -R spec dist/test/test-*.js",
+    "cover": "npm run -s build && npm run -s lint && istanbul cover --report json _mocha -- -R spec dist/test/test-*.js && remap-istanbul -i coverage/coverage-final.json -t html -o coverage/html-report",
     "start": "node ./bin/mhub-server",
-    "lint": "tslint --type-check --format verbose -p src/ && tslint --type-check --format verbose -p test/",
+    "lint": "tslint --format verbose -p src/ && tslint --format verbose -p test/",
     "build:src": "tsc -p src/",
     "watch:src": "tsc -p src/ --watch",
     "build:test": "tsc -p test/",
@@ -24,7 +25,10 @@
     "watch:start": "mkdir -p dist/src/ && touch dist/src/mhub-server.js && nodemon ./bin/mhub-server --delay 1 --watch dist/",
     "watch": "parallelshell 'npm run -s watch:src' 'npm run -s watch:test' 'npm run -s watch:start'",
     "clean": "rimraf dist",
-    "prepublish": "npm run -s lint && npm run -s build && npm run -s test"
+    "prepare": "npm run -s test",
+    "prepublishOnly": "npm run -s test",
+    "preversion": "npm install",
+    "version": "git add package-lock.json"
   },
   "author": "Martin Poelstra <martin@beryllium.net>",
   "license": "MIT",
@@ -49,8 +53,10 @@
     "@types/chai": "^3.4.34",
     "@types/mocha": "^2.2.32",
     "chai": "^3.5.0",
+    "coveralls": "^3.0.1",
     "mocha": "^2.5.3",
     "parallelshell": "^2.0.0",
+    "remap-istanbul": "^0.11.1",
     "rimraf": "^2.6.1",
     "tslint": "^5.5.0",
     "typescript": "^2.4.2"
