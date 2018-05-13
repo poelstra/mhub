@@ -5,9 +5,9 @@
 
 import Promise from "ts-promise";
 
-import Message from "./message";
-
+import Hub from "./hub";
 import { getMatcher, Matcher, MatchSpec } from "./match";
+import Message from "./message";
 
 interface MatchDef {
 	pattern: MatchSpec;
@@ -20,7 +20,7 @@ interface Binding {
 }
 
 export interface Initializable {
-	init?(): Promise<void>;
+	init?(hub: Hub): Promise<void>;
 }
 
 export interface Destination extends Initializable {
@@ -44,16 +44,12 @@ export function isSource(node: BaseNode | undefined): node is Source {
 
 export type BaseNode = Source | Destination;
 
-// tslint:disable-next-line:no-empty-interface
-export interface BaseSourceOptions {
-}
-
 export class BaseSource implements Source {
 	public name: string;
 
 	private _bindings: Binding[] = [];
 
-	constructor(name: string, options?: BaseSourceOptions) {
+	constructor(name: string) {
 		this.name = name;
 	}
 

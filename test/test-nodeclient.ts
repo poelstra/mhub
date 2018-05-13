@@ -30,12 +30,14 @@ class TestServer {
 
 	constructor(port: number) {
 		this._port = port;
+		this._hub = new Hub();
+		this._server = http.createServer();
+		this._wss = new ws.Server({ server: <any>this._server, path: "/" });
 	}
 
 	public start(): Promise<void> {
 		const auth = new PlainAuthenticator();
 		auth.setUser("foo", "bar");
-		this._hub = new Hub();
 		this._hub.setAuthenticator(auth);
 		return this._hub.init().then(() => this._startTransport());
 	}
@@ -56,9 +58,6 @@ class TestServer {
 
 	private _startTransport(): Promise<void> {
 		return new Promise<void>((resolve, reject) => {
-			this._server = http.createServer();
-			this._wss = new ws.Server({ server: <any>this._server, path: "/" });
-
 			this._wss.on("connection", (conn: ws) => {
 				const connId = this._connectionId++;
 				// tslint:disable-next-line:no-unused-expression

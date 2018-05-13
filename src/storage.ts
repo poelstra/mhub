@@ -29,7 +29,7 @@ export interface Storage<T> {
 	 * @param  {string}     key Identifier of the data as used by `save()`
 	 * @return {Promise<T>}     Promise that resolves with the data, or `undefined` if not found
 	 */
-	load(key: string): Promise<T|void>;
+	load(key: string): Promise<T|undefined>;
 }
 
 export class SimpleFileStorage<T> implements Storage<T> {
@@ -72,8 +72,8 @@ export class SimpleFileStorage<T> implements Storage<T> {
 		});
 	}
 
-	public load(key: string): Promise<T|void> {
-		return new Promise<T|void>((resolve, reject) => {
+	public load(key: string): Promise<T|undefined> {
+		return new Promise<T|undefined>((resolve, reject) => {
 			fs.readFile(
 				this._getFilename(key),
 				"utf8",
@@ -144,20 +144,7 @@ export class ThrottledStorage<T> implements Storage<T> {
 		return promise;
 	}
 
-	public load(key: string): Promise<T|void> {
+	public load(key: string): Promise<T|undefined> {
 		return this._slave.load(key);
 	}
-}
-
-// TODO This global storage is basically a kludge, and needs to be moved
-// to e.g. a Hub class, which can then be passed to all created nodes.
-
-let defaultStorage: Storage<any>;
-
-export function getDefaultStorage(): Storage<any> {
-	return defaultStorage;
-}
-
-export function setDefaultStorage(storage: Storage<any>): void {
-	defaultStorage = storage;
 }

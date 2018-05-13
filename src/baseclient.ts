@@ -152,7 +152,7 @@ export abstract class BaseClient extends events.EventEmitter {
 	 */
 	public close(error?: Error): Promise<void> {
 		if (!this._closing) {
-			this._closing = new Promise<void>((resolve, reject) => {
+			this._closing = new Promise<void>((resolve) => {
 				// Announce error if necessary
 				if (error) {
 					this._asyncEmit("error", error);
@@ -447,7 +447,7 @@ export abstract class BaseClient extends events.EventEmitter {
 	}
 
 	private _send(msg: protocol.Command): Promise<protocol.Response> {
-		return new Promise<protocol.Response>((resolve: (res: protocol.Response) => void, reject: (err: Error) => void) => {
+		return new Promise<protocol.Response>((resolve, reject) => {
 			const seq = this._nextSeq();
 			msg.seq = seq;
 			this._transactions[seq] = resolve;
@@ -475,7 +475,7 @@ export abstract class BaseClient extends events.EventEmitter {
 		}
 		delete this._transactions[seqNr];
 		if (err) {
-			resolver(Promise.reject<never>(err));
+			resolver(Promise.reject<protocol.Response>(err));
 		} else {
 			resolver(msg!);
 		}

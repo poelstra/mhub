@@ -1,14 +1,10 @@
 import Message from "../message";
 import * as pubsub from "../pubsub";
 
-// tslint:disable-next-line:no-empty-interface
-export interface ConsoleDestinationOptions {
-}
-
 export class ConsoleDestination implements pubsub.Destination {
 	public name: string;
 
-	constructor(name: string, options?: ConsoleDestinationOptions) {
+	constructor(name: string) {
 		this.name = name;
 	}
 

@@ -3,6 +3,7 @@
     "tslint:recommended"
   ],
   "rules": {
+    "no-parameter-properties": true,
     "no-unused-variable": [
       true
     ],

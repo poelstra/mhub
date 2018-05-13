@@ -99,7 +99,7 @@ export class HubClient extends events.EventEmitter {
 	public name: string; // TODO move this to higher layer?
 	private _hub: Hub;
 	private _subscriptions: Dict<SubscriptionNode> = new Dict<SubscriptionNode>();
-	private _username: string;
+	private _username: string | undefined;
 	private _authorizer: Authorizer;
 
 	constructor(hub: Hub, name: string) {

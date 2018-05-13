@@ -35,7 +35,7 @@ function convertToBuffer(value: any, rootDir: string): any {
 
 /// Convert filenames to the contents of these files
 export function replaceKeyFiles(options: TlsOptions, rootDir: string): void {
-	["pfx", "key", "cert", "crl", "ca", "dhparam", "ticketKeys"]
+	(<Array<keyof TlsOptions>>["pfx", "key", "cert", "crl", "ca", "dhparam", "ticketKeys"])
 		.forEach((propName: keyof TlsOptions) => {
 			if (options[propName]) {
 				options[propName] = convertToBuffer(options[propName], rootDir);

@@ -10,14 +10,12 @@ import log from "../log";
 import * as protocol from "../protocol";
 
 export class TcpConnection {
-	private _hub: Hub;
 	private _socket: net.Socket;
 	private _name: string;
 	private _client: HubClient;
 	private _buffer: string = "";
 
 	constructor(hub: Hub, socket: net.Socket, name: string) {
-		this._hub = hub;
 		this._socket = socket;
 		this._name = name;
 

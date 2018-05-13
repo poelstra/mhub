@@ -52,7 +52,7 @@ class WebSocketConnection extends events.EventEmitter implements Connection {
 	 * arrived at other side, can be e.g. queued).
 	 */
 	public send(data: protocol.Command): Promise<void> {
-		return new Promise<void>((resolve, reject) => {
+		return new Promise<void>((resolve) => {
 			this._socket.send(JSON.stringify(data));
 			resolve(undefined);
 		});

@@ -4,6 +4,7 @@
 		"module": "commonjs",
 		"strict": true,
 		"noUnusedLocals": true,
+		"noUnusedParameters": true,
 		"isolatedModules": false,
 		"declaration": true,
 		"removeComments": false,

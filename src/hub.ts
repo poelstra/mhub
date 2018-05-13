@@ -13,6 +13,7 @@ import { Authenticator } from "./authenticator";
 import Dict from "./dict";
 import { getMatcher, Matcher } from "./match";
 import * as pubsub from "./pubsub";
+import { Storage } from "./storage";
 
 /**
  * Specify what permission a user has to e.g. publish or subscribe.
@@ -136,8 +137,9 @@ export class Authorizer {
 
 export class Hub {
 	private _nodes: Dict<pubsub.BaseNode> = new Dict<pubsub.BaseNode>();
-	private _authenticator: Authenticator;
+	private _authenticator: Authenticator | undefined;
 	private _rights: Dict<PartialPermissions> = new Dict<PartialPermissions>();
+	private _storage: Storage<any> | undefined;
 
 	public setAuthenticator(authenticator: Authenticator): void {
 		this._authenticator = authenticator;
@@ -160,10 +162,22 @@ export class Hub {
 		const initPromises: Array<Promise<void>> = [];
 		this._nodes.forEach((node) => {
 			if (node.init) {
-				initPromises.push(node.init());
+				initPromises.push(node.init(this));
 			}
 		});
 		return Promise.all(initPromises).return();
+	}
+
+	public setStorage(storage: Storage<any>): void {
+		this._storage = storage;
+	}
+
+	public getStorage<T>(): Storage<T> | undefined {
+		// TODO: allowing caller to pass in storage sub-type is unsafe, but don't
+		// now of a generic but better way to fix that right now. Note that the
+		// storage users currently do check for the validity of the actual stored
+		// data, so it's fine in practice.
+		return this._storage;
 	}
 
 	public add(node: pubsub.BaseNode): void {
