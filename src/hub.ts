@@ -136,7 +136,7 @@ export class Authorizer {
 
 export class Hub {
 	private _nodes: Dict<pubsub.BaseNode> = new Dict<pubsub.BaseNode>();
-	private _authenticator: Authenticator;
+	private _authenticator: Authenticator | undefined;
 	private _rights: Dict<PartialPermissions> = new Dict<PartialPermissions>();
 
 	public setAuthenticator(authenticator: Authenticator): void {
