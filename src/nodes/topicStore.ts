@@ -8,7 +8,7 @@ import { KeyValues } from "../types";
 
 import log from "../log";
 
-export interface TopicStoreOptions extends pubsub.BaseSource {
+export interface TopicStoreOptions {
 	pattern?: string | string[]; // Topic patterns to memorize, defaults to all topics
 	persistent?: boolean; // If true, state will be persisted to storage (typically disk)
 }
@@ -41,7 +41,7 @@ export class TopicStore extends pubsub.BaseSource {
 	private _storage: Storage<TopicStoreStorage> | undefined;
 
 	constructor(name: string, options?: TopicStoreOptions) {
-		super(name, options);
+		super(name);
 		this.name = name;
 		this._matcher = getMatcher(options && options.pattern);
 		if (options && options.persistent) {

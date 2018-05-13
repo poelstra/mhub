@@ -35,7 +35,7 @@ class LocalConnection extends events.EventEmitter implements Connection {
 	 * arrived at other side, can be e.g. queued).
 	 */
 	public send(data: protocol.Command): Promise<void> {
-		return new Promise<void>((resolve, reject) => {
+		return new Promise<void>((resolve) => {
 			this._hubClient.processCommand(data);
 			resolve(undefined);
 		});
@@ -46,7 +46,7 @@ class LocalConnection extends events.EventEmitter implements Connection {
 	 * to be completed.
 	 * @return Promise that resolves when connection is succesfully closed.
 	 */
-	public close(code?: number): Promise<void> {
+	public close(): Promise<void> {
 		this._hubClient.close();
 		return Promise.resolve();
 	}

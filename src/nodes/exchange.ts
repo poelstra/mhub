@@ -2,10 +2,6 @@ import log from "../log";
 import Message from "../message";
 import * as pubsub from "../pubsub";
 
-// tslint:disable-next-line:no-empty-interface
-export interface ExchangeOptions extends pubsub.BaseSourceOptions {
-}
-
 export class Exchange extends pubsub.BaseSource implements pubsub.Destination {
 	constructor(name: string) {
 		super(name);

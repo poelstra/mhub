@@ -44,10 +44,6 @@ export function isSource(node: BaseNode | undefined): node is Source {
 
 export type BaseNode = Source | Destination;
 
-// tslint:disable-next-line:no-empty-interface
-export interface BaseSourceOptions {
-}
-
 export class BaseSource implements Source {
 	public name: string;
 

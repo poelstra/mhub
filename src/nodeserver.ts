@@ -104,10 +104,8 @@ nodeClasses.forEach((c) => {
 });
 
 // For backward compatibility
-/* tslint:disable:no-string-literal */
-nodeClassMap["TopicQueue"] = TopicStore;
-nodeClassMap["TopicState"] = TopicStore;
-/* tslint:enable:no-string-literal */
+nodeClassMap.TopicQueue = TopicStore;
+nodeClassMap.TopicState = TopicStore;
 
 export class MServer {
 	private hub: Hub;

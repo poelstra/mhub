@@ -160,7 +160,7 @@ export abstract class BaseClient extends events.EventEmitter {
 
 				// Abort pending transactions
 				const transactionError = error || new Error("connection closed");
-				const closedRejection = Promise.reject<never>(transactionError);
+				const closedRejection = Promise.reject<protocol.Response>(transactionError);
 				for (const t in this._transactions) {
 					if (!this._transactions[t]) {
 						continue;
@@ -425,7 +425,7 @@ export abstract class BaseClient extends events.EventEmitter {
 	}
 
 	private _send(msg: protocol.Command): Promise<protocol.Response> {
-		return new Promise<protocol.Response>((resolve: (res: protocol.Response) => void, reject: (err: Error) => void) => {
+		return new Promise<protocol.Response>((resolve, reject) => {
 			const seq = this._nextSeq();
 			msg.seq = seq;
 			this._transactions[seq] = resolve;
@@ -453,7 +453,7 @@ export abstract class BaseClient extends events.EventEmitter {
 		}
 		delete this._transactions[seqNr];
 		if (err) {
-			resolver(Promise.reject<never>(err));
+			resolver(Promise.reject<protocol.Response>(err));
 		} else {
 			resolver(msg!);
 		}
