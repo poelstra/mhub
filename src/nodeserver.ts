@@ -81,6 +81,7 @@ export interface NormalizedConfig {
 
 import ConsoleDestination from "./nodes/consoleDestination";
 import Exchange from "./nodes/exchange";
+import HeaderStore from "./nodes/headerStore";
 import PingResponder from "./nodes/pingResponder";
 import Queue from "./nodes/queue";
 import TestSource from "./nodes/testSource";
@@ -97,6 +98,7 @@ const nodeClasses: ConstructableNode[] = [
 	Queue,
 	TestSource,
 	TopicStore,
+	HeaderStore,
 ];
 
 const nodeClassMap: { [className: string]: ConstructableNode } = {};
