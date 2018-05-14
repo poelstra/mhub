@@ -200,7 +200,9 @@ export class HubClient extends events.EventEmitter {
 			throw new Error(`node '${msg.node}' is not a Destination`);
 		}
 
-		node.send(new Message(msg.topic, msg.data, msg.headers));
+		const message = new Message(msg.topic, msg.data, msg.headers);
+		message.validate();
+		node.send(message);
 
 		if (protocol.hasSequenceNumber(msg)) {
 			return {

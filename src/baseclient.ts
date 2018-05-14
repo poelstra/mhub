@@ -264,24 +264,20 @@ export abstract class BaseClient extends events.EventEmitter {
 	public publish(nodeName: string, message: Message): Promise<void>;
 	// Implementation
 	public publish(nodeName: string, ...args: any[]): Promise<void> {
+		let message: Message;
 		if (typeof args[0] === "object") {
-			const message: Message = args[0];
-			return this._send(<protocol.PublishCommand>{
-				type: "publish",
-				node: nodeName,
-				topic: message.topic,
-				data: message.data,
-				headers: message.headers,
-			}).return();
+			message = args[0];
 		} else {
-			return this._send(<protocol.PublishCommand>{
-				type: "publish",
-				node: nodeName,
-				topic: args[0],
-				data: args[1],
-				headers: args[2],
-			}).return();
+			message = new Message(args[0], args[1], args[2]);
 		}
+		message.validate();
+		return this._send(<protocol.PublishCommand>{
+			type: "publish",
+			node: nodeName,
+			topic: message.topic,
+			data: message.data,
+			headers: message.headers,
+		}).return();
 	}
 
 	/**
@@ -356,9 +352,11 @@ export abstract class BaseClient extends events.EventEmitter {
 			switch (response.type) {
 				case "message":
 					const msgRes = <protocol.MessageResponse>response;
+					const message = new Message(msgRes.topic, msgRes.data, msgRes.headers);
+					message.validate();
 					this._asyncEmit(
 						"message",
-						new Message(msgRes.topic, msgRes.data, msgRes.headers),
+						message,
 						msgRes.subscription
 					);
 					break;

@@ -35,13 +35,9 @@ export class Message {
 	 */
 	public static fromObject(o: MessageLike): Message {
 		if (!o || typeof o !== "object") {
-			throw new TypeError("cannot create message from object, got " + typeof o);
+			throw new TypeError(`cannot create message from object, got ${typeof o}`);
 		}
-		if (typeof o.topic !== "string") {
-			throw new TypeError("cannot create message from object, missing or invalid topic");
-		}
-		const headers = (o ? { ...o.headers } : {}) as Headers;
-		return new Message(o.topic, o.data, headers);
+		return new Message(o.topic, o.data, o.headers);
 	}
 
 	/**
@@ -64,17 +60,13 @@ export class Message {
 	/**
 	 * Construct message object.
 	 *
-	 * Warning: do NOT change a message once it's been passed to the pubsub framework!
-	 * I.e. after a call to publish() or send(), make sure to create 'fresh' instances of e.g.
-	 * a headers object.
+	 * Note: headers are cloned, but data is NOT cloned, so don't change data after you've
+	 * passed it to the pubsub framework!
 	 */
 	constructor(topic: string, data?: any, headers?: Headers) {
-		if (typeof topic !== "string") {
-			throw new TypeError("invalid topic: expected string, got " + typeof topic);
-		}
 		this.topic = topic;
 		this.data = data;
-		this.headers = headers || Object.create(null); // tslint:disable-line:no-null-keyword
+		this.headers = { ...headers }; // clone
 	}
 
 	/**
@@ -84,12 +76,35 @@ export class Message {
 	 * so be careful when the data is an object: making changes to it will be
 	 * reflected in the old and new message.
 	 *
-	 * The headers (if any) will be cloned into a new headers object.
+	 * The headers (if any) are cloned into a new headers object.
 	 *
 	 * @return New message with same topic, same data and shallow clone of headers.
 	 */
 	public clone(): Message {
-		return new Message(this.topic, this.data, { ...this.headers });
+		return new Message(this.topic, this.data, this.headers);
+	}
+
+	/**
+	 * Validate correctness of message properties, e.g. that topic is a string,
+	 * and header is either undefined or key-values.
+	 */
+	public validate(): void {
+		if (typeof this.topic !== "string") {
+			throw new TypeError(`invalid topic: expected string, got ${typeof this.topic}`);
+		}
+		const headers = this.headers;
+		if (headers !== undefined && typeof headers !== "object") {
+			throw new TypeError(`invalid headers: expected object or undefined, got ${typeof headers}`);
+		}
+		for (const key in headers) {
+			if (!headers.hasOwnProperty(key)) {
+				continue;
+			}
+			const t = typeof headers[key];
+			if (t !== "string") {
+				throw new TypeError(`invalid headers: expected string for header '${key}', got ${t}`);
+			}
+		}
 	}
 }
 
