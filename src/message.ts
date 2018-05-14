@@ -7,7 +7,7 @@
  * about a message.
  */
 export interface Headers {
-	[name: string]: string;
+	[name: string]: string | boolean | number;
 }
 
 /**
@@ -101,8 +101,8 @@ export class Message {
 				continue;
 			}
 			const t = typeof headers[key];
-			if (t !== "string") {
-				throw new TypeError(`invalid headers: expected string for header '${key}', got ${t}`);
+			if (t !== "string" && t !== "boolean" && t !== "number") {
+				throw new TypeError(`invalid headers: expected string, boolean or number for header '${key}', got ${t}`);
 			}
 		}
 	}

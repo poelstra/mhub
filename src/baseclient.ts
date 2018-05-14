@@ -9,7 +9,7 @@
 import * as assert from "assert";
 import * as events from "events";
 import Promise, { Thenable } from "ts-promise";
-import Message from "./message";
+import Message, { Headers } from "./message";
 import * as protocol from "./protocol";
 
 const MAX_SEQ = 65536;
@@ -254,7 +254,7 @@ export abstract class BaseClient extends events.EventEmitter {
 	 * @param data  Message data
 	 * @param headers Message headers
 	 */
-	public publish(nodeName: string, topic: string, data?: any, headers?: { [name: string]: string }): Promise<void>;
+	public publish(nodeName: string, topic: string, data?: any, headers?: Headers): Promise<void>;
 	/**
 	 * Publish message to a node.
 	 *

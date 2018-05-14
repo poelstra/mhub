@@ -160,7 +160,7 @@ export interface PublishCommand {
 	 * Can be used to pass meta-information about a message (e.g. which servers
 	 * it passed through).
 	 */
-	headers?: { [header: string]: string; };
+	headers?: { [header: string]: string | boolean | number; };
 }
 
 /**
@@ -238,7 +238,7 @@ export interface MessageResponse {
 	 * Message headers (similar to HTTP headers), encoded as an object of
 	 * key-value pairs.
 	 */
-	headers: { [header: string]: string; };
+	headers: { [header: string]: string | boolean | number; };
 	/**
 	 * ID of subscription (`SubscribeCommand.id`) or `"default"`.
 	 */
