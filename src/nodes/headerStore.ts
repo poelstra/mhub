@@ -82,10 +82,10 @@ export class HeaderStore extends pubsub.BaseSource implements pubsub.Initializab
 		const topic = message.topic;
 		const keep = message.headers[MESSAGE_HEADER_NAME];
 		if (keep !== undefined) {
+			// First delete, then insert to maintain message order
+			delete this._state[topic];
 			if (keep) {
 				this._state[topic] = message;
-			} else {
-				delete this._state[topic];
 			}
 			if (this._storage) {
 				this._storage.save(this.name, {

@@ -83,9 +83,9 @@ export class TopicStore extends pubsub.BaseSource implements pubsub.Initializabl
 		// Store or delete this message if it matches the pattern
 		const topic = message.topic;
 		if (this._matcher(topic)) {
-			if (message.data === undefined) {
-				delete this._state[topic];
-			} else {
+			// First delete, then insert to maintain message order
+			delete this._state[topic];
+			if (message.data !== undefined) {
 				this._state[topic] = message;
 			}
 			if (this._storage) {
