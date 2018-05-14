@@ -1,5 +1,10 @@
 /**
  * MHub client for direct (local) connection to an MHub server instance.
+ *
+ * A LocalClient has the same interface as e.g. NodeClient, but directly connects
+ * to a Hub without using e.g. sockets.
+ * This is useful for tests, or when embedding an MHub server and client into a
+ * program.
  */
 
 import * as events from "events";
@@ -48,6 +53,7 @@ class LocalConnection extends events.EventEmitter implements Connection {
 	 */
 	public close(): Promise<void> {
 		this._hubClient.close();
+		this.emit("close");
 		return Promise.resolve();
 	}
 
