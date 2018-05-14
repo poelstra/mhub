@@ -14,8 +14,10 @@
                 "tdd",
                 "--timeout",
                 "999999",
+                "--no-exit",
                 "--colors",
-                "${workspaceRoot}/dist/test"
+                "${workspaceRoot}/dist/test/test-*.js",
+                "${workspaceRoot}/dist/test/**/test-*.js"
             ],
             "internalConsoleOptions": "openOnSessionStart",
             "sourceMaps": true,

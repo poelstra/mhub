@@ -13,8 +13,8 @@
   },
   "scripts": {
     "test": "npm run -s build && npm run -s lint && npm run -s mocha",
-    "mocha": "mocha -R spec dist/test/test-*.js",
-    "cover": "npm run -s build && npm run -s lint && istanbul cover --report json _mocha -- -R spec dist/test/test-*.js && remap-istanbul -i coverage/coverage-final.json -t html -o coverage/html-report",
+    "mocha": "mocha -R spec dist/test/test-*.js dist/test/*/test-*.js",
+    "cover": "npm run -s build && npm run -s lint && istanbul cover --report json _mocha -- -R spec dist/test/test-*.js dist/test/*/test-*.js && remap-istanbul -i coverage/coverage-final.json -t html -o coverage/html-report",
     "start": "node ./bin/mhub-server",
     "lint": "tslint --format verbose -p src/ && tslint --format verbose -p test/",
     "build:src": "tsc -p src/",
