@@ -11,7 +11,7 @@
 	],
 	"logging": "info",
 	"nodes": {
-		"default": "Exchange",
+		"default": "HeaderStore",
 		"state": {
 			"type": "TopicStore",
 			"options": {
