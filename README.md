@@ -368,6 +368,10 @@ Currently available node types and their options:
   topic. New subscribers will receive that last message (and any future state)
   of the topics. Useful for storing (simple) configuration data (e.g. URLs of
   JSON APIs), initializing all connecting displays to the same state, etc.
+  To 'delete' a topic from storage, send a message without any data (payload).
+  Note: this means that a message will always need to have some sort of data
+  in order to be stored by a `TopicStore`.
+  Note: this node is deprecated in favor of the `HeaderStore`.
   Again, a topic pattern can be given, and the queue can be persisted to disk.
   * `pattern?: string | string[]`: Which messages (filtered by topic) to keep
     (default all)
