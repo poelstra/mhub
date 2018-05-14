@@ -351,6 +351,19 @@ Much more flexibility can be achieved by passing them as an object of
 Currently available node types and their options:
 * `Exchange`: Simplest node type. Broadcasts any incoming message to all
   subscribed clients (taking their pattern into account, of course).
+* `HeaderStore`: Forwards all messages (like `Exchange`), but depending on
+  a message's `keep` header, can also store messages when new subscribers
+  arrive later, also when the server is restarted.
+  This is useful for storing the last state of a switch, (simple) configuration
+  data (e.g. URLs of JSON APIs), etc.
+  If a message's `keep` header is true, the message will be stored, overwriting
+  any previously stored message for its topic.
+  If `keep` is false, previous message for this topic is cleared (but message
+  is still forwarded).
+  Note: if `keep` is not present, message will be forwarded, but previously
+  stored message (if any) will NOT be affected. This is for performance reasons.
+  * `persistent?: boolean`: Whether to persist this queue to disk (default
+    true)
 * `Queue`: Forwards incoming messages to all subscribed clients (like an
   Exchange), but also stores a configurable number of messages. A new subscriber
   will receive all currently stored messages. Useful for e.g. chat applications,
