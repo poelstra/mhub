@@ -63,6 +63,8 @@ describe("nodes/HeaderStore", (): void => {
 		return hub.init().then(() => client.connect());
 	});
 
+	afterEach(() => client.close());
+
 	it("keeps message when header is set", () => {
 		return Promise.resolve()
 			.then(() => client.publish("default", "a"))

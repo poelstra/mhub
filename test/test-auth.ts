@@ -33,8 +33,17 @@ describe("auth", (): void => {
 	let client: LocalClient;
 
 	function createAndConnectClient(): Promise<void> {
+		// We're also called to recreate the client,
+		// make sure to close the previous one to prevent
+		// tests from staying open.
+		let p: Promise<void>;
+		if (client) {
+			p = client.close();
+		} else {
+			p = Promise.resolve();
+		}
 		client = new LocalClient(hub, "test");
-		return client.connect();
+		return p.then(() => client!.connect());
 	}
 
 	beforeEach(() => {
@@ -44,6 +53,8 @@ describe("auth", (): void => {
 		hub.add(new Exchange("default"));
 		return createAndConnectClient();
 	});
+
+	afterEach(() => client.close());
 
 	function expectErrorContaining(p: Promise<void>, message: string): Promise<void> {
 		return p.catch((err) => {

@@ -30,6 +30,8 @@ describe("hub", (): void => {
 		return createAndConnectClient();
 	});
 
+	afterEach(() => client.close());
+
 	describe("subscribe", () => {
 		let msgs: { [id: string]: Message[]; };
 
