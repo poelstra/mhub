@@ -104,9 +104,12 @@ export class TopicStore extends pubsub.BaseSource implements pubsub.Initializabl
 
 	public bind(destination: pubsub.Destination, pattern?: MatchSpec): void {
 		super.bind(destination, pattern);
+		const matcher = getMatcher(pattern);
 		// tslint:disable-next-line:forin
 		for (const topic in this._state) {
-			destination.send(this._state[topic]);
+			if (matcher(topic)) {
+				destination.send(this._state[topic]);
+			}
 		}
 	}
 }

@@ -89,8 +89,11 @@ export class Queue extends pubsub.BaseSource implements pubsub.Initializable {
 
 	public bind(destination: pubsub.Destination, pattern?: MatchSpec): void {
 		super.bind(destination, pattern);
+		const matcher = getMatcher(pattern);
 		this._queue.forEach((msg: Message): void => {
-			destination.send(msg);
+			if (matcher(msg.topic)) {
+				destination.send(msg);
+			}
 		});
 	}
 }

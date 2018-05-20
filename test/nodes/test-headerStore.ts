@@ -116,4 +116,25 @@ describe("nodes/HeaderStore", (): void => {
 				});
 			});
 	});
+
+	it("only returns subscribed messages", () => {
+		return Promise.resolve()
+			.then(() => client.publish("default", "a", undefined, { keep: true }))
+			.then(() => client.publish("default", "b", undefined, { keep: true }))
+			.then(() => client.close())
+			.then(() => client.connect())
+			.then(() => client.subscribe("default", "a", "id1"))
+			.then(() => client.subscribe("default", "b", "id2"))
+			.then(() => client.publish("default", "x"))
+			.then(() => {
+				expect(msgs).to.deep.equal({
+					id1: [
+						new Message("a", undefined, { keep: true }),
+					],
+					id2: [
+						new Message("b", undefined, { keep: true }),
+					],
+				});
+			});
+	});
 });

@@ -2,7 +2,7 @@ import Promise from "ts-promise";
 
 import Hub from "../hub";
 import log from "../log";
-import { MatchSpec } from "../match";
+import { getMatcher, MatchSpec } from "../match";
 import Message from "../message";
 import * as pubsub from "../pubsub";
 import { Storage } from "../storage";
@@ -108,9 +108,12 @@ export class HeaderStore extends pubsub.BaseSource implements pubsub.Initializab
 
 	public bind(destination: pubsub.Destination, pattern?: MatchSpec): void {
 		super.bind(destination, pattern);
+		const matcher = getMatcher(pattern);
 		// tslint:disable-next-line:forin
 		for (const topic in this._state) {
-			destination.send(this._state[topic]);
+			if (matcher(topic)) {
+				destination.send(this._state[topic]);
+			}
 		}
 	}
 }
