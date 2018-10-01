@@ -102,7 +102,7 @@ export class SimpleFileStorage<T> implements Storage<T> {
 }
 
 interface ThrottleItem<T> {
-	lastValue: T;
+	lastValue: T | undefined;
 	promise: Promise<void>;
 }
 
@@ -118,30 +118,45 @@ export class ThrottledStorage<T> implements Storage<T> {
 
 	public save(key: string, value: T): Promise<void> {
 		// TODO make sure to flush on exit!
-		const item = this._saveQueue[key];
-		if (item) {
-			item.lastValue = value;
-			return item.promise;
-		}
-		const promise = new Promise<void>((resolve) => {
-			setTimeout(
-				() => {
-					const latestItem = this._saveQueue[key];
-					delete this._saveQueue[key];
-					if (latestItem) {
-						resolve(this._slave.save(key, latestItem.lastValue));
-					} else {
-						resolve(undefined); // already saved...
-					}
-				},
-				this._delay
-			);
-		});
-		this._saveQueue[key] = {
-			lastValue: value,
-			promise,
+
+		const doSave = () => {
+			const latestItem = this._saveQueue[key];
+			const lastValue = latestItem.lastValue;
+			// Mark existing record as 'in-progress' by unsetting
+			// the value. If another save is requested, it will still
+			// be chained after the current write.
+			latestItem.lastValue = undefined;
+			if (lastValue !== undefined) {
+				return this._slave.save(key, lastValue);
+			}
 		};
-		return promise;
+
+		// Get or create pending action record for this key
+		let item = this._saveQueue[key];
+		if (!item) {
+			item = {
+				lastValue: undefined,
+				promise: Promise.resolve(),
+			};
+			this._saveQueue[key] = item;
+		}
+
+		// If no save action is currently scheduled (either because there
+		// was none, or because an existing save is currently underway)
+		// schedule a new one
+		if (item.lastValue === undefined) {
+			item.lastValue = value;
+			item.promise = item.promise.delay(this._delay).then(doSave).finally(() => {
+				// If there are no pending saves anymore, we can safely remove
+				// the record for this key, otherwise keep it until the scheduled
+				// save is done with it
+				if (item.lastValue === undefined) {
+					delete this._saveQueue[key];
+				}
+			});
+		}
+
+		return item.promise;
 	}
 
 	public load(key: string): Promise<T|undefined> {
