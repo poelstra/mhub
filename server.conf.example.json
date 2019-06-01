@@ -12,6 +12,12 @@
 	"logging": "info",
 	"nodes": {
 		"default": "HeaderStore",
+		"state": {
+			"type": "TopicStore",
+			"options": {
+				"persistent": true
+			}
+		},
 		"ping": "PingResponder",
 		"heartbeat": {
 			"type": "TestSource",
@@ -19,7 +25,18 @@
 				"topic": "heartbeat",
 				"interval": 5000
 			}
+		},
+		"test": {
+			"type": "Queue",
+			"options": {
+				"capacity": 5,
+				"pattern": ["test:*", "blib"],
+				"persistent": true
+			}
 		}
 	},
+	"bindings": [
+		{ "from": "blib", "to": "test" }
+	],
 	"storage": "./storage/"
 }
