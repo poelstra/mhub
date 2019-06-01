@@ -27,6 +27,8 @@ This project provides:
   * [Scoring](https://github.com/FirstLegoLeague/fllscoring)
 * Arduino library (not published yet, contact [me](https://github.com/poelstra) if interested)
 
+It's successfully powering my home automation for a few years now.
+
 ## Concepts
 
 ### Messages
@@ -36,11 +38,16 @@ connected clients.
 
 A *message* consists of a *topic* and optionally *data* and/or *headers*.
 
-The topic of a message typically represents e.g. a command or event, like
-`clock:arm` or `twitter:add`. Data can be the countdown time,
-tweet to add, etc.
+The *topic* of a message typically represents e.g. a command or event, like
+`clock:arm`, `twitter:add` or `/home/lights/kitchen`.
+
+*Data* can be the countdown time, tweet to add, light value, etc.
+It can be anything that's valid in JSON.
+
 Headers are for more advanced uses of the system, e.g. to support sending
-messages between multiple brokers.
+messages between multiple brokers, but also e.g. to mark certain messages
+to be persistent (i.e. any future subscriber will also receive it, see
+`HeaderStore` below).
 
 ### Publish / subscribe (pubsub)
 
@@ -55,10 +62,16 @@ Any client can both publish messages and subscribe to other messages.
 (Note: messages sent by a client will also be received by that client if it
 matches one of its subscriptions).
 
-The topic format is technically free-form, and pattern matching is done by
-[minimatch](https://www.npmjs.com/package/minimatch). However, it is advised to
-follow e.g. [mq-protocols](https://github.com/FirstLegoLeague/mq-protocols) to
-ensure compatibility with other systems.
+The topic format is free-form, and pattern matching is done by
+[minimatch](https://www.npmjs.com/package/minimatch). So, depending on the
+needs and preferences of your applicatino, topics can look like
+`someThing`, `some:thing`, `some/thing`, `/some/thing/`, etc.
+
+For example, in my home automation system I'm using topics like:
+- `/home/lights/kitchen`, `/home/lights/table`, etc: dimmer values for lights
+- `/home/scene`: string value with the name of a scene to switch to (e.g. "dinner", "off", etc)
+- `/dev/rfhub/rx`, `/dev/rfhub/tx`: received RF events and RF commands to be
+  transmitted (for controlling lights)
 
 ### Nodes and bindings
 
@@ -104,39 +117,47 @@ npm install -g mhub
 mhub-server
 ```
 
-You'll now have an MHub server listening on port 13900, containing `default` and
-`test` nodes.
+You'll now have an MHub server listening on port 13900 for websocket connections,
+and 13902 for 'raw' TCP connections.
 
-To verify that it's working, start an `mhub-client` in listen mode and connect to
-e.g. the `test` node to see a 'blib' message every five seconds:
+Start an `mhub-client` in listen mode on the `default` node:
 ```sh
-mhub-client -n test -l
+mhub-client -l
 ```
 
-You should now see e.g.:
-```
-{ topic: 'blib', data: 3, headers: {} }
-{ topic: 'blib', data: 4, headers: {} }
-etc...
-```
-
-Leave the listening mhub-client running, then start another one to send a simple
-test message:
+In another terminal, publish some messages:
 ```sh
-mhub-client -t my:topic
+mhub-client -t /some/topic
+mhub-client -t /some/topic -d 42
+mhub-client -t /some/topic -d '"a message"'
+mhub-client -t /some/topic -d '{"some": "object"}'
+mhub-client -t /some/topic -d 123 -h '{"keep": true}'
 ```
 
-You'll see it on the listening `mhub-client` as:
-```
-{ topic: 'test:topic', data: undefined, headers: {} }
+Note how the data and header parameters accepts any JSON input, so it must be properly
+quoted on the shell.
+
+You'll see them turn up in the first terminal as:
+```sh
+Message { topic: '/some/topic', data: undefined, headers: {} }
+Message { topic: '/some/topic', data: 42, headers: {} }
+Message { topic: '/some/topic', data: 'a message', headers: {} }
+Message { topic: '/some/topic', data: { some: 'object' }, headers: {} }
+Message {
+  topic: '/some/topic',
+  data: { persistent: 'message' },
+  headers: { keep: true } }
+Message { topic: '/some/topic', data: 123, headers: { keep: true } }
 ```
 
-Note that the message was sent to the `default` node (because we didn't specify
-another one with `-n`). However, because the server is by default configured to
-forward all messages with topic pattern `test:*` from that `default` node to the
-`test` node, it does appear at the listening mhub-client started earlier.
-You can see this binding in `server.conf.json`. See below for changing it
-yourself.
+If you restart the listening MHub client (`mhub-client -l`), you'll now
+immediately get:
+```
+Message { topic: '/some/topic', data: 123, headers: { keep: true } }
+```
+
+Note how the message with 'keep: true' is automatically redelivered.
+Read more about this at the `HeaderStore` node type, below.
 
 ## `mhub-client` commandline interface
 
@@ -231,7 +252,7 @@ options are available to simplify this:
   and data).
 * `jsondata`: Outputs just the data field of a message. Every message is
   guaranteed to be printed on its own line. Useful when listening to just a
-  single topic, but complex data is used.
+  single topic with complex data.
 
 ### Publishing single messages
 
@@ -327,11 +348,14 @@ on a Windows console. Don't expect your 60fps mouse tracking to work then.
 
 ### Node types
 
-MHub supports different types of nodes. When the nodes are given as an array of
-strings (legacy format), all nodes are created as `Exchange` nodes.
+MHub supports different types of nodes.
 
-Much more flexibility can be achieved by passing them as an object of
-{ node_name: node_definition } pairs:
+The default configuration has a node named `default`, which is configured
+as a `HeaderStore`. This is likely all you need for many applications.
+
+You can configure custom nodes in the `nodes` property of the server
+configuration as an object of `{ node_name: node_definition }` pairs as:
+
 ```js
 // In server.conf.json:
 {
@@ -348,6 +372,8 @@ Much more flexibility can be achieved by passing them as an object of
 }
 ```
 
+For examples, see the packaged `server.conf.example.json`.
+
 Currently available node types and their options:
 * `Exchange`: Simplest node type. Broadcasts any incoming message to all
   subscribed clients (taking their pattern into account, of course).
@@ -360,8 +386,8 @@ Currently available node types and their options:
   any previously stored message for its topic.
   If `keep` is false, previous message for this topic is cleared (but message
   is still forwarded).
-  Note: if `keep` is not present, message will be forwarded, but previously
-  stored message (if any) will NOT be affected. This is for performance reasons.
+  Note: if `keep` is not present, message will be forwarded, but any previously
+  stored message (if any) will NOT be affected.
   * `persistent?: boolean`: Whether to persist this queue to disk (default
     true)
 * `Queue`: Forwards incoming messages to all subscribed clients (like an
@@ -402,8 +428,8 @@ Currently available node types and their options:
   * `topic?: string`: Topic for the test messages (default "blib")
   * `interval?: number`: Delay between messages (in ms, default 5000)
 
-You can define these in the configuration file, see the packaged
-`server.conf.json` for examples.
+For backward compatibility, it's also possibly for `nodes` to be an array of
+node names, in which case all these nodes are created as `Exchange` nodes.
 
 ## Configuring transports (protocols / ports)
 
@@ -637,7 +663,7 @@ It is possible (and advisable) to also listen for the `close` event to reconnect
 (after some time) to the server in case the connection is lost. Note: any
 subscriptions will have to be recreated upon reconnection.
 
-For use in the browser, a (preliminary) native WebSocket version is available as
+For use in the browser, a native WebSocket version is available as
 `import MHubClient from "mhub/dist/src/browserclient");`, which can then be bundled
 using e.g. [browserify](http://browserify.org/) or [webpack](https://webpack.github.io/).
 This client has the same interface as the Node.JS version, and will be moved to
@@ -718,6 +744,16 @@ export declare class MClient extends events.EventEmitter {
      */
     subscribe(nodeName: string, pattern?: string, id?: string): Promise<void>;
     /**
+     * Unsubscribe `pattern` (or all if omitted) from given `node` and `id`.
+     * Subscription id "default" is used if `id` is omitted.
+     *
+     * @param nodeName Name of node in MServer to unsubscribe from (e.g. "default")
+     * @param pattern  Optional pattern glob (e.g. "/some/foo*"). Unsubscribes all (on `node` and `id`)
+     *                 if omitted.
+     * @param id       Subscription ID, or "default"
+     */
+    unsubscribe(nodeName: string, pattern?: string, id?: string): Promise<void>;
+    /**
      * Publish message to a node.
      *
      * @param nodeName Name of node in MServer to publish to (e.g. "default")
@@ -725,9 +761,7 @@ export declare class MClient extends events.EventEmitter {
      * @param data  Message data
      * @param headers Message headers
      */
-    publish(nodeName: string, topic: string, data?: any, headers?: {
-        [name: string]: string;
-    }): Promise<void>;
+    publish(nodeName: string, topic: string, data?: any, headers?: Headers): Promise<void>;
     /**
      * Publish message to a node.
      *
@@ -747,6 +781,7 @@ export declare class MClient extends events.EventEmitter {
      */
     ping(timeout?: number): Promise<void>;
 }
+
 /**
  * Options to be passed to MClient constructor.
  */
@@ -765,6 +800,7 @@ export interface MClientOptions extends TlsOptions {
      */
     keepalive?: number;
 }
+
 export interface TlsOptions {
     pfx?: string | Buffer;
     key?: string | string[] | Buffer | Buffer[];
@@ -784,43 +820,81 @@ export interface TlsOptions {
 API doc for Message (implemented as a class for convenient construction):
 ```ts
 /**
- * Message to be sent or received over MServer network.
+ * Headers are key-value pairs that carry meta-information
+ * about a message.
  */
-declare class Message {
+export interface Headers {
+    [name: string]: string | boolean | number;
+}
+
+/**
+ * Interface describing what a 'raw' object should look like
+ * if it is to be converted to a Message using `Message.fromObject()`.
+ */
+export interface MessageLike {
+    topic: string;
+    data?: any;
+    headers?: Headers;
+}
+
+/**
+ * Message to be sent or received over MHub network.
+ */
+export declare class Message {
+    /**
+     * Create a Message object from a plain object, by taking its topic, data and
+     * headers properties.
+     *
+     * Note that the data is not deep-cloned.
+     *
+     * @param o Input object. Must at least contain a `.topic` property.
+     * @return New `Message` instance, with given topic, same data, and clone of headers.
+     */
+    static fromObject(o: MessageLike): Message;
     /**
      * Topic of message.
      * Can be used to determine routing between pubsub Nodes.
      */
     topic: string;
-
     /**
      * Optional message data, can be null.
      * Must be JSON serializable.
      */
     data: any;
-
     /**
      * Optional message headers.
      */
-    headers: {
-        [name: string]: string;
-    };
-
+    headers: Headers;
     /**
      * Construct message object.
      *
-     * Warning: do NOT change a message once it's been passed to the pubsub framework!
-     * I.e. after a call to publish() or send(), make sure to create 'fresh' instances of e.g.
-     * a headers object.
+     * Note: headers are cloned, but data is NOT cloned, so don't change data after you've
+     * passed it to the pubsub framework!
      */
-    constructor(topic: string, data?: any, headers?: {
-        [name: string]: string;
-    });
+    constructor(topic: string, data?: any, headers?: Headers);
+    /**
+     * Perform a shallow clone of the message.
+     *
+     * I.e. the new message will share the same `data` as the source message,
+     * so be careful when the data is an object: making changes to it will be
+     * reflected in the old and new message.
+     *
+     * The headers (if any) are cloned into a new headers object.
+     *
+     * @return New message with same topic, same data and shallow clone of headers.
+     */
+    clone(): Message;
+    /**
+     * Validate correctness of message properties, e.g. that topic is a string,
+     * and header is either undefined or key-values.
+     */
+    validate(): void;
 }
 ```
 
-(Note: `Message` is not directly used on the wire, it is only used to pass to e.g.
-`client.publish()` and received for subscriptions).
+Note: `Message` is not directly used on the wire, it is only used to pass to e.g.
+`client.publish()` and received for subscriptions. Use e.g. `Message.fromObject()`
+to convert a plain (JSON) object into an instance of `Message`.
 
 ## Wire protocol
 
@@ -948,6 +1022,11 @@ For example:
 }
 ```
 
+Use the `unsubscribe` command to unsubscribe from some or all previously
+subscribed patterns. Like `subscribe`, you can use `node`, `pattern`, `id`
+and `seq`. See `src/protocol.ts` for a detailed description of the exact
+behaviour.
+
 ## Contributing
 
 All feedback and contributions are welcome!
@@ -980,6 +1059,12 @@ before sending a pull-request.
 
 The list below shows notable changes between each release.
 For details, see the version tags at GitHub.
+
+1.0.0 (2019-06-05):
+- protocol: Add unsubscribe command
+- server: Implement `HeaderStore` and use it for `default` node
+- server: Remove test nodes from `server.conf.json`, but keep `ping` and `heartbeat` (renamed from `blib`).
+- all: various bugfixes and huge refactoring of the code base, thanks @rikkertkoppes!
 
 0.9.1 (2017-08-18):
 - mhub-server: Fix TLS server on newer versions of Node.
