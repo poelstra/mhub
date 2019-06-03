@@ -72,41 +72,43 @@ describe("auth", (): void => {
 	}
 
 	function testDenyPublish(node: string = "default", topic: string = "topic"): void {
-		it("deny publish", (): Promise<void> => {
+		it(`deny publish topic ${topic} at node ${node}`, (): Promise<void> => {
 			return expectPermissionDenied(client.publish(node, topic));
 		});
-		it("doesn't give away node existence when permission denied", (): Promise<void> => {
-			let err1: Error;
-			let err2: Error;
-			return client.publish(node, topic)
-				.catch((err) => err1 = err)
-				.then(() => client.publish("nonexistent", topic))
-				.catch((err) => err2 = err)
-				.then(() => {
-					expect(err1).to.be.instanceof(Error);
-					expect(err2).to.be.instanceof(Error);
-					expect(err1.message).to.contain("permission denied");
-					expect(err1.message).to.equal(err2.message);
-					expect(err1.name).to.equal(err2.name);
-				});
-		});
-
+		it(
+			`doesn't give away node existence when permission denied for publish topic ${topic} at node ${node}`,
+			(): Promise<void> => {
+				let err1: Error;
+				let err2: Error;
+				return client.publish(node, topic)
+					.catch((err) => err1 = err)
+					.then(() => client.publish("nonexistent", topic))
+					.catch((err) => err2 = err)
+					.then(() => {
+						expect(err1).to.be.instanceof(Error);
+						expect(err2).to.be.instanceof(Error);
+						expect(err1.message).to.contain("permission denied");
+						expect(err1.message).to.equal(err2.message);
+						expect(err1.name).to.equal(err2.name);
+					});
+			}
+		);
 	}
 
 	function testDenySubscribe(node: string = "default", pattern?: string): void {
-		it("deny subscribe", (): Promise<void> => {
+		it(`deny subscribe pattern ${pattern} at node ${node}`, (): Promise<void> => {
 			return expectPermissionDenied(client.subscribe(node, pattern));
 		});
 	}
 
 	function testAllowPublish(node: string = "default", topic: string = "topic"): void {
-		it("allow publish", (): Promise<void> => {
+		it(`allow publish topic ${topic} at node ${node}`, (): Promise<void> => {
 			return expectOk(client.publish(node, topic));
 		});
 	}
 
 	function testAllowSubscribe(node: string = "default", pattern?: string): void {
-		it("allow subscribe", (): Promise<void> => {
+		it(`allow subscribe pattern ${pattern} at node ${node}`, (): Promise<void> => {
 			return expectOk(client.subscribe(node, pattern));
 		});
 	}
@@ -123,7 +125,7 @@ describe("auth", (): void => {
 			// tslint:disable-next-line:forin
 			for (const publishTopic in publishTests) {
 				const expectedResult = publishTests[publishTopic];
-				it(`subscription to ${node}:${subscriptionPattern || "<no pattern>"} ${expectedResult ? "pass" : "filter"} ` +
+				it(`subscription to ${node}:${subscriptionPattern || "<no pattern>"} ${expectedResult ? "passes" : "filters"} ` +
 						`${publishTopic}`, () => {
 					const msgs: Message[] = [];
 					client.on("message", (msg: Message) => msgs.push(msg));
@@ -417,7 +419,7 @@ describe("auth", (): void => {
 		testDenySubscribe("someNode", "/foo/bar");
 	});
 
-	describe("allow subscribe on a node+topic", () => {
+	describe("subscriptions with permission someNode:/foo/bar/baz", () => {
 		beforeEach((): Promise<void> => {
 			auth.setUser("testUser", "");
 			hub.add(new Exchange("someNode"));
@@ -460,7 +462,7 @@ describe("auth", (): void => {
 		});
 	});
 
-	describe("allow subscribe on a node+pattern", () => {
+	describe("subscriptions with permission someNode:/foo/**", () => {
 		beforeEach((): Promise<void> => {
 			auth.setUser("testUser", "");
 			hub.add(new Exchange("someNode"));
@@ -515,7 +517,7 @@ describe("auth", (): void => {
 		});
 	});
 
-	describe("allow subscribe on a node+multiple patterns", () => {
+	describe("subscriptions with permissions someNode:test and someNode:/foo/**", () => {
 		beforeEach((): Promise<void> => {
 			auth.setUser("testUser", "");
 			hub.add(new Exchange("someNode"));
