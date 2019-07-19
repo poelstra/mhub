@@ -7,8 +7,6 @@
  * turn used by e.g. TcpConnection, WSConnection, and LocalClient.
  */
 
-import Promise from "ts-promise";
-
 import { Authenticator } from "./authenticator";
 import Dict from "./dict";
 import { getMatcher, Matcher } from "./match";
@@ -165,7 +163,7 @@ export class Hub {
 				initPromises.push(node.init(this));
 			}
 		});
-		return Promise.all(initPromises).return();
+		return Promise.all(initPromises).then(() => undefined);
 	}
 
 	public setStorage(storage: Storage<any>): void {

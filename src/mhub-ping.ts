@@ -5,7 +5,6 @@
 import "source-map-support/register";
 
 import * as path from "path";
-import Promise from "ts-promise";
 import * as yargs from "yargs";
 
 import { Headers, Message } from "./message";
@@ -127,7 +126,7 @@ function createClient(): Promise<MClient> {
 		if (argv.username) {
 			return client.login(argv.username, argv.password || "");
 		}
-	}).return(client);
+	}).then(() => client);
 }
 
 let data: any;

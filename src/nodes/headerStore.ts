@@ -1,5 +1,3 @@
-import Promise from "ts-promise";
-
 import Hub from "../hub";
 import log from "../log";
 import { getMatcher, MatchSpec } from "../match";
@@ -92,7 +90,7 @@ export class HeaderStore extends pubsub.BaseSource implements pubsub.Initializab
 					type: HEADER_STORE_STORAGE_ID,
 					version: HEADER_STORE_STORAGE_VERSION,
 					state: this._state,
-				}).catch((err) => {
+				}).catch((err: any) => {
 					log.error(`Error saving topic data in node '${this.name}': ${err}`);
 					// TODO replace with a more appropriate mechanism
 					process.exit(1);

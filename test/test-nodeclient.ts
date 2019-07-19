@@ -8,12 +8,12 @@
 
 import { expect } from "chai";
 import * as http from "http";
-import Promise from "ts-promise";
 import * as ws from "ws";
 
 import { PlainAuthenticator } from "../src/authenticator";
 import Hub from "../src/hub";
 import MClient from "../src/nodeclient";
+import { delay } from "../src/promise";
 import WSConnection from "../src/transports/wsconnection";
 
 import "./common";
@@ -100,7 +100,7 @@ describe("MClient", (): void => {
 			// Note: another close will also be executed in the
 			// afterEach() call
 			return client.close()
-				.delay(10) // FIXME: websocket server calls close event a bit later
+				.then(() => delay(10)) // FIXME: websocket server calls close event a bit later
 				.then(() => {
 					expect(server.connectionCount).to.equal(0);
 				});
@@ -108,7 +108,7 @@ describe("MClient", (): void => {
 
 		it("works when server is closed first", () => {
 			server.killConnections();
-			return Promise.delay(10) // FIXME: websocket server calls close event a bit later
+			return delay(10) // FIXME: websocket server calls close event a bit later
 				.then(() => expect(server.connectionCount).to.equal(0))
 				.then(() => client.close());
 		});
@@ -121,7 +121,7 @@ describe("MClient", (): void => {
 
 		it("allows to reconnect after closing", () => {
 			return client.close()
-				.delay(10) // FIXME: websocket server calls close event a bit later
+				.then(() => delay(10)) // FIXME: websocket server calls close event a bit later
 				.then(() => expect(server.connectionCount).to.equal(0))
 				.then(() => client.connect())
 				.then(() => expect(server.connectionCount).to.equal(1));
@@ -129,7 +129,7 @@ describe("MClient", (): void => {
 
 		it("allows to reconnect after server closed", () => {
 			server.killConnections();
-			return Promise.delay(10) // FIXME: websocket server calls close event a bit later
+			return delay(10) // FIXME: websocket server calls close event a bit later
 				.then(() => expect(server.connectionCount).to.equal(0))
 				.then(() => client.connect())
 				.then(() => expect(server.connectionCount).to.equal(1));

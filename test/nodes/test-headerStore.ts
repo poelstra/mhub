@@ -3,7 +3,6 @@
  */
 
 import { expect } from "chai";
-import Promise from "ts-promise";
 
 import { Dict } from "../../src/dict";
 import Hub from "../../src/hub";

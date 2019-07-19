@@ -8,13 +8,14 @@
 
 import * as assert from "assert";
 import * as events from "events";
-import Promise, { Thenable } from "ts-promise";
+
 import Message, { Headers } from "./message";
+import { delay } from "./promise";
 import * as protocol from "./protocol";
 
 const MAX_SEQ = 65536;
 
-type Resolver<T> = (v: T|Thenable<T>) => void;
+type Resolver<T> = (v: T|PromiseLike<T>) => void;
 
 /**
  * Options to be passed to constructor.
@@ -205,7 +206,7 @@ export abstract class BaseClient extends events.EventEmitter {
 			type: "login",
 			username,
 			password,
-		}).return();
+		}).then(() => undefined);
 	}
 
 	/**
@@ -225,7 +226,7 @@ export abstract class BaseClient extends events.EventEmitter {
 			node: nodeName,
 			pattern,
 			id,
-		}).return();
+		}).then(() => undefined);
 	}
 
 	/**
@@ -243,7 +244,7 @@ export abstract class BaseClient extends events.EventEmitter {
 			node: nodeName,
 			pattern,
 			id,
-		}).return();
+		}).then(() => undefined);
 	}
 
 	/**
@@ -277,7 +278,7 @@ export abstract class BaseClient extends events.EventEmitter {
 			topic: message.topic,
 			data: message.data,
 			headers: message.headers,
-		}).return();
+		}).then(() => undefined);
 	}
 
 	/**
@@ -293,10 +294,12 @@ export abstract class BaseClient extends events.EventEmitter {
 	public ping(timeout?: number): Promise<void> {
 		const pingResult = this._send(<protocol.PingCommand>{
 			type: "ping",
-		}).return();
+		}).then(() => undefined);
 		if (timeout) {
 			return Promise.race([
-				Promise.delay(timeout).throw(new Error("ping timeout")),
+				delay(timeout).then(() => {
+					throw new Error("ping timeout");
+				}),
 				pingResult,
 			]);
 		} else {
@@ -310,7 +313,7 @@ export abstract class BaseClient extends events.EventEmitter {
 	 * prevent hard-to-debug async weirdness.
 	 */
 	private _asyncEmit(event: string, ...args: any[]): void {
-		Promise.resolve().done(() => {
+		Promise.resolve().then(() => {
 			this.emit(event, ...args);
 		});
 	}

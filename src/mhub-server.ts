@@ -9,7 +9,6 @@ import "source-map-support/register";
 import * as path from "path";
 import * as yargs from "yargs";
 
-import Promise from "ts-promise";
 import parseConfigFile from "./configparser";
 import { LogLevel } from "./logger";
 import { LoggingOptions, MServer } from "./nodeserver";

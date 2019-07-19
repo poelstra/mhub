@@ -1,6 +1,6 @@
 {
 	"compilerOptions": {
-		"target": "es5",
+		"target": "es6",
 		"module": "commonjs",
 		"strict": true,
 		"noUnusedLocals": true,
@@ -13,6 +13,12 @@
 		"outDir": "../dist/",
 		"types": [
 			"node", "mocha"
+		],
+		"lib": [
+			"dom",
+			"es6",
+			"es2015.promise",
+			"es2018.promise"
 		]
 	},
 	"include": [

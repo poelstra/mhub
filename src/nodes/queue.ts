@@ -1,5 +1,3 @@
-import Promise from "ts-promise";
-
 import { getMatcher, Matcher, MatchSpec } from "../match";
 import Message from "../message";
 import * as pubsub from "../pubsub";
@@ -78,7 +76,7 @@ export class Queue extends pubsub.BaseSource implements pubsub.Initializable {
 					type: QUEUE_STORAGE_ID,
 					version: QUEUE_STORAGE_VERSION,
 					queue: this._queue,
-				}).catch((err) => {
+				}).catch((err: any) => {
 					log.error(`Error saving topic data in node '${this.name}': ${err}`);
 					// TODO replace with a more appropriate mechanism
 					process.exit(1);

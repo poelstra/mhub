@@ -3,7 +3,6 @@
  */
 
 import * as events from "events";
-import Promise from "ts-promise";
 import * as ws from "ws";
 
 import { BaseClient, BaseClientOptions, Connection } from "./baseclient";

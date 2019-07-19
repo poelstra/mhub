@@ -5,8 +5,8 @@
 import * as fs from "fs";
 import { sync as mkdirpSync } from "mkdirp";
 import * as path from "path";
-import Promise from "ts-promise";
 
+import { delay } from "./promise";
 import { KeyValues } from "./types";
 
 export interface Storage<T> {
@@ -146,7 +146,7 @@ export class ThrottledStorage<T> implements Storage<T> {
 		// schedule a new one
 		if (item.lastValue === undefined) {
 			item.lastValue = value;
-			item.promise = item.promise.delay(this._delay).then(doSave).finally(() => {
+			item.promise = item.promise.then(() => delay(this._delay)).then(doSave).finally(() => {
 				// If there are no pending saves anymore, we can safely remove
 				// the record for this key, otherwise keep it until the scheduled
 				// save is done with it

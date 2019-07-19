@@ -6,7 +6,6 @@
  */
 
 import { expect } from "chai";
-import Promise from "ts-promise";
 
 import Hub from "../src/hub";
 import { LocalClient } from "../src/localclient";

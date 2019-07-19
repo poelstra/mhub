@@ -3,7 +3,6 @@ import * as https from "https";
 import * as net from "net";
 import * as ws from "ws";
 
-import Promise from "ts-promise";
 import { PlainAuthenticator } from "./authenticator";
 import Hub, { UserRights } from "./hub";
 import { TlsOptions } from "./tls";
@@ -282,6 +281,6 @@ export class MServer {
 						throw new Error(`unsupported transport '${options!.type}'`);
 				}
 			})
-		).return();
+		).then(() => undefined);
 	}
 }

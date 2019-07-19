@@ -1,5 +1,3 @@
-import Promise from "ts-promise";
-
 import { getMatcher, Matcher, MatchSpec } from "../match";
 import Message from "../message";
 import * as pubsub from "../pubsub";
@@ -93,7 +91,7 @@ export class TopicStore extends pubsub.BaseSource implements pubsub.Initializabl
 					type: TOPIC_STORE_STORAGE_ID,
 					version: TOPIC_STORE_STORAGE_VERSION,
 					state: this._state,
-				}).catch((err) => {
+				}).catch((err: any) => {
 					log.error(`Error saving topic data in node '${this.name}': ${err}`);
 					// TODO replace with a more appropriate mechanism
 					process.exit(1);

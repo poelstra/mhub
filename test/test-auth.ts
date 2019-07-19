@@ -3,13 +3,13 @@
  */
 
 import { expect } from "chai";
-import Promise from "ts-promise";
 
 import { PlainAuthenticator } from "../src/authenticator";
 import Hub from "../src/hub";
 import LocalClient from "../src/localclient";
 import { Message } from "../src/message";
 import { Exchange } from "../src/nodes/exchange";
+import { delay } from "../src/promise";
 
 import "./common";
 
@@ -136,7 +136,7 @@ describe("auth", (): void => {
 							hub.findDestination(node)!.send(new Message(publishTopic));
 							// Make sure all internal processing has completed, and any
 							// messages will have cleared queues.
-							return Promise.delay(0);
+							return delay(0);
 						})
 						.then(() => {
 							if (expectedResult) {

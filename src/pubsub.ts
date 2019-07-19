@@ -3,8 +3,6 @@
  * Provides the basic routing infrastructure to send and receive messages.
  */
 
-import Promise from "ts-promise";
-
 import Hub from "./hub";
 import { getMatcher, Matcher, MatchSpec } from "./match";
 import Message from "./message";
