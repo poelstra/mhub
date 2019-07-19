@@ -1060,6 +1060,9 @@ before sending a pull-request.
 The list below shows notable changes between each release.
 For details, see the version tags at GitHub.
 
+1.0.1 (2019-07-19):
+- package: Update WS and other packages to address security warnings.
+
 1.0.0 (2019-06-05):
 - protocol: Add unsubscribe command
 - server: Implement `HeaderStore` and use it for `default` node
