@@ -1060,6 +1060,10 @@ before sending a pull-request.
 The list below shows notable changes between each release.
 For details, see the version tags at GitHub.
 
+2.0.0 (2019-07-20):
+- all: Switch to native promises (breaking change because any returned promise now e.g. doesn't
+  have methods like `.return()` or `.delay()` anymore)
+
 1.0.1 (2019-07-19):
 - package: Update WS and other packages to address security warnings.
 
