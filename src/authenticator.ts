@@ -11,7 +11,7 @@ export interface Authenticator {
 	 * @param password Password.
 	 * @return true if user exists with that password, false otherwise.
 	 */
-	authenticate(username: string, password: string): boolean;
+	authenticate(username: string, password: string): boolean | Promise<boolean>;
 }
 
 /**
@@ -59,5 +59,16 @@ export class PlainAuthenticator implements Authenticator {
 			throw new TypeError("invalid password");
 		}
 		return this._users.get(username) === password;
+	}
+}
+
+export type BackedAuthenticateHandler = (username: string, password: string) => boolean | Promise<boolean>;
+export class BackedAuthenticator implements Authenticator {
+	private onAuthenticate: BackedAuthenticateHandler;
+	constructor(_onAuthenticate: BackedAuthenticateHandler) {
+		this.onAuthenticate = _onAuthenticate;
+	}
+	public async authenticate(username: string, password: string): Promise<boolean> {
+		return await this.onAuthenticate(username, password);
 	}
 }
