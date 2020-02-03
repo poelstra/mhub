@@ -294,7 +294,7 @@ export class HubClient extends events.EventEmitter {
 		};
 	}
 
-	private _handleLogin(msg: protocol.LoginCommand): protocol.LoginAckResponse | undefined {
+	private async _handleLogin(msg: protocol.LoginCommand): Promise<protocol.LoginAckResponse | undefined> {
 		if (this._username !== undefined) {
 			// Wouldn't really be a problem for now, but may be in
 			// the future if e.g. different users have different quota
@@ -302,7 +302,7 @@ export class HubClient extends events.EventEmitter {
 			throw new Error("already logged in");
 		}
 
-		const authenticated = this._hub.authenticate(msg.username, msg.password);
+		const authenticated = await this._hub.authenticate(msg.username, msg.password);
 		if (!authenticated) {
 			throw new Error("authentication failed");
 		}
