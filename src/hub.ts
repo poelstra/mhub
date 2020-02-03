@@ -143,10 +143,6 @@ export class Hub {
 		this._authenticator = authenticator || new PlainAuthenticator();
 	}
 
-	public setAuthenticator(authenticator: Authenticator): void {
-		this._authenticator = authenticator;
-	}
-
 	public getAuthenticator(): Authenticator {
 		return this._authenticator;
 	}
