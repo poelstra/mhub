@@ -142,7 +142,7 @@ export class HubClient extends events.EventEmitter {
 	 *
 	 * @param msg Command to process.
 	 */
-	public processCommand(msg: protocol.Command): void {
+	public async processCommand(msg: protocol.Command): Promise<void> {
 		let response: protocol.Response | undefined;
 		try {
 			if (typeof msg !== "object") {
@@ -153,19 +153,19 @@ export class HubClient extends events.EventEmitter {
 			}
 			switch (msg.type) {
 				case "publish":
-					response = this._handlePublish(msg);
+					response = await this._handlePublish(msg);
 					break;
 				case "subscribe":
-					response = this._handleSubscribe(msg);
+					response = await this._handleSubscribe(msg);
 					break;
 				case "unsubscribe":
-					response = this._handleUnsubscribe(msg);
+					response = await this._handleUnsubscribe(msg);
 					break;
 				case "ping":
-					response = this._handlePing(msg);
+					response = await this._handlePing(msg);
 					break;
 				case "login":
-					response = this._handleLogin(msg);
+					response = await this._handleLogin(msg);
 					break;
 				default:
 					throw new Error(`unknown command '${msg!.type}'`);
