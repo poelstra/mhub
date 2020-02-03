@@ -203,11 +203,11 @@ export class Hub {
 		return pubsub.isDestination(n) ? n : undefined;
 	}
 
-	public authenticate(username: string, password: string): boolean {
+	public async authenticate(username: string, password: string): Promise<boolean> {
 		if (!this._authenticator) {
 			throw new Error("missing authenticator");
 		}
-		return this._authenticator.authenticate(username, password);
+		return await this._authenticator.authenticate(username, password);
 	}
 }
 
