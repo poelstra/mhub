@@ -7,7 +7,7 @@
  * turn used by e.g. TcpConnection, WSConnection, and LocalClient.
  */
 
-import { Authenticator } from "./authenticator";
+import { Authenticator, PlainAuthenticator } from "./authenticator";
 import Dict from "./dict";
 import { getMatcher, Matcher } from "./match";
 import * as pubsub from "./pubsub";
@@ -135,12 +135,20 @@ export class Authorizer {
 
 export class Hub {
 	private _nodes: Dict<pubsub.BaseNode> = new Dict<pubsub.BaseNode>();
-	private _authenticator: Authenticator | undefined;
+	private _authenticator: Authenticator;
 	private _rights: Dict<PartialPermissions> = new Dict<PartialPermissions>();
 	private _storage: Storage<any> | undefined;
 
+	constructor(authenticator?: Authenticator) {
+		this._authenticator = authenticator || new PlainAuthenticator();
+	}
+
 	public setAuthenticator(authenticator: Authenticator): void {
 		this._authenticator = authenticator;
+	}
+
+	public getAuthenticator(): Authenticator {
+		return this._authenticator;
 	}
 
 	public setRights(rights: UserRights): void {

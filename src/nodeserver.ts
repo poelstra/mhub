@@ -146,11 +146,16 @@ export class MServer {
 	}
 
 	private setAuthenticator({ users }: NormalizedConfig): void {
-		const authenticator = new PlainAuthenticator();
-		Object.keys(users).forEach((username: string) => {
-			authenticator.setUser(username, users[username]);
-		});
-		this.hub.setAuthenticator(authenticator);
+		const authenticator = this.hub.getAuthenticator();
+		const usernames = Object.keys(users);
+		if (usernames.length > 0) {
+			if (!(authenticator instanceof PlainAuthenticator)) {
+				throw new Error(`Hub uses an external authenticator. Use that to add users`);
+			}
+			usernames.forEach((username: string) => {
+				authenticator.setUser(username, users[username]);
+			});
+		}
 	}
 
 	// Set up user permissions
