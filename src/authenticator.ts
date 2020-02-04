@@ -61,14 +61,3 @@ export class PlainAuthenticator implements Authenticator {
 		return this._users.get(username) === password;
 	}
 }
-
-export type BackedAuthenticateHandler = (username: string, password: string) => boolean | Promise<boolean>;
-export class BackedAuthenticator implements Authenticator {
-	private onAuthenticate: BackedAuthenticateHandler;
-	constructor(_onAuthenticate: BackedAuthenticateHandler) {
-		this.onAuthenticate = _onAuthenticate;
-	}
-	public async authenticate(username: string, password: string): Promise<boolean> {
-		return await this.onAuthenticate(username, password);
-	}
-}
