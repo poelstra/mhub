@@ -153,16 +153,16 @@ export class HubClient extends events.EventEmitter {
 			}
 			switch (msg.type) {
 				case "publish":
-					response = await this._handlePublish(msg);
+					response = this._handlePublish(msg);
 					break;
 				case "subscribe":
-					response = await this._handleSubscribe(msg);
+					response = this._handleSubscribe(msg);
 					break;
 				case "unsubscribe":
-					response = await this._handleUnsubscribe(msg);
+					response = this._handleUnsubscribe(msg);
 					break;
 				case "ping":
-					response = await this._handlePing(msg);
+					response = this._handlePing(msg);
 					break;
 				case "login":
 					response = await this._handleLogin(msg);
