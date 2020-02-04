@@ -44,7 +44,7 @@ export class TcpConnection {
 		this._socket.destroy(); // will cause close event, which causes client close
 	}
 
-	private _handleSocketData(chunk: string): void {
+	private async _handleSocketData(chunk: string): Promise<void> {
 		// Add new chunk to buffer, start looking for lines
 		// in buffer
 		this._buffer += chunk;
@@ -65,7 +65,7 @@ export class TcpConnection {
 			log.debug(`[ ${this._name} ] command ${line}`);
 			try {
 				const cmd: protocol.Command = JSON.parse(line);
-				this._client.processCommand(cmd);
+				await this._client.processCommand(cmd);
 			} catch (e) {
 				log.error(`[ ${this._name} ] protocol error ${e}`);
 				this._handleClientResponse({

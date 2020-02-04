@@ -38,11 +38,8 @@ class LocalConnection extends events.EventEmitter implements Connection {
 	 * @return Promise that resolves when transmit is accepted (i.e. not necessarily
 	 * arrived at other side, can be e.g. queued).
 	 */
-	public send(data: protocol.Command): Promise<void> {
-		return new Promise<void>((resolve) => {
-			this._hubClient.processCommand(data);
-			resolve(undefined);
-		});
+	public async send(data: protocol.Command): Promise<void> {
+		await this._hubClient.processCommand(data);
 	}
 
 	/**
