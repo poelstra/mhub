@@ -204,9 +204,6 @@ export class Hub {
 	}
 
 	public async authenticate(username: string, password: string): Promise<boolean> {
-		if (!this._authenticator) {
-			throw new Error("missing authenticator");
-		}
 		return await this._authenticator.authenticate(username, password);
 	}
 }
