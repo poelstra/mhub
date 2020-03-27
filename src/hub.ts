@@ -200,7 +200,7 @@ export class Hub {
 	}
 
 	public async authenticate(username: string, password: string): Promise<boolean> {
-		return await this._authenticator.authenticate(username, password);
+		return this._authenticator.authenticate(username, password);
 	}
 }
 
