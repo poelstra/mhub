@@ -42,7 +42,15 @@ export class WSConnection {
 		this._socket.close(); // will cause close event, which causes client close
 	}
 
-	private async _handleSocketMessage(data: string): Promise<void> {
+	private _handleProtocolError(e: Error): void {
+		log.error(`[ ${this._name} ] protocol error ${e}`);
+		this._handleClientResponse({
+			type: "error",
+			message: `protocol error: ${e}`,
+		});
+	}
+
+	private _handleSocketMessage(data: string): void {
 		if (data === "") {
 			// Ignore empty lines
 			return;
@@ -50,13 +58,10 @@ export class WSConnection {
 		log.debug(`[ ${this._name} ] command ${data}`);
 		try {
 			const cmd: protocol.Command = JSON.parse(data);
-			await this._client.processCommand(cmd);
+			this._client.processCommand(cmd)
+				.catch((e: Error) => this._handleProtocolError(e));
 		} catch (e) {
-			log.error(`[ ${this._name} ] protocol error ${e}`);
-			this._handleClientResponse({
-				type: "error",
-				message: `protocol error: ${e}`,
-			});
+			this._handleProtocolError(e);
 		}
 	}
 }
