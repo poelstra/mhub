@@ -7,13 +7,15 @@
 
 import { expect } from "chai";
 
+import { PlainAuthenticator } from "../src/authenticator";
 import Hub from "../src/hub";
 import { LocalClient } from "../src/localclient";
 import Message from "../src/message";
 import Exchange from "../src/nodes/exchange";
 
 function createHub(): Hub {
-	const hub = new Hub();
+	const auth = new PlainAuthenticator();
+	const hub = new Hub(auth);
 	hub.setRights({ "": true });
 	hub.add(new Exchange("default"));
 	return hub;

@@ -4,6 +4,7 @@
 
 import { expect } from "chai";
 
+import { PlainAuthenticator } from "../src/authenticator";
 import Hub from "../src/hub";
 import LocalClient from "../src/localclient";
 import { Message } from "../src/message";
@@ -21,7 +22,8 @@ describe("hub", (): void => {
 	}
 
 	beforeEach(() => {
-		hub = new Hub();
+		const auth = new PlainAuthenticator();
+		hub = new Hub(auth);
 		hub.add(new Exchange("default"));
 		hub.setRights({
 			"": true,

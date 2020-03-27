@@ -111,6 +111,7 @@ nodeClassMap.TopicState = TopicStore;
 
 export class MServer {
 	private hub: Hub;
+	private plainAuth: PlainAuthenticator;
 	private normalizedConfig: NormalizedConfig;
 	private logger: Logger | undefined = undefined;
 	private connectionId = 0;
@@ -118,9 +119,10 @@ export class MServer {
 		normalizedConfig: NormalizedConfig,
 		hub?: Hub
 	) {
-		this.hub = hub || new Hub();
+		this.plainAuth = new PlainAuthenticator();
+		this.hub = hub || new Hub(this.plainAuth);
 		this.normalizedConfig = normalizedConfig;
-		this.setAuthenticator(normalizedConfig);
+		this.setUsers(normalizedConfig);
 		this.setPermissions(normalizedConfig);
 		this.instantiateNodes(normalizedConfig);
 		this.setupBindings(normalizedConfig);
@@ -145,12 +147,11 @@ export class MServer {
 		}
 	}
 
-	private setAuthenticator({ users }: NormalizedConfig): void {
-		const authenticator = new PlainAuthenticator();
-		Object.keys(users).forEach((username: string) => {
-			authenticator.setUser(username, users[username]);
+	private setUsers({ users }: NormalizedConfig): void {
+		const usernames = Object.keys(users);
+		usernames.forEach((username: string) => {
+			this.plainAuth.setUser(username, users[username]);
 		});
-		this.hub.setAuthenticator(authenticator);
 	}
 
 	// Set up user permissions

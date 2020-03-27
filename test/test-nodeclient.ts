@@ -22,6 +22,7 @@ class TestServer {
 	public connectionCount: number = 0;
 
 	private _port: number;
+	private _auth: PlainAuthenticator;
 	private _hub: Hub;
 	private _server: http.Server;
 	private _wss: ws.Server;
@@ -30,15 +31,14 @@ class TestServer {
 
 	constructor(port: number) {
 		this._port = port;
-		this._hub = new Hub();
+		this._auth = new PlainAuthenticator();
+		this._hub = new Hub(this._auth);
 		this._server = http.createServer();
 		this._wss = new ws.Server({ server: <any>this._server, path: "/" });
 	}
 
 	public start(): Promise<void> {
-		const auth = new PlainAuthenticator();
-		auth.setUser("foo", "bar");
-		this._hub.setAuthenticator(auth);
+		this._auth.setUser("foo", "bar");
 		return this._hub.init().then(() => this._startTransport());
 	}
 

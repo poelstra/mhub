@@ -11,7 +11,7 @@ export interface Authenticator {
 	 * @param password Password.
 	 * @return true if user exists with that password, false otherwise.
 	 */
-	authenticate(username: string, password: string): boolean;
+	authenticate(username: string, password: string): boolean | Promise<boolean>;
 }
 
 /**

@@ -135,11 +135,11 @@ export class Authorizer {
 
 export class Hub {
 	private _nodes: Dict<pubsub.BaseNode> = new Dict<pubsub.BaseNode>();
-	private _authenticator: Authenticator | undefined;
+	private _authenticator: Authenticator;
 	private _rights: Dict<PartialPermissions> = new Dict<PartialPermissions>();
 	private _storage: Storage<any> | undefined;
 
-	public setAuthenticator(authenticator: Authenticator): void {
+	constructor(authenticator: Authenticator) {
 		this._authenticator = authenticator;
 	}
 
@@ -199,10 +199,7 @@ export class Hub {
 		return pubsub.isDestination(n) ? n : undefined;
 	}
 
-	public authenticate(username: string, password: string): boolean {
-		if (!this._authenticator) {
-			throw new Error("missing authenticator");
-		}
+	public async authenticate(username: string, password: string): Promise<boolean> {
 		return this._authenticator.authenticate(username, password);
 	}
 }

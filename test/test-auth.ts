@@ -47,9 +47,8 @@ describe("auth", (): void => {
 	}
 
 	beforeEach(() => {
-		hub = new Hub();
 		auth = new PlainAuthenticator();
-		hub.setAuthenticator(auth);
+		hub = new Hub(auth);
 		hub.add(new Exchange("default"));
 		return createAndConnectClient();
 	});

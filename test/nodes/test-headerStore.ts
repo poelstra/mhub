@@ -4,6 +4,7 @@
 
 import { expect } from "chai";
 
+import { PlainAuthenticator } from "../../src/authenticator";
 import { Dict } from "../../src/dict";
 import Hub from "../../src/hub";
 import { LocalClient } from "../../src/localclient";
@@ -35,7 +36,8 @@ export class MemStorage<T> implements Storage<T> {
 }
 
 function createHub(storage: Storage<any>): Hub {
-	const hub = new Hub();
+	const auth = new PlainAuthenticator();
+	const hub = new Hub(auth);
 	hub.add(new HeaderStore("default"));
 	hub.setRights({ "": true });
 	hub.setStorage(storage);

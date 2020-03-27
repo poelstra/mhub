@@ -16,11 +16,10 @@ describe("HubClient", (): void => {
 	let client: HubClient;
 
 	beforeEach(() => {
-		const hub = new Hub();
-
 		const auth = new PlainAuthenticator();
+		const hub = new Hub(auth);
+
 		auth.setUser("foo", "bar");
-		hub.setAuthenticator(auth);
 
 		hub.setRights({
 			"": { publish: false, subscribe: true },
