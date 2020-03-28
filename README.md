@@ -632,7 +632,7 @@ client.subscribe("node4", "/bar") -> ok, but will never match anything
 client.subscribe("node5", "/bar") -> ok, will only match "/bar"
 ```
 
-## Using MHub from Javascript
+## Using MHub client from Javascript
 
 In Node.JS, simply `npm install --save mhub` in your package, then require the client
 interface as e.g.:
@@ -895,6 +895,39 @@ export declare class Message {
 Note: `Message` is not directly used on the wire, it is only used to pass to e.g.
 `client.publish()` and received for subscriptions. Use e.g. `Message.fromObject()`
 to convert a plain (JSON) object into an instance of `Message`.
+
+## Integrating MHub server into your application
+
+It's possible, and easy, to integrate an MHub server into your own application.
+For example, to have a websocket server hosted on the same port as your API
+webserver.
+
+See `src/example/custom-server.ts` for a fully functional example.
+
+Basically, you instantiate a `Hub`, and connect transports (TCP, websocket, etc.)
+to it, like:
+
+```ts
+const authenticator = new PlainAuthenticator(); // or your own Authenticator implementation
+const hub = new Hub(authenticator);
+hub.add(new HeaderStore("default"));
+await hub.init();
+
+const httpServer = http.createServer();
+// ... insert your Express API code here ...
+
+const wss = new ws.Server({ server: httpServer });
+let connectionId = 0;
+wss.on("connection", (conn: ws) =>
+    new WSConnection(hub, conn, "websocket" + this.connectionId++)
+);
+
+httpServer.listen(13900);
+```
+
+There's also a `LocalClient` which behaves exactly like a 'normal' networked client,
+but directly connects to the `hub`. This allows easy access to the hub from e.g.
+your API backend code.
 
 ## Wire protocol
 
