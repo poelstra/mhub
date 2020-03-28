@@ -229,13 +229,13 @@ export class MServer {
 				new WSConnection(hub, conn, "websocket" + this.connectionId++);
 			});
 
+			wss.on("error", (e: Error): void => {
+				reject(e);
+			});
+
 			server.listen(options.port, (): void => {
 				this.log(`WebSocket Server started on port ${options.port}${useTls ? " (TLS)" : ""}`);
 				resolve(undefined);
-			});
-
-			server.on("error", (e: Error): void => {
-				reject(e);
 			});
 		});
 	}
@@ -250,6 +250,10 @@ export class MServer {
 				new TcpConnection(hub, socket, "tcp" + this.connectionId++);
 			});
 
+			server.on("error", (e: Error): void => {
+				reject(e);
+			});
+
 			server.listen(
 				{
 					port: options.port,
@@ -261,10 +265,6 @@ export class MServer {
 					resolve(undefined);
 				}
 			);
-
-			server.on("error", (e: Error): void => {
-				reject(e);
-			});
 		});
 	}
 
