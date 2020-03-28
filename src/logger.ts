@@ -56,24 +56,22 @@ export class Logger {
 		this.write(LogLevel.Debug, this.indent + fmt, ...args);
 	}
 
-	public write(level: LogLevel, fmt: string, ...args: any[]): void;
-	public write(level: LogLevel, ...args: any[]): void {
+	public write(level: LogLevel, fmt: string, ...args: any[]): void {
 		if (!this.onMessage || level > this.logLevel) {
 			return;
 		}
 		// Prefix log level character (e.g. [E])
-		args[0] = `[${LogLevel[level][0]}] ${args[0]}`;
+		fmt = `[${LogLevel[level][0]}] ${fmt}`;
 		// In debug mode, prefix timestamp before that
 		if (this.logLevel === LogLevel.Debug) {
-			args[0] = `${new Date().toISOString()} ${args[0]}`;
+			fmt = `${new Date().toISOString()} ${fmt}`;
 		}
-		const msg = util.format.apply(undefined, args);
+		const msg = util.format(fmt, ...args);
 		this.onMessage(msg);
 	}
 
-	public push(fmt: string, ...args: any[]): void;
-	public push(...args: any[]): void {
-		this.debug.apply(this, args);
+	public push(fmt: string, ...args: any[]): void {
+		this.debug(fmt, ...args);
 		this.indent += "  ";
 	}
 

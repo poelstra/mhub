@@ -51,7 +51,7 @@ export class SimpleFileStorage<T> implements Storage<T> {
 				tmpFile,
 				data + (data ? "\n" : ""),
 				"utf8",
-				(err: Error) => {
+				(err: Error | null) => {
 					if (err) {
 						reject(err);
 					} else {
@@ -61,7 +61,7 @@ export class SimpleFileStorage<T> implements Storage<T> {
 			);
 		}).then(() => {
 			return new Promise<void>((resolve, reject) => {
-				fs.rename(tmpFile, realFile, (err: Error) => {
+				fs.rename(tmpFile, realFile, (err: Error | null) => {
 					if (err) {
 						reject(err);
 					} else {
@@ -77,7 +77,7 @@ export class SimpleFileStorage<T> implements Storage<T> {
 			fs.readFile(
 				this._getFilename(key),
 				"utf8",
-				(err: Error, data: string) => {
+				(err: Error | null, data: string) => {
 					if (err) {
 						if ((<any>err).code === "ENOENT") {
 							// Return `undefined` when key does not exist (yet)

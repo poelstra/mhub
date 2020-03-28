@@ -3,11 +3,11 @@
  */
 
 import * as events from "events";
+import * as tls from "tls";
 import * as ws from "ws";
 
 import { BaseClient, BaseClientOptions, Connection } from "./baseclient";
 import * as protocol from "./protocol";
-import { TlsOptions } from "./tls";
 
 const DEFAULT_PORT_WS = 13900;
 const DEFAULT_PORT_WSS = 13901;
@@ -19,7 +19,7 @@ function noop(): void {
 /**
  * Options to be passed to MClient constructor.
  */
-export interface MClientOptions extends BaseClientOptions, TlsOptions {
+export interface MClientOptions extends BaseClientOptions, tls.TlsOptions {
 	/**
 	 * When true, will not automatically connect in the
 	 * constructor. Connect explicitly using `#connect()`.

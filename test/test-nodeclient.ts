@@ -45,7 +45,9 @@ class TestServer {
 	public stop(): Promise<void> {
 		return new Promise<void>((resolve, reject) => {
 			this._wss.close((): any => {
-				this._server.close(resolve);
+				this._server.close((err?: Error | null) =>
+					err ? reject(err) : resolve()
+				);
 			});
 		});
 	}

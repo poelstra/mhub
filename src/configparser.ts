@@ -6,7 +6,7 @@ import {
 	Binding, Config, ListenOption, LoggingOptions,
 	NodesConfig, NormalizedConfig, UserOptions
 } from "./nodeserver";
-import { replaceKeyFiles } from "./tls";
+import { replaceKeyFiles } from "./tlsHelpers";
 
 function normalizeListen(config: Config, rootDir: string): ListenOption[] {
 	// Checks

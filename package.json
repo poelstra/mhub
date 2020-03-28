@@ -59,19 +59,19 @@
     "parallelshell": "^2.0.0",
     "remap-istanbul": "^0.11.1",
     "rimraf": "^2.6.1",
-    "tslint": "^5.10.0",
-    "typescript": "^2.8.3"
+    "tslint": "^6.1.0",
+    "typescript": "^3.8.3"
   },
   "dependencies": {
-    "@types/mkdirp": "^0.3.29",
-    "@types/node": "^8.0.17",
-    "@types/ws": "0.0.35",
-    "@types/yargs": "0.0.33",
+    "@types/mkdirp": "^1.0.0",
+    "@types/node": "^12.12.31",
+    "@types/ws": "^7.2.3",
+    "@types/yargs": "^15.0.4",
     "micromatch": "^3.1.10",
-    "mkdirp": "^0.5.1",
-    "source-map-support": "^0.4.1",
-    "ws": "^3.3.1",
-    "yargs": "^4.7.1"
+    "mkdirp": "^1.0.3",
+    "source-map-support": "^0.5.16",
+    "ws": "^7.2.3",
+    "yargs": "^15.3.1"
   },
   "typings": "./dist/src/index.d.ts",
   "tslintConfig": "tslint.json"

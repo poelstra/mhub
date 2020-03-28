@@ -4,12 +4,12 @@
 
 import "source-map-support/register";
 
-import * as path from "path";
+import * as tls from "tls";
 import * as yargs from "yargs";
 
 import { Headers, Message } from "./message";
 import MClient from "./nodeclient";
-import { replaceKeyFiles, TlsOptions } from "./tls";
+import { replaceKeyFiles } from "./tlsHelpers";
 
 const usage = [
 	"Sends a message to the given node, waits for an answer, then sends the next etc.",
@@ -19,8 +19,9 @@ const usage = [
 	"routing to respond with `ping:response` to each `ping:request`",
 ].join("\n");
 
-function die(...args: any[]): never {
-	console.error.apply(undefined, args);
+function die(fmt: string, ...args: any[]): never {
+	// tslint:disable-next-line:no-console
+	console.error(fmt, ...args);
 	return process.exit(1);
 }
 
@@ -28,33 +29,33 @@ const argv = yargs
 	.usage(usage)
 	.help("help")
 	// tslint:disable-next-line:no-require-imports
-	.version(() => require(path.resolve(__dirname, "../../package.json")).version)
+	.version()
 	.alias("v", "version")
-	.option("s", {
+	.option("socket", {
 		type: "string",
-		alias: "socket",
+		alias: "s",
 		description: "WebSocket to connect to",
 		default: "localhost:13900",
 	})
-	.option("n", {
+	.option("node", {
 		type: "string",
-		alias: "node",
+		alias: "n",
 		description: "Node to subscribe/publish to",
 		default: "ping",
 	})
-	.option("d", {
+	.option("data", {
 		type: "string",
-		alias: "data",
+		alias: "d",
 		description: "Optional message data as JSON object, e.g. '\"a string\"' or '{ \"foo\": \"bar\" }'",
 	})
-	.option("h", {
+	.option("headers", {
 		type: "string",
-		alias: "headers",
+		alias: "h",
 		description: "Optional message headers as JSON object, e.g. '{ \"my-header\": \"foo\" }'",
 	})
-	.option("c", {
+	.option("count", {
 		type: "number",
-		alias: "count",
+		alias: "c",
 		description: "Number of pings to send",
 		default: 10,
 	})
@@ -91,14 +92,14 @@ const argv = yargs
 		type: "string",
 		description: "List of ciphers to use or exclude, separated by :",
 	})
-	.option("U", {
+	.option("username", {
 		type: "string",
-		alias: "username",
+		alias: "U",
 		description: "Username",
 	})
-	.option("P", {
+	.option("password", {
 		type: "string",
-		alias: "password",
+		alias: "P",
 		description: "Password. Note: sent in plain-text, so only use on secure connection. " +
 				"Also note it may appear in e.g. `ps` output.",
 	})
@@ -106,7 +107,7 @@ const argv = yargs
 	.argv;
 
 function createClient(): Promise<MClient> {
-	const tlsOptions: TlsOptions = {};
+	const tlsOptions: tls.TlsOptions = {};
 	tlsOptions.pfx = argv.pfx;
 	tlsOptions.key = argv.key;
 	tlsOptions.passphrase = argv.passphrase;

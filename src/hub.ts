@@ -157,7 +157,7 @@ export class Hub {
 	}
 
 	public init(): Promise<void> {
-		const initPromises: Array<Promise<void>> = [];
+		const initPromises: Promise<void>[] = [];
 		this._nodes.forEach((node) => {
 			if (node.init) {
 				initPromises.push(node.init(this));

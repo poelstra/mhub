@@ -4,21 +4,7 @@
 
 import * as fs from "fs";
 import * as path from "path";
-
-export interface TlsOptions {
-	pfx?: string | Buffer;
-	key?: string | string[] | Buffer | Buffer[];
-	passphrase?: string;
-	cert?: string | string[] | Buffer | Buffer[];
-	ca?: string | string[] | Buffer | Buffer[];
-	crl?: string | string[] | Buffer | Buffer[];
-	ciphers?: string;
-	honorCipherOrder?: boolean;
-	requestCert?: boolean;
-	rejectUnauthorized?: boolean;
-	NPNProtocols?: string[] | Buffer;
-	ALPNProtocols?: string[] | Buffer;
-}
+import * as tls from "tls";
 
 function convertToBuffer(value: any, rootDir: string): any {
 	// Some options accept an array of keys/certs etc
@@ -34,9 +20,10 @@ function convertToBuffer(value: any, rootDir: string): any {
 }
 
 /// Convert filenames to the contents of these files
-export function replaceKeyFiles(options: TlsOptions, rootDir: string): void {
-	(<Array<keyof TlsOptions>>["pfx", "key", "cert", "crl", "ca", "dhparam", "ticketKeys"])
-		.forEach((propName: keyof TlsOptions) => {
+export function replaceKeyFiles(options: tls.TlsOptions, rootDir: string): void {
+	// tslint:disable-next-line:array-type
+	(<Array<keyof tls.TlsOptions>>["pfx", "key", "cert", "crl", "ca", "dhparam", "ticketKeys"])
+		.forEach((propName: keyof tls.TlsOptions) => {
 			if (options[propName]) {
 				options[propName] = convertToBuffer(options[propName], rootDir);
 			}

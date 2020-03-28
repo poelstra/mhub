@@ -4,12 +4,12 @@
 
 import "source-map-support/register";
 
-import * as path from "path";
+import * as tls from "tls";
 import * as yargs from "yargs";
 
 import { Headers, Message } from "./message";
 import MClient from "./nodeclient";
-import { replaceKeyFiles, TlsOptions } from "./tls";
+import { replaceKeyFiles } from "./tlsHelpers";
 
 // tslint:disable:no-console
 
@@ -27,66 +27,65 @@ const usage = [
 ].join("\n");
 
 // tslint:disable-next-line:no-shadowed-variable
-function die(...args: any[]): never {
-	console.error.apply(undefined, args);
+function die(fmt: string, ...args: any[]): never {
+	console.error(fmt, ...args);
 	return process.exit(1);
 }
 
 const args = yargs
 	.usage(usage)
 	.help("help")
-	// tslint:disable-next-line:no-require-imports
-	.version(() => require(path.resolve(__dirname, "../../package.json")).version)
+	.version()
 	.alias("v", "version")
-	.option("s", {
+	.option("socket", {
 		type: "string",
-		alias: "socket",
+		alias: "s",
 		description: "WebSocket to connect to, specify as [protocol://]host[:port], e.g. ws://localhost:13900, " +
 				"or wss://localhost:13900",
 		required: true,
 		default: "localhost:13900",
 	})
-	.option("n", {
+	.option("node", {
 		type: "string",
-		alias: "node",
+		alias: "n",
 		description: "Node to subscribe/publish to, e.g. 'test'",
 		required: true,
 		default: "default",
 	})
-	.option("l", {
+	.option("listen", {
 		type: "boolean",
-		alias: "listen",
+		alias: "l",
 		description: "Select listen mode",
 	})
-	.option("p", {
+	.option("pattern", {
 		type: "string",
-		alias: "pattern",
+		alias: "p",
 		description: "Topic subscription pattern as glob, e.g. 'twitter:*'",
 	})
-	.option("o", {
+	.option("output", {
 		type: "string",
-		alias: "output",
+		alias: "o",
 		description: "Output format, can be: human, text, jsondata, json",
 		default: "human",
 	})
-	.option("t", {
+	.option("topic", {
 		type: "string",
-		alias: "topic",
+		alias: "t",
 		description: "Message topic",
 	})
-	.option("d", {
+	.option("data", {
 		type: "string",
-		alias: "data",
+		alias: "d",
 		description: "Optional message data as JSON object, e.g. '\"a string\"' or '{ \"foo\": \"bar\" }'",
 	})
-	.option("h", {
+	.option("headers", {
 		type: "string",
-		alias: "headers",
+		alias: "h",
 		description: "Optional message headers as JSON object, e.g. '{ \"my-header\": \"foo\" }'",
 	})
-	.option("i", {
+	.option("input", {
 		type: "string",
-		alias: "input",
+		alias: "i",
 		description: "Read lines from stdin, post each line to server. <input_format> can be: text, json",
 	})
 	.option("insecure", {
@@ -122,14 +121,14 @@ const args = yargs
 		type: "string",
 		description: "List of ciphers to use or exclude, separated by :",
 	})
-	.option("U", {
+	.option("username", {
 		type: "string",
-		alias: "username",
+		alias: "U",
 		description: "Username",
 	})
-	.option("P", {
+	.option("password", {
 		type: "string",
-		alias: "password",
+		alias: "P",
 		description: "Password. Note: sent in plain-text, so only use on secure connection. " +
 				"Also note it may appear in e.g. `ps` output.",
 	})
@@ -158,7 +157,7 @@ function parseOutputFormat(s: string): OutputFormat {
 }
 
 function createClient(argv: any): Promise<MClient> {
-	const tlsOptions: TlsOptions = {};
+	const tlsOptions: tls.TlsOptions = {};
 	tlsOptions.pfx = argv.pfx;
 	tlsOptions.key = argv.key;
 	tlsOptions.passphrase = argv.passphrase;
@@ -255,6 +254,7 @@ function parseInputFormat(s: string): InputFormat {
 function pipeMode(): void {
 	const argv = args
 		.require("topic", true)
+		.require("input", true)
 		.argv;
 
 	const format = parseInputFormat(argv.input);

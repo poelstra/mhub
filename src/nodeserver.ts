@@ -1,11 +1,11 @@
 import * as http from "http";
 import * as https from "https";
 import * as net from "net";
+import * as tls from "tls";
 import * as ws from "ws";
 
 import { PlainAuthenticator } from "./authenticator";
 import Hub, { UserRights } from "./hub";
-import { TlsOptions } from "./tls";
 import TcpConnection from "./transports/tcpconnection";
 import WSConnection from "./transports/wsconnection";
 
@@ -25,7 +25,7 @@ export interface Binding {
 	pattern?: string;
 }
 
-export interface WSServerOptions extends TlsOptions {
+export interface WSServerOptions extends tls.TlsOptions {
 	type: "websocket";
 	port?: number; // default 13900 (ws) or 13901 (wss)
 }
@@ -86,9 +86,8 @@ import Queue from "./nodes/queue";
 import TestSource from "./nodes/testSource";
 import TopicStore from "./nodes/topicStore";
 
-interface ConstructableNode {
-	new(name: string, options?: KeyValues<any>): pubsub.Source | pubsub.Destination;
-}
+type ConstructableNode =
+	new(name: string, options?: KeyValues<any>) => pubsub.Source | pubsub.Destination;
 
 const nodeClasses: ConstructableNode[] = [
 	ConsoleDestination,

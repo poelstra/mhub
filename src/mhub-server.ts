@@ -16,8 +16,8 @@ import { LoggingOptions, MServer } from "./nodeserver";
 import log from "./log";
 
 // tslint:disable-next-line:no-shadowed-variable
-function die(...args: any[]): void {
-	log.fatal.apply(log, args);
+function die(fmt: string, ...args: any[]): void {
+	log.fatal(fmt, ...args);
 	process.exit(1);
 }
 
@@ -31,16 +31,16 @@ const args = yargs
 	.help("help")
 	.alias("h", "help")
 	// tslint:disable-next-line:no-require-imports
-	.version(() => require(path.resolve(__dirname, "../../package.json")).version)
+	.version()
 	.alias("v", "version")
-	.option("c", {
+	.option("config", {
 		type: "string",
-		alias: "config",
+		alias: "c",
 		description: "Filename of config, uses mhub's server.conf.json by default",
 	})
-	.option("l", {
+	.option("loglevel", {
 		type: "string",
-		alias: "loglevel",
+		alias: "l",
 		description: "Override log level in config file. Valid options: " + logLevelNames.join(", "),
 	})
 	.strict()
@@ -55,7 +55,7 @@ if (!args.config) {
 	configFile = path.resolve(args.config);
 }
 
-function setLogLevel(logLevelName: LoggingOptions) {
+function setLogLevel(logLevelName: LoggingOptions | string) {
 	// Convert config.logging to a LogLevel
 	const matching = Object.keys(LogLevel).filter((s) => {
 		return s.toLowerCase() === logLevelName;
@@ -80,5 +80,5 @@ function main(): Promise<void> {
 }
 
 Promise.resolve().then(main).catch((err: Error) => {
-	die(err);
+	die("main failed: ", err);
 });
