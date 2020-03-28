@@ -149,27 +149,48 @@ try {
 	die("Error parsing message headers as JSON: " + e.message);
 }
 
-let pingCount = argv.count;
+const pingCount = argv.count;
 
-createClient().then((client) => {
-	client.on("message", (msg: Message): void => {
-		const reply = JSON.stringify(msg.data);
-		if (argv.data === reply) {
-			console.timeEnd("pong"); // tslint:disable-line:no-console
-			if (pingCount > 0) {
-				ping();
-			} else {
-				client.close();
-			}
+/**
+ * High-res timestamp in milliseconds.
+ */
+function now(): number {
+	const hrTime = process.hrtime();
+	return hrTime[0] * 1000000000 + hrTime[1] / 1000000;
+}
+
+createClient().then(async (client) => {
+	async function ping(): Promise<void> {
+		const response = new Promise<void>(resolve => {
+			client.once("message", (msg: Message): void => {
+				const reply = JSON.stringify(msg.data);
+				if (argv.data === reply) {
+					resolve();
+				}
+			});
+		});
+
+		const request = client.publish(argv.node, "ping:request", data, headers);
+		let timeoutTimer: NodeJS.Timer;
+		const timeout = new Promise((_, reject) => {
+			timeoutTimer = setTimeout(() => reject(new Error("timeout")), 1000);
+		});
+		try {
+			await Promise.race([Promise.all([request, response]), timeout]);
+		} finally {
+			clearTimeout(timeoutTimer!);
 		}
-	});
-
-	function ping(): void {
-		pingCount--;
-		console.time("pong"); // tslint:disable-line:no-console
-		client.publish(argv.node, "ping:request", data, headers);
 	}
 
 	client.subscribe(argv.node, "ping:response");
-	ping();
+	for (let i = 0; i < pingCount; i++) {
+		const start = now();
+		try {
+			await ping();
+			console.log(`pong ${i}: ${(now() - start).toFixed(3)}ms`); // tslint:disable-line:no-console
+		} catch (err) {
+			console.warn(err.message || `${err}`); // tslint:disable-line:no-console
+		}
+	}
+	return client.close();
 }).catch(die);
