@@ -31,7 +31,7 @@ export interface BaseClientOptions {
 	keepalive?: number;
 }
 
-export const defaultClientOptions: BaseClientOptions = {
+export const defaultBaseClientOptions: BaseClientOptions = {
 	keepalive: 30000, // milliseconds
 };
 
@@ -98,7 +98,7 @@ export abstract class BaseClient extends events.EventEmitter {
 		super();
 
 		// Ensure options is an object and fill in defaults
-		options = {...defaultClientOptions, ...options};
+		options = {...defaultBaseClientOptions, ...options};
 		this._options = options;
 		this._socketConstructor = socketConstructor;
 	}
