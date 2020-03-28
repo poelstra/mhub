@@ -26,5 +26,7 @@ export function getMatcher(pattern?: MatchSpec): Matcher {
 	if (typeof pattern === "function") {
 		return pattern;
 	}
-	return micromatch.matcher(pattern);
+	return micromatch.matcher(pattern, {
+		strictSlashes: true,
+	});
 }

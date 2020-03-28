@@ -51,7 +51,7 @@
   "homepage": "https://github.com/poelstra/mhub#readme",
   "devDependencies": {
     "@types/chai": "^3.4.34",
-    "@types/micromatch": "^3.1.0",
+    "@types/micromatch": "^4.0.1",
     "@types/mocha": "^2.2.32",
     "chai": "^3.5.0",
     "coveralls": "^3.0.3",
@@ -67,7 +67,7 @@
     "@types/node": "^12.12.31",
     "@types/ws": "^7.2.3",
     "@types/yargs": "^15.0.4",
-    "micromatch": "^3.1.10",
+    "micromatch": "^4.0.2",
     "mkdirp": "^1.0.3",
     "source-map-support": "^0.5.16",
     "ws": "^7.2.3",
