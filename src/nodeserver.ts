@@ -28,6 +28,7 @@ export interface Binding {
 export interface WSServerOptions extends TlsOptions {
 	type: "websocket";
 	port?: number; // default 13900 (ws) or 13901 (wss)
+	server?: http.Server | https.Server;	// optional server to pass in
 }
 
 export interface TcpServerOptions {
@@ -218,7 +219,9 @@ export class MServer {
 
 			options.port = options.port || (useTls ? DEFAULT_PORT_WSS : DEFAULT_PORT_WS);
 
-			if (useTls) {
+			if (options.server) {
+				server = options.server;
+			} else if (useTls) {
 				server = https.createServer(options);
 			} else {
 				server = http.createServer();
@@ -230,14 +233,17 @@ export class MServer {
 				new WSConnection(hub, conn, "websocket" + this.connectionId++);
 			});
 
-			server.listen(options.port, (): void => {
+			server.on("listening", () => {
 				this.log(`WebSocket Server started on port ${options.port}${useTls ? " (TLS)" : ""}`);
 				resolve(undefined);
 			});
-
 			server.on("error", (e: Error): void => {
 				reject(e);
 			});
+
+			if (!options.server) {
+				server.listen(options.port);
+			}
 		});
 	}
 
