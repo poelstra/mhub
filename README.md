@@ -1093,6 +1093,12 @@ before sending a pull-request.
 The list below shows notable changes between each release.
 For details, see the version tags at GitHub.
 
+2.1.0 (2020-04-21):
+- authentication: Allow asynchronous authentication backend (#19), thanks to @rikkertkoppes
+- server: Export most types to allow easy embedding of MHub (server) in your own app,
+  add docs and example source code on how to do it
+- all: Upgrade dependencies to latest versions (incl Typescript)
+
 2.0.0 (2019-07-20):
 - all: Switch to native promises (breaking change because any returned promise now e.g. doesn't
   have methods like `.return()` or `.delay()` anymore)
