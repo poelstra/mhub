@@ -68,6 +68,29 @@ export interface Connection extends events.EventEmitter {
 	terminate(): Promise<void>;
 }
 
+export interface BaseClient {
+	/**
+	 * Attach event handler for connection established event.
+	 */
+	on(event: "open", listener: () => void): this;
+	/**
+	 * Attache event handler for connection closed event.
+	 */
+	// tslint:disable-next-line: unified-signatures
+	on(event: "close", listener: () => void): this;
+
+	/**
+	 * Attach event handler for error event.
+	 */
+	on(event: "error", listener: (error: Error) => void): this;
+
+	/**
+	 * Attach event handler for receiving a new message.
+	 * If no explicit subscriptionId was passed during subscribe, string "default" is used.
+	 */
+	on(event: "message", listener: (message: Message, subscriptionId: string) => void): this;
+}
+
 /**
  * Abstract MHub client.
  *
