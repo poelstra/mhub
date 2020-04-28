@@ -308,6 +308,8 @@ export class HubClient extends events.EventEmitter {
 		}
 		this.setUsername(msg.username);
 
+		log.info(`[ ${this.name} ] logged in as ${msg.username}`);
+
 		if (protocol.hasSequenceNumber(msg)) {
 			return {
 				type: "loginack",
