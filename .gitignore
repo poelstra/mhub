@@ -3,4 +3,5 @@
 /dist/
 /npm-debug.log
 /todo.txt
+/*.todo.txt
 /storage/
