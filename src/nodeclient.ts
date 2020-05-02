@@ -133,7 +133,7 @@ export class MClient extends BaseClient {
 	 */
 	constructor(url: string, options?: MClientOptions) {
 		// Ensure options is an object and fill in defaults
-		options = {...defaultClientOptions, ...options};
+		options = { ...defaultClientOptions, ...options };
 
 		// Prefix URL with "ws://" or "wss://" if needed
 		if (url.indexOf("://") < 0) {
@@ -149,10 +149,7 @@ export class MClient extends BaseClient {
 			url = url + ":" + (useTls ? DEFAULT_PORT_WSS : DEFAULT_PORT_WS);
 		}
 
-		super(
-			() => new WebSocketConnection(url, options),
-			options
-		);
+		super(() => new WebSocketConnection(url, options), options);
 
 		this._url = url;
 

@@ -34,7 +34,7 @@ describe("hub", (): void => {
 	afterEach(() => client.close());
 
 	describe("subscribe", () => {
-		let msgs: { [id: string]: Message[]; };
+		let msgs: { [id: string]: Message[] };
 
 		beforeEach(() => {
 			client.on("message", (msg: Message, id: string) => {
@@ -127,7 +127,7 @@ describe("hub", (): void => {
 	});
 
 	describe("unsubscribe", () => {
-		let msgs: { [id: string]: Message[]; };
+		let msgs: { [id: string]: Message[] };
 
 		beforeEach(() => {
 			client.on("message", (msg: Message, id: string) => {
@@ -214,9 +214,7 @@ describe("hub", (): void => {
 				.then(() => client.publish("default", "/ja/ja"))
 				.then(() => {
 					expect(msgs).to.deep.equal({
-						default: [
-							new Message("/ja/ja", undefined, {}),
-						],
+						default: [new Message("/ja/ja", undefined, {})],
 					});
 				});
 		});

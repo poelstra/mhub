@@ -10,12 +10,14 @@ export class TestSource extends pubsub.BaseSource {
 	constructor(name: string, options?: TestSourceOptions) {
 		super(name);
 
-		const topic: string = options && options.topic || "blib";
-		const interval: number = options && options.interval || 5000;
+		const topic: string = (options && options.topic) || "blib";
+		const interval: number = (options && options.interval) || 5000;
 		let blibCount = 0;
-		const sender = () => { this._broadcast(new Message(topic, blibCount++)); };
+		const sender = () => {
+			this._broadcast(new Message(topic, blibCount++));
+		};
 		// setTimeout(sender, 0); // Send one right away TODO make this wait for init to be complete!
-		setInterval(sender,	interval);
+		setInterval(sender, interval);
 	}
 }
 

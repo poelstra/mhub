@@ -47,7 +47,7 @@ function createHub(storage: Storage<any>): Hub {
 describe("nodes/HeaderStore", (): void => {
 	let hub: Hub;
 	let client: LocalClient;
-	let msgs: { [id: string]: Message[]; };
+	let msgs: { [id: string]: Message[] };
 
 	beforeEach(() => {
 		hub = createHub(new MemStorage());
@@ -69,7 +69,9 @@ describe("nodes/HeaderStore", (): void => {
 	it("keeps message when header is set", () => {
 		return Promise.resolve()
 			.then(() => client.publish("default", "a"))
-			.then(() => client.publish("default", "b", undefined, { keep: true }))
+			.then(() =>
+				client.publish("default", "b", undefined, { keep: true })
+			)
 			.then(() => client.close())
 			.then(() => client.connect())
 			.then(() => client.subscribe("default"))
@@ -87,18 +89,42 @@ describe("nodes/HeaderStore", (): void => {
 	it("maintains topic order", () => {
 		// Note the order: ABC DEF CBA DEF
 		return Promise.resolve()
-			.then(() => client.publish("default", "a", undefined, { keep: true }))
-			.then(() => client.publish("default", "b", undefined, { keep: true }))
-			.then(() => client.publish("default", "c", undefined, { keep: true }))
-			.then(() => client.publish("default", "d", undefined, { keep: true }))
-			.then(() => client.publish("default", "e", undefined, { keep: true }))
-			.then(() => client.publish("default", "f", undefined, { keep: true }))
-			.then(() => client.publish("default", "c", undefined, { keep: true }))
-			.then(() => client.publish("default", "b", undefined, { keep: true }))
-			.then(() => client.publish("default", "a", undefined, { keep: true }))
-			.then(() => client.publish("default", "d", undefined, { keep: true }))
-			.then(() => client.publish("default", "e", undefined, { keep: true }))
-			.then(() => client.publish("default", "f", undefined, { keep: true }))
+			.then(() =>
+				client.publish("default", "a", undefined, { keep: true })
+			)
+			.then(() =>
+				client.publish("default", "b", undefined, { keep: true })
+			)
+			.then(() =>
+				client.publish("default", "c", undefined, { keep: true })
+			)
+			.then(() =>
+				client.publish("default", "d", undefined, { keep: true })
+			)
+			.then(() =>
+				client.publish("default", "e", undefined, { keep: true })
+			)
+			.then(() =>
+				client.publish("default", "f", undefined, { keep: true })
+			)
+			.then(() =>
+				client.publish("default", "c", undefined, { keep: true })
+			)
+			.then(() =>
+				client.publish("default", "b", undefined, { keep: true })
+			)
+			.then(() =>
+				client.publish("default", "a", undefined, { keep: true })
+			)
+			.then(() =>
+				client.publish("default", "d", undefined, { keep: true })
+			)
+			.then(() =>
+				client.publish("default", "e", undefined, { keep: true })
+			)
+			.then(() =>
+				client.publish("default", "f", undefined, { keep: true })
+			)
 			.then(() => client.close())
 			.then(() => client.connect())
 			.then(() => client.subscribe("default"))
@@ -120,8 +146,12 @@ describe("nodes/HeaderStore", (): void => {
 
 	it("only returns subscribed messages", () => {
 		return Promise.resolve()
-			.then(() => client.publish("default", "a", undefined, { keep: true }))
-			.then(() => client.publish("default", "b", undefined, { keep: true }))
+			.then(() =>
+				client.publish("default", "a", undefined, { keep: true })
+			)
+			.then(() =>
+				client.publish("default", "b", undefined, { keep: true })
+			)
 			.then(() => client.close())
 			.then(() => client.connect())
 			.then(() => client.subscribe("default", "a", "id1"))
@@ -129,12 +159,8 @@ describe("nodes/HeaderStore", (): void => {
 			.then(() => client.publish("default", "x"))
 			.then(() => {
 				expect(msgs).to.deep.equal({
-					id1: [
-						new Message("a", undefined, { keep: true }),
-					],
-					id2: [
-						new Message("b", undefined, { keep: true }),
-					],
+					id1: [new Message("a", undefined, { keep: true })],
+					id2: [new Message("b", undefined, { keep: true })],
 				});
 			});
 	});

@@ -11,18 +11,8 @@
 		"preserveConstEnums": true,
 		"sourceMap": true,
 		"outDir": "../dist/",
-		"types": [
-			"node", "mocha"
-		],
-		"lib": [
-			"dom",
-			"es6",
-			"es2015.promise",
-			"es2018.promise"
-		]
+		"types": ["node", "mocha"],
+		"lib": ["dom", "es6", "es2015.promise", "es2018.promise"]
 	},
-	"include": [
-		"**/*.ts",
-		"../src/type-overrides.d.ts"
-	]
+	"include": ["**/*.ts", "../src/type-overrides.d.ts"]
 }

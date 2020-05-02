@@ -12,14 +12,7 @@
 		"preserveConstEnums": true,
 		"sourceMap": true,
 		"outDir": "../dist/src/",
-		"types": [
-			"node"
-		],
-		"lib": [
-			"dom",
-			"es6",
-			"es2015.promise",
-			"es2018.promise"
-		]
+		"types": ["node"],
+		"lib": ["dom", "es6", "es2015.promise", "es2018.promise"]
 	}
 }

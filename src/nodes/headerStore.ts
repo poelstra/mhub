@@ -37,7 +37,8 @@ const MESSAGE_HEADER_NAME = "keep";
  * When a new Destination binds to this, all currently remembered topics are
  * sent to it.
  */
-export class HeaderStore extends pubsub.BaseSource implements pubsub.Initializable {
+export class HeaderStore extends pubsub.BaseSource
+	implements pubsub.Initializable {
 	public name: string;
 
 	// tslint:disable-next-line:no-null-keyword
@@ -59,19 +60,26 @@ export class HeaderStore extends pubsub.BaseSource implements pubsub.Initializab
 		if (!this._storage) {
 			return Promise.resolve(undefined);
 		}
-		return this._storage.load(this.name).then((data?: HeaderStoreStorage) => {
-			if (!data || typeof data !== "object") {
-				return;
-			}
-			if (data.type !== HEADER_STORE_STORAGE_ID || data.version !== HEADER_STORE_STORAGE_VERSION) {
-				log.warning(`Warning: discarding invalid storage ID / version for node '${this.name}'`);
-				return;
-			}
-			// tslint:disable-next-line:forin
-			for (const topic in data.state) {
-				this._state[topic] = Message.fromObject(data.state[topic]);
-			}
-		});
+		return this._storage
+			.load(this.name)
+			.then((data?: HeaderStoreStorage) => {
+				if (!data || typeof data !== "object") {
+					return;
+				}
+				if (
+					data.type !== HEADER_STORE_STORAGE_ID ||
+					data.version !== HEADER_STORE_STORAGE_VERSION
+				) {
+					log.warning(
+						`Warning: discarding invalid storage ID / version for node '${this.name}'`
+					);
+					return;
+				}
+				// tslint:disable-next-line:forin
+				for (const topic in data.state) {
+					this._state[topic] = Message.fromObject(data.state[topic]);
+				}
+			});
 	}
 
 	public send(message: Message): void {
@@ -86,15 +94,19 @@ export class HeaderStore extends pubsub.BaseSource implements pubsub.Initializab
 				this._state[topic] = message;
 			}
 			if (this._storage) {
-				this._storage.save(this.name, {
-					type: HEADER_STORE_STORAGE_ID,
-					version: HEADER_STORE_STORAGE_VERSION,
-					state: this._state,
-				}).catch((err: any) => {
-					log.error(`Error saving topic data in node '${this.name}': ${err}`);
-					// TODO replace with a more appropriate mechanism
-					process.exit(1);
-				});
+				this._storage
+					.save(this.name, {
+						type: HEADER_STORE_STORAGE_ID,
+						version: HEADER_STORE_STORAGE_VERSION,
+						state: this._state,
+					})
+					.catch((err: any) => {
+						log.error(
+							`Error saving topic data in node '${this.name}': ${err}`
+						);
+						// TODO replace with a more appropriate mechanism
+						process.exit(1);
+					});
 			}
 		}
 

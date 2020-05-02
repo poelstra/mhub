@@ -55,7 +55,10 @@ describe("auth", (): void => {
 
 	afterEach(() => client.close());
 
-	function expectErrorContaining(p: Promise<void>, message: string): Promise<void> {
+	function expectErrorContaining(
+		p: Promise<void>,
+		message: string
+	): Promise<void> {
 		return p.catch((err) => {
 			expect(err.message).to.contain(message);
 		});
@@ -70,44 +73,62 @@ describe("auth", (): void => {
 		return p;
 	}
 
-	function testDenyPublish(node: string = "default", topic: string = "topic"): void {
+	function testDenyPublish(
+		node: string = "default",
+		topic: string = "topic"
+	): void {
 		it(`deny publish topic ${topic} at node ${node}`, (): Promise<void> => {
 			return expectPermissionDenied(client.publish(node, topic));
 		});
-		it(
-			`doesn't give away node existence when permission denied for publish topic ${topic} at node ${node}`,
-			(): Promise<void> => {
-				let err1: Error;
-				let err2: Error;
-				return client.publish(node, topic)
-					.catch((err) => err1 = err)
-					.then(() => client.publish("nonexistent", topic))
-					.catch((err) => err2 = err)
-					.then(() => {
-						expect(err1).to.be.instanceof(Error);
-						expect(err2).to.be.instanceof(Error);
-						expect(err1.message).to.contain("permission denied");
-						expect(err1.message).to.equal(err2.message);
-						expect(err1.name).to.equal(err2.name);
-					});
-			}
-		);
+		it(`doesn't give away node existence when permission denied for publish topic ${topic} at node ${node}`, (): Promise<
+			void
+		> => {
+			let err1: Error;
+			let err2: Error;
+			return client
+				.publish(node, topic)
+				.catch((err) => (err1 = err))
+				.then(() => client.publish("nonexistent", topic))
+				.catch((err) => (err2 = err))
+				.then(() => {
+					expect(err1).to.be.instanceof(Error);
+					expect(err2).to.be.instanceof(Error);
+					expect(err1.message).to.contain("permission denied");
+					expect(err1.message).to.equal(err2.message);
+					expect(err1.name).to.equal(err2.name);
+				});
+		});
 	}
 
-	function testDenySubscribe(node: string = "default", pattern?: string): void {
-		it(`deny subscribe pattern ${pattern} at node ${node}`, (): Promise<void> => {
+	function testDenySubscribe(
+		node: string = "default",
+		pattern?: string
+	): void {
+		it(`deny subscribe pattern ${pattern} at node ${node}`, (): Promise<
+			void
+		> => {
 			return expectPermissionDenied(client.subscribe(node, pattern));
 		});
 	}
 
-	function testAllowPublish(node: string = "default", topic: string = "topic"): void {
-		it(`allow publish topic ${topic} at node ${node}`, (): Promise<void> => {
+	function testAllowPublish(
+		node: string = "default",
+		topic: string = "topic"
+	): void {
+		it(`allow publish topic ${topic} at node ${node}`, (): Promise<
+			void
+		> => {
 			return expectOk(client.publish(node, topic));
 		});
 	}
 
-	function testAllowSubscribe(node: string = "default", pattern?: string): void {
-		it(`allow subscribe pattern ${pattern} at node ${node}`, (): Promise<void> => {
+	function testAllowSubscribe(
+		node: string = "default",
+		pattern?: string
+	): void {
+		it(`allow subscribe pattern ${pattern} at node ${node}`, (): Promise<
+			void
+		> => {
 			return expectOk(client.subscribe(node, pattern));
 		});
 	}
@@ -117,35 +138,54 @@ describe("auth", (): void => {
 	// received by the subscription as expected.
 	// Note: topics may be filtered by both the subscription pattern AND authorization
 	// settings.
-	function testSubscribePatterns(node: string, pubSubDefinition: PubSubTestDefinition): void {
+	function testSubscribePatterns(
+		node: string,
+		pubSubDefinition: PubSubTestDefinition
+	): void {
 		// tslint:disable-next-line:forin
 		for (const subscriptionPattern in pubSubDefinition) {
 			const publishTests = pubSubDefinition[subscriptionPattern];
 			// tslint:disable-next-line:forin
 			for (const publishTopic in publishTests) {
 				const expectedResult = publishTests[publishTopic];
-				it(`subscription to ${node}:${subscriptionPattern || "<no pattern>"} ${expectedResult ? "passes" : "filters"} ` +
-						`${publishTopic}`, () => {
-					const msgs: Message[] = [];
-					client.on("message", (msg: Message) => msgs.push(msg));
-					return client.subscribe(node, subscriptionPattern)
-						.then(() => {
-							// Send message directly, bypassing any authentication
-							// that may exist for 'normal' clients.
-							hub.findDestination(node)!.send(new Message(publishTopic));
-							// Make sure all internal processing has completed, and any
-							// messages will have cleared queues.
-							return delay(0);
-						})
-						.then(() => {
-							if (expectedResult) {
-								expect(msgs.length).to.equal(1, "expected message to be received");
-								expect(msgs[0].topic).to.equal(publishTopic);
-							} else {
-								expect(msgs.length).to.equal(0, "expected message to not be received");
-							}
-						});
-				});
+				it(
+					`subscription to ${node}:${
+						subscriptionPattern || "<no pattern>"
+					} ${expectedResult ? "passes" : "filters"} ` +
+						`${publishTopic}`,
+					() => {
+						const msgs: Message[] = [];
+						client.on("message", (msg: Message) => msgs.push(msg));
+						return client
+							.subscribe(node, subscriptionPattern)
+							.then(() => {
+								// Send message directly, bypassing any authentication
+								// that may exist for 'normal' clients.
+								hub.findDestination(node)!.send(
+									new Message(publishTopic)
+								);
+								// Make sure all internal processing has completed, and any
+								// messages will have cleared queues.
+								return delay(0);
+							})
+							.then(() => {
+								if (expectedResult) {
+									expect(msgs.length).to.equal(
+										1,
+										"expected message to be received"
+									);
+									expect(msgs[0].topic).to.equal(
+										publishTopic
+									);
+								} else {
+									expect(msgs.length).to.equal(
+										0,
+										"expected message to not be received"
+									);
+								}
+							});
+					}
+				);
 			}
 		}
 	}
@@ -160,20 +200,31 @@ describe("auth", (): void => {
 		});
 
 		it("rejects incorrect user/pass", (): Promise<void> => {
-			return expectErrorContaining(client.login("foo", "wrong"), "authentication failed");
+			return expectErrorContaining(
+				client.login("foo", "wrong"),
+				"authentication failed"
+			);
 		});
 
 		it("rejects username starting with @", (): Promise<void> => {
-			return expectErrorContaining(client.login("@foo", "bar"), "invalid username");
+			return expectErrorContaining(
+				client.login("@foo", "bar"),
+				"invalid username"
+			);
 		});
 
 		it("rejects empty username", (): Promise<void> => {
-			return expectErrorContaining(client.login("", ""), "invalid username");
+			return expectErrorContaining(
+				client.login("", ""),
+				"invalid username"
+			);
 		});
 
 		it("rejects double login", (): Promise<void> => {
 			return expectErrorContaining(
-				client.login("foo", "bar").then(() => client.login("foo", "bar")),
+				client
+					.login("foo", "bar")
+					.then(() => client.login("foo", "bar")),
 				"already logged in"
 			);
 		});
@@ -214,134 +265,151 @@ describe("auth", (): void => {
 	});
 
 	describe("empty rights", () => {
-		beforeEach((): Promise<void> => {
-			auth.setUser("testUser", "");
-			hub.setRights({
-				"testUser": {
-				},
-			});
-			return client.login("testUser", "");
-		});
+		beforeEach(
+			(): Promise<void> => {
+				auth.setUser("testUser", "");
+				hub.setRights({
+					testUser: {},
+				});
+				return client.login("testUser", "");
+			}
+		);
 		testDenyPublish();
 		testDenySubscribe();
 	});
 
 	describe("`false` rights", () => {
-		beforeEach((): Promise<void> => {
-			auth.setUser("testUser", "");
-			hub.setRights({
-				"testUser": false,
-			});
-			return client.login("testUser", "");
-		});
+		beforeEach(
+			(): Promise<void> => {
+				auth.setUser("testUser", "");
+				hub.setRights({
+					testUser: false,
+				});
+				return client.login("testUser", "");
+			}
+		);
 		testDenyPublish();
 		testDenySubscribe();
 	});
 
 	describe("`true` rights", () => {
-		beforeEach((): Promise<void> => {
-			auth.setUser("testUser", "");
-			hub.setRights({
-				"testUser": true,
-			});
-			return client.login("testUser", "");
-		});
+		beforeEach(
+			(): Promise<void> => {
+				auth.setUser("testUser", "");
+				hub.setRights({
+					testUser: true,
+				});
+				return client.login("testUser", "");
+			}
+		);
 		testAllowPublish();
 		testAllowSubscribe();
 	});
 
 	describe("only publish rights", () => {
-		beforeEach((): Promise<void> => {
-			auth.setUser("testUser", "");
-			hub.setRights({
-				"testUser": {
-					publish: true,
-				},
-			});
-			return client.login("testUser", "");
-		});
+		beforeEach(
+			(): Promise<void> => {
+				auth.setUser("testUser", "");
+				hub.setRights({
+					testUser: {
+						publish: true,
+					},
+				});
+				return client.login("testUser", "");
+			}
+		);
 		testAllowPublish();
 		testDenySubscribe();
 	});
 
 	describe("only subscribe rights", () => {
-		beforeEach((): Promise<void> => {
-			auth.setUser("testUser", "");
-			hub.setRights({
-				"testUser": {
-					subscribe: true,
-				},
-			});
-			return client.login("testUser", "");
-		});
+		beforeEach(
+			(): Promise<void> => {
+				auth.setUser("testUser", "");
+				hub.setRights({
+					testUser: {
+						subscribe: true,
+					},
+				});
+				return client.login("testUser", "");
+			}
+		);
 		testDenyPublish();
 		testAllowSubscribe();
 	});
 
 	describe("allow publish on a node", () => {
-		beforeEach((): Promise<void> => {
-			auth.setUser("testUser", "");
-			hub.add(new Exchange("someNode"));
-			hub.setRights({
-				"testUser": {
-					publish: {
-						"someNode": true,
+		beforeEach(
+			(): Promise<void> => {
+				auth.setUser("testUser", "");
+				hub.add(new Exchange("someNode"));
+				hub.setRights({
+					testUser: {
+						publish: {
+							someNode: true,
+						},
 					},
-				},
-			});
-			return client.login("testUser", "");
-		});
+				});
+				return client.login("testUser", "");
+			}
+		);
 		testDenyPublish("default");
 		testAllowPublish("someNode");
 	});
 
 	describe("deny publish on a node", () => {
-		beforeEach((): Promise<void> => {
-			auth.setUser("testUser", "");
-			hub.add(new Exchange("someNode"));
-			hub.setRights({
-				"testUser": {
-					publish: {
-						"someNode": false,
+		beforeEach(
+			(): Promise<void> => {
+				auth.setUser("testUser", "");
+				hub.add(new Exchange("someNode"));
+				hub.setRights({
+					testUser: {
+						publish: {
+							someNode: false,
+						},
 					},
-				},
-			});
-			return client.login("testUser", "");
-		});
+				});
+				return client.login("testUser", "");
+			}
+		);
 		testDenyPublish("someNode");
 	});
 
 	describe("allow publish on a node+topic", () => {
-		beforeEach((): Promise<void> => {
-			auth.setUser("testUser", "");
-			hub.add(new Exchange("someNode"));
-			hub.setRights({
-				"testUser": {
-					publish: {
-						"someNode": "/foo/bar/baz",
+		beforeEach(
+			(): Promise<void> => {
+				auth.setUser("testUser", "");
+				hub.add(new Exchange("someNode"));
+				hub.setRights({
+					testUser: {
+						publish: {
+							someNode: "/foo/bar/baz",
+						},
 					},
-				},
-			});
-			return client.login("testUser", "");
-		});
+				});
+				return client.login("testUser", "");
+			}
+		);
 		testDenyPublish("someNode", "foo");
 		testAllowPublish("someNode", "/foo/bar/baz");
 		testDenyPublish("otherNode", "/foo/bar/baz");
 	});
 
 	describe("allow publish on a node+pattern", () => {
-		beforeEach((): Promise<void> => {
-			auth.setUser("testUser", "");
-			hub.add(new Exchange("someNode"));
-			hub.setRights({
-				"testUser": {
-					publish: {
-						"someNode": "/foo/**",
+		beforeEach(
+			(): Promise<void> => {
+				auth.setUser("testUser", "");
+				hub.add(new Exchange("someNode"));
+				hub.setRights({
+					testUser: {
+						publish: {
+							someNode: "/foo/**",
+						},
 					},
-				},
-			});
-			return client.login("testUser", "");
-		});
+				});
+				return client.login("testUser", "");
+			}
+		);
 		testDenyPublish("someNode", "foo");
 		testAllowPublish("someNode", "/foo/bar/baz");
 		testAllowPublish("someNode", "/foo/flep");
@@ -349,18 +417,20 @@ describe("auth", (): void => {
 	});
 
 	describe("allow publish on a node+multiple patterns", () => {
-		beforeEach((): Promise<void> => {
-			auth.setUser("testUser", "");
-			hub.add(new Exchange("someNode"));
-			hub.setRights({
-				"testUser": {
-					publish: {
-						"someNode": ["test", "/foo/**"],
+		beforeEach(
+			(): Promise<void> => {
+				auth.setUser("testUser", "");
+				hub.add(new Exchange("someNode"));
+				hub.setRights({
+					testUser: {
+						publish: {
+							someNode: ["test", "/foo/**"],
+						},
 					},
-				},
-			});
-			return client.login("testUser", "");
-		});
+				});
+				return client.login("testUser", "");
+			}
+		);
 		testAllowPublish("someNode", "test");
 		testDenyPublish("someNode", "testfoo");
 		testAllowPublish("someNode", "/foo/bar/baz");
@@ -368,18 +438,20 @@ describe("auth", (): void => {
 	});
 
 	describe("allow subscribe on a node", () => {
-		beforeEach((): Promise<void> => {
-			auth.setUser("testUser", "");
-			hub.add(new Exchange("someNode"));
-			hub.setRights({
-				"testUser": {
-					subscribe: {
-						"someNode": true,
+		beforeEach(
+			(): Promise<void> => {
+				auth.setUser("testUser", "");
+				hub.add(new Exchange("someNode"));
+				hub.setRights({
+					testUser: {
+						subscribe: {
+							someNode: true,
+						},
 					},
-				},
-			});
-			return client.login("testUser", "");
-		});
+				});
+				return client.login("testUser", "");
+			}
+		);
 		testDenySubscribe("default");
 		testAllowSubscribe("someNode");
 		testAllowSubscribe("someNode", "**");
@@ -401,36 +473,40 @@ describe("auth", (): void => {
 	});
 
 	describe("deny subscribe on a node", () => {
-		beforeEach((): Promise<void> => {
-			auth.setUser("testUser", "");
-			hub.add(new Exchange("someNode"));
-			hub.setRights({
-				"testUser": {
-					subscribe: {
-						"someNode": false,
+		beforeEach(
+			(): Promise<void> => {
+				auth.setUser("testUser", "");
+				hub.add(new Exchange("someNode"));
+				hub.setRights({
+					testUser: {
+						subscribe: {
+							someNode: false,
+						},
 					},
-				},
-			});
-			return client.login("testUser", "");
-		});
+				});
+				return client.login("testUser", "");
+			}
+		);
 		testDenySubscribe("someNode");
 		testDenySubscribe("someNode", "**");
 		testDenySubscribe("someNode", "/foo/bar");
 	});
 
 	describe("subscriptions with permission someNode:/foo/bar/baz", () => {
-		beforeEach((): Promise<void> => {
-			auth.setUser("testUser", "");
-			hub.add(new Exchange("someNode"));
-			hub.setRights({
-				"testUser": {
-					subscribe: {
-						"someNode": "/foo/bar/baz",
+		beforeEach(
+			(): Promise<void> => {
+				auth.setUser("testUser", "");
+				hub.add(new Exchange("someNode"));
+				hub.setRights({
+					testUser: {
+						subscribe: {
+							someNode: "/foo/bar/baz",
+						},
 					},
-				},
-			});
-			return client.login("testUser", "");
-		});
+				});
+				return client.login("testUser", "");
+			}
+		);
 		testDenySubscribe("otherNode");
 		testDenySubscribe("otherNode", "**");
 		testAllowSubscribe("someNode");
@@ -462,18 +538,20 @@ describe("auth", (): void => {
 	});
 
 	describe("subscriptions with permission someNode:/foo/**", () => {
-		beforeEach((): Promise<void> => {
-			auth.setUser("testUser", "");
-			hub.add(new Exchange("someNode"));
-			hub.setRights({
-				"testUser": {
-					subscribe: {
-						"someNode": "/foo/**",
+		beforeEach(
+			(): Promise<void> => {
+				auth.setUser("testUser", "");
+				hub.add(new Exchange("someNode"));
+				hub.setRights({
+					testUser: {
+						subscribe: {
+							someNode: "/foo/**",
+						},
 					},
-				},
-			});
-			return client.login("testUser", "");
-		});
+				});
+				return client.login("testUser", "");
+			}
+		);
 		testDenySubscribe("otherNode");
 		testDenySubscribe("otherNode", "**");
 
@@ -493,7 +571,7 @@ describe("auth", (): void => {
 				"/foo/bar": true,
 				"/foo/": true,
 				"/foo": false,
-				"foo": false,
+				foo: false,
 			},
 			"*": {
 				"/foo/bar/baz": false,
@@ -517,18 +595,20 @@ describe("auth", (): void => {
 	});
 
 	describe("subscriptions with permissions someNode:test and someNode:/foo/**", () => {
-		beforeEach((): Promise<void> => {
-			auth.setUser("testUser", "");
-			hub.add(new Exchange("someNode"));
-			hub.setRights({
-				"testUser": {
-					subscribe: {
-						"someNode": ["test", "/foo/**"],
+		beforeEach(
+			(): Promise<void> => {
+				auth.setUser("testUser", "");
+				hub.add(new Exchange("someNode"));
+				hub.setRights({
+					testUser: {
+						subscribe: {
+							someNode: ["test", "/foo/**"],
+						},
 					},
-				},
-			});
-			return client.login("testUser", "");
-		});
+				});
+				return client.login("testUser", "");
+			}
+		);
 		testAllowSubscribe("someNode", "foo");
 		testDenySubscribe("someNode", "foobar");
 		testAllowSubscribe("someNode", "/foo/bar/baz");
@@ -541,30 +621,30 @@ describe("auth", (): void => {
 				"/foo/bar": true,
 				"/foo/": true,
 				"/foo": false,
-				"foo": false,
-				"test": true,
+				foo: false,
+				test: true,
 			},
 			"*": {
 				"/foo/bar/baz": false,
 				"/foo": false,
-				"test": true,
+				test: true,
 			},
 			"**": {
 				"/foo/bar/baz": true,
 				"/foo": false,
-				"test": true,
+				test: true,
 			},
 			"/foo/bar/baz": {
 				"/foo/bar/baz": true,
 				"/foo/bar": false,
-				"test": false,
+				test: false,
 			},
 			"/**/baz": {
 				"/foo/bar/baz": true,
 				"/foo/meh/baz": true,
 				"/meh/foo/baz": false,
 				"/foo/bar": false,
-				"test": false,
+				test: false,
 			},
 		});
 	});

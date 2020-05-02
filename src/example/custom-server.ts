@@ -100,7 +100,7 @@ async function startWebsocketServer(hub: Hub): Promise<void> {
 
 	const port = 13900;
 	await new Promise((resolve, reject) => {
-		wss.once("error", err => reject(err));
+		wss.once("error", (err) => reject(err));
 		httpServer.listen(port, (): void => {
 			log.info(`WebSocket Server started on port ${port}`);
 			resolve();
@@ -159,4 +159,4 @@ function die(fmt: string, ...args: any[]): void {
 	process.exit(1);
 }
 
-main().catch(err => die("main crashed", err));
+main().catch((err) => die("main crashed", err));

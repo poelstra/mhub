@@ -20,12 +20,22 @@ function convertToBuffer(value: any, rootDir: string): any {
 }
 
 /// Convert filenames to the contents of these files
-export function replaceKeyFiles(options: tls.TlsOptions, rootDir: string): void {
+export function replaceKeyFiles(
+	options: tls.TlsOptions,
+	rootDir: string
+): void {
 	// tslint:disable-next-line:array-type
-	(<Array<keyof tls.TlsOptions>>["pfx", "key", "cert", "crl", "ca", "dhparam", "ticketKeys"])
-		.forEach((propName: keyof tls.TlsOptions) => {
-			if (options[propName]) {
-				options[propName] = convertToBuffer(options[propName], rootDir);
-			}
-		});
+	(<Array<keyof tls.TlsOptions>>[
+		"pfx",
+		"key",
+		"cert",
+		"crl",
+		"ca",
+		"dhparam",
+		"ticketKeys",
+	]).forEach((propName: keyof tls.TlsOptions) => {
+		if (options[propName]) {
+			options[propName] = convertToBuffer(options[propName], rootDir);
+		}
+	});
 }

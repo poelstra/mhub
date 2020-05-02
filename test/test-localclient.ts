@@ -26,7 +26,7 @@ describe("LocalClient", () => {
 		const hub = createHub();
 		const client = new LocalClient(hub, "test");
 		let received: Message;
-		client.on("message", (msg: Message) => received = msg);
+		client.on("message", (msg: Message) => (received = msg));
 		return Promise.resolve()
 			.then(() => client.connect())
 			.then(() => client.subscribe("default"))
@@ -39,7 +39,7 @@ describe("LocalClient", () => {
 		const hub = createHub();
 		const client = new LocalClient(hub, "test");
 		let received: Message;
-		client.on("message", (msg: Message) => received = msg);
+		client.on("message", (msg: Message) => (received = msg));
 		return Promise.resolve()
 			.then(() => client.connect())
 			.then(() => client.publish("default", "a"))

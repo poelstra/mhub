@@ -40,8 +40,9 @@ const args = yargs
 	.option("socket", {
 		type: "string",
 		alias: "s",
-		description: "WebSocket to connect to, specify as [protocol://]host[:port], e.g. ws://localhost:13900, " +
-				"or wss://localhost:13900",
+		description:
+			"WebSocket to connect to, specify as [protocol://]host[:port], e.g. ws://localhost:13900, " +
+			"or wss://localhost:13900",
 		required: true,
 		default: "localhost:13900",
 	})
@@ -76,21 +77,25 @@ const args = yargs
 	.option("data", {
 		type: "string",
 		alias: "d",
-		description: "Optional message data as JSON object, e.g. '\"a string\"' or '{ \"foo\": \"bar\" }'",
+		description:
+			'Optional message data as JSON object, e.g. \'"a string"\' or \'{ "foo": "bar" }\'',
 	})
 	.option("headers", {
 		type: "string",
 		alias: "h",
-		description: "Optional message headers as JSON object, e.g. '{ \"my-header\": \"foo\" }'",
+		description:
+			'Optional message headers as JSON object, e.g. \'{ "my-header": "foo" }\'',
 	})
 	.option("input", {
 		type: "string",
 		alias: "i",
-		description: "Read lines from stdin, post each line to server. <input_format> can be: text, json",
+		description:
+			"Read lines from stdin, post each line to server. <input_format> can be: text, json",
 	})
 	.option("insecure", {
 		type: "boolean",
-		description: "Disable server certificate validation, useful for testing using self-signed certificates",
+		description:
+			"Disable server certificate validation, useful for testing using self-signed certificates",
 	})
 	.option("key", {
 		type: "string",
@@ -110,7 +115,8 @@ const args = yargs
 	})
 	.option("pfx", {
 		type: "string",
-		description: "Filename of TLS private key, certificate and CA certificates " +
+		description:
+			"Filename of TLS private key, certificate and CA certificates " +
 			"(in PFX or PKCS12 format). Mutually exclusive with --key, --cert and --ca.",
 	})
 	.option("crl", {
@@ -129,8 +135,9 @@ const args = yargs
 	.option("password", {
 		type: "string",
 		alias: "P",
-		description: "Password. Note: sent in plain-text, so only use on secure connection. " +
-				"Also note it may appear in e.g. `ps` output.",
+		description:
+			"Password. Note: sent in plain-text, so only use on secure connection. " +
+			"Also note it may appear in e.g. `ps` output.",
 	})
 	.strict();
 
@@ -173,43 +180,46 @@ function createClient(argv: any): Promise<MClient> {
 		die("Client error:", e);
 	});
 
-	return client.connect().then(() => {
-		if (argv.username) {
-			return client.login(argv.username, argv.password || "");
-		}
-	}).then(() => client);
+	return client
+		.connect()
+		.then(() => {
+			if (argv.username) {
+				return client.login(argv.username, argv.password || "");
+			}
+		})
+		.then(() => client);
 }
 
 function listenMode(): void {
 	const argv = args.argv;
 	const format = parseOutputFormat(argv.output);
-	createClient(argv).then((client) => {
-		client.on("message", (msg: Message): void => {
-			switch (format) {
-				case OutputFormat.Human:
-					console.log(msg);
-					break;
-				case OutputFormat.Text:
-					console.log(msg.data);
-					break;
-				case OutputFormat.JsonData:
-					console.log(JSON.stringify(msg.data));
-					break;
-				case OutputFormat.Json:
-					console.log(JSON.stringify(msg));
-					break;
-				default:
-					die("Unknown output format:", format);
-			}
-		});
-		return client.subscribe(argv.node, argv.pattern);
-	}).catch(die);
+	createClient(argv)
+		.then((client) => {
+			client.on("message", (msg: Message): void => {
+				switch (format) {
+					case OutputFormat.Human:
+						console.log(msg);
+						break;
+					case OutputFormat.Text:
+						console.log(msg.data);
+						break;
+					case OutputFormat.JsonData:
+						console.log(JSON.stringify(msg.data));
+						break;
+					case OutputFormat.Json:
+						console.log(JSON.stringify(msg));
+						break;
+					default:
+						die("Unknown output format:", format);
+				}
+			});
+			return client.subscribe(argv.node, argv.pattern);
+		})
+		.catch(die);
 }
 
 function postMode(): void {
-	const argv = args
-		.require("topic", true)
-		.argv;
+	const argv = args.require("topic", true).argv;
 
 	let data: any;
 	try {
@@ -218,7 +228,7 @@ function postMode(): void {
 		console.error("Error parsing message data as JSON:", e.message);
 		die(
 			"Hint: if you're passing a string, make sure to put double-quotes around it, " +
-			"and escape these quotes for your shell with single-quotes, e.g.: '\"my string\"'"
+				"and escape these quotes for your shell with single-quotes, e.g.: '\"my string\"'"
 		);
 	}
 
@@ -229,10 +239,14 @@ function postMode(): void {
 		die("Error parsing message headers as JSON: " + e.message);
 	}
 
-	createClient(argv).then((client) => {
-		const closer = () => client.close();
-		return client.publish(argv.node, argv.topic, data, headers).then(closer, closer);
-	}).catch(die);
+	createClient(argv)
+		.then((client) => {
+			const closer = () => client.close();
+			return client
+				.publish(argv.node, argv.topic, data, headers)
+				.then(closer, closer);
+		})
+		.catch(die);
 }
 
 enum InputFormat {
@@ -252,10 +266,7 @@ function parseInputFormat(s: string): InputFormat {
 }
 
 function pipeMode(): void {
-	const argv = args
-		.require("topic", true)
-		.require("input", true)
-		.argv;
+	const argv = args.require("topic", true).require("input", true).argv;
 
 	const format = parseInputFormat(argv.input);
 
@@ -267,65 +278,70 @@ function pipeMode(): void {
 	}
 
 	let ended = false;
-	createClient(argv).then((client) => {
-		// Connection opened, start reading lines from stdin
-		process.stdin.setEncoding("utf8");
-		process.stdin.on("readable", onRead);
-		process.stdin.on("end", onEnd);
+	createClient(argv)
+		.then((client) => {
+			// Connection opened, start reading lines from stdin
+			process.stdin.setEncoding("utf8");
+			process.stdin.on("readable", onRead);
+			process.stdin.on("end", onEnd);
 
-		let lineBuffer = "";
+			let lineBuffer = "";
 
-		function onRead(): void {
-			const chunk = process.stdin.read();
-			if (chunk === null) { // tslint:disable-line:no-null-keyword
-				return;
-			}
-			lineBuffer += chunk;
-			while (true) {
-				const p = lineBuffer.indexOf("\n");
-				if (p < 0) {
-					break;
+			function onRead(): void {
+				const chunk = process.stdin.read();
+				if (chunk === null) {
+					// tslint:disable-line:no-null-keyword
+					return;
 				}
-				handleLine(lineBuffer.slice(0, p));
-				lineBuffer = lineBuffer.slice(p + 1);
-			}
-		}
-
-		function onEnd(): void {
-			ended = true;
-			if (lineBuffer !== "") {
-				// Make sure to post remaining line, if non-empty
-				handleLine(lineBuffer);
-			} else {
-				// Otherwise, we're done
-				client.close();
-			}
-		}
-
-		function handleLine(line: string): void {
-			// Strip trailing \r if necessary
-			if (line[line.length - 1] === "\r") {
-				line = line.slice(0, -1);
-			}
-			let data: any;
-			if (format === InputFormat.Json) {
-				try {
-					data = JSON.parse(line);
-				} catch (e) {
-					die("Error parsing line as JSON: " + e.message);
+				lineBuffer += chunk;
+				while (true) {
+					const p = lineBuffer.indexOf("\n");
+					if (p < 0) {
+						break;
+					}
+					handleLine(lineBuffer.slice(0, p));
+					lineBuffer = lineBuffer.slice(p + 1);
 				}
-			} else {
-				data = line;
 			}
 
-			const closer = () => {
-				if (ended) {
+			function onEnd(): void {
+				ended = true;
+				if (lineBuffer !== "") {
+					// Make sure to post remaining line, if non-empty
+					handleLine(lineBuffer);
+				} else {
+					// Otherwise, we're done
 					client.close();
 				}
-			};
-			client.publish(argv.node, argv.topic, data, headers).then(closer, closer);
-		}
-	}).catch(die);
+			}
+
+			function handleLine(line: string): void {
+				// Strip trailing \r if necessary
+				if (line[line.length - 1] === "\r") {
+					line = line.slice(0, -1);
+				}
+				let data: any;
+				if (format === InputFormat.Json) {
+					try {
+						data = JSON.parse(line);
+					} catch (e) {
+						die("Error parsing line as JSON: " + e.message);
+					}
+				} else {
+					data = line;
+				}
+
+				const closer = () => {
+					if (ended) {
+						client.close();
+					}
+				};
+				client
+					.publish(argv.node, argv.topic, data, headers)
+					.then(closer, closer);
+			}
+		})
+		.catch(die);
 }
 
 function main(): void {

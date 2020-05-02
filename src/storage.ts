@@ -29,7 +29,7 @@ export interface Storage<T> {
 	 * @param  {string}     key Identifier of the data as used by `save()`
 	 * @return {Promise<T>}     Promise that resolves with the data, or `undefined` if not found
 	 */
-	load(key: string): Promise<T|undefined>;
+	load(key: string): Promise<T | undefined>;
 }
 
 export class SimpleFileStorage<T> implements Storage<T> {
@@ -72,8 +72,8 @@ export class SimpleFileStorage<T> implements Storage<T> {
 		});
 	}
 
-	public load(key: string): Promise<T|undefined> {
-		return new Promise<T|undefined>((resolve, reject) => {
+	public load(key: string): Promise<T | undefined> {
+		return new Promise<T | undefined>((resolve, reject) => {
 			fs.readFile(
 				this._getFilename(key),
 				"utf8",
@@ -146,20 +146,23 @@ export class ThrottledStorage<T> implements Storage<T> {
 		// schedule a new one
 		if (item.lastValue === undefined) {
 			item.lastValue = value;
-			item.promise = item.promise.then(() => delay(this._delay)).then(doSave).finally(() => {
-				// If there are no pending saves anymore, we can safely remove
-				// the record for this key, otherwise keep it until the scheduled
-				// save is done with it
-				if (item.lastValue === undefined) {
-					delete this._saveQueue[key];
-				}
-			});
+			item.promise = item.promise
+				.then(() => delay(this._delay))
+				.then(doSave)
+				.finally(() => {
+					// If there are no pending saves anymore, we can safely remove
+					// the record for this key, otherwise keep it until the scheduled
+					// save is done with it
+					if (item.lastValue === undefined) {
+						delete this._saveQueue[key];
+					}
+				});
 		}
 
 		return item.promise;
 	}
 
-	public load(key: string): Promise<T|undefined> {
+	public load(key: string): Promise<T | undefined> {
 		return this._slave.load(key);
 	}
 }

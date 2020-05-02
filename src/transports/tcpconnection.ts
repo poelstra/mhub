@@ -74,7 +74,8 @@ export class TcpConnection {
 			log.debug(`[ ${this._name} ] command ${line}`);
 			try {
 				const cmd: protocol.Command = JSON.parse(line);
-				this._client.processCommand(cmd)
+				this._client
+					.processCommand(cmd)
 					.catch((e: Error) => this._handleProtocolError(e));
 			} catch (e) {
 				this._handleProtocolError(e);

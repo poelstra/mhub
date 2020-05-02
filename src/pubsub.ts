@@ -37,7 +37,11 @@ export function isDestination(node: BaseNode | undefined): node is Destination {
 }
 
 export function isSource(node: BaseNode | undefined): node is Source {
-	return !!(node && typeof (<any>node).bind === "function" && typeof (<any>node).unbind === "function");
+	return !!(
+		node &&
+		typeof (<any>node).bind === "function" &&
+		typeof (<any>node).unbind === "function"
+	);
 }
 
 export type BaseNode = Source | Destination;
@@ -70,7 +74,7 @@ export class BaseSource implements Source {
 		}
 		// Create pattern matcher for this destination
 		b.matchers.push({
-			pattern: (pattern) ? pattern : "",
+			pattern: pattern ? pattern : "",
 			filter: getMatcher(pattern),
 		});
 	}
@@ -96,7 +100,11 @@ export class BaseSource implements Source {
 
 	protected _broadcast(message: Message): void {
 		this._bindings.forEach((b: Binding): void => {
-			if (b.matchers.some((m: MatchDef): boolean => m.filter(message.topic))) {
+			if (
+				b.matchers.some((m: MatchDef): boolean =>
+					m.filter(message.topic)
+				)
+			) {
 				b.destination.send(message);
 			}
 		});

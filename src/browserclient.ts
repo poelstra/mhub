@@ -13,11 +13,9 @@ const DEFAULT_PORT_WSS = 13901;
  * Options to be passed to MClient constructor.
  */
 // tslint:disable-next-line:no-empty-interface
-export interface MClientOptions extends BaseClientOptions {
-}
+export interface MClientOptions extends BaseClientOptions {}
 
-export const defaultClientOptions: MClientOptions = {
-};
+export const defaultClientOptions: MClientOptions = {};
 
 const CLOSE_GOING_AWAY = 1001; // https://developer.mozilla.org/en-US/docs/Web/API/CloseEvent#Status_codes
 
@@ -28,7 +26,9 @@ class WebSocketConnection extends events.EventEmitter implements Connection {
 		super();
 
 		this._socket = new WebSocket(url);
-		this._socket.addEventListener("error", (e: any) => this.emit("error", e));
+		this._socket.addEventListener("error", (e: any) =>
+			this.emit("error", e)
+		);
 		this._socket.addEventListener("open", () => {
 			this.emit("open");
 		});
@@ -68,7 +68,9 @@ class WebSocketConnection extends events.EventEmitter implements Connection {
 			result = Promise.resolve();
 		} else {
 			result = new Promise<void>((resolve) => {
-				this._socket.addEventListener("close", () => resolve(undefined));
+				this._socket.addEventListener("close", () =>
+					resolve(undefined)
+				);
 			});
 		}
 		this._socket.close(code);
@@ -84,7 +86,10 @@ class WebSocketConnection extends events.EventEmitter implements Connection {
 	}
 
 	private get _connected(): boolean {
-		return this._socket.readyState === WebSocket.CONNECTING || this._socket.readyState === WebSocket.OPEN;
+		return (
+			this._socket.readyState === WebSocket.CONNECTING ||
+			this._socket.readyState === WebSocket.OPEN
+		);
 	}
 }
 
@@ -108,7 +113,7 @@ export class MClient extends BaseClient {
 	 */
 	constructor(url: string, options?: MClientOptions) {
 		// Ensure options is an object and fill in defaults
-		options = {...defaultClientOptions, ...options};
+		options = { ...defaultClientOptions, ...options };
 
 		// Prefix URL with "ws://" if needed
 		if (url.indexOf("://") < 0) {
@@ -120,10 +125,7 @@ export class MClient extends BaseClient {
 			url = url + ":" + (useTls ? DEFAULT_PORT_WSS : DEFAULT_PORT_WS);
 		}
 
-		super(
-			() => new WebSocketConnection(url),
-			options
-		);
+		super(() => new WebSocketConnection(url), options);
 
 		this._url = url;
 	}

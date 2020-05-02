@@ -58,7 +58,8 @@ export class WSConnection {
 		log.debug(`[ ${this._name} ] command ${data}`);
 		try {
 			const cmd: protocol.Command = JSON.parse(data);
-			this._client.processCommand(cmd)
+			this._client
+				.processCommand(cmd)
 				.catch((e: Error) => this._handleProtocolError(e));
 		} catch (e) {
 			this._handleProtocolError(e);

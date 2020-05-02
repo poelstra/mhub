@@ -1,7 +1,7 @@
 language: node_js
 node_js:
-  - "12.14.1"
+    - "12.14.1"
 script:
-  - "npm run -s cover"
+    - "npm run -s cover"
 after_script:
-  - "nyc report --reporter=text-lcov | coveralls"
+    - "nyc report --reporter=text-lcov | coveralls"

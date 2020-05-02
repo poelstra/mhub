@@ -45,7 +45,11 @@ class SubscriptionNode implements pubsub.Destination {
 		this._onResponse(response);
 	}
 
-	public subscribe(node: pubsub.Source, pattern: string | undefined, matcher: MatchSpec): void {
+	public subscribe(
+		node: pubsub.Source,
+		pattern: string | undefined,
+		matcher: MatchSpec
+	): void {
 		let bindings = this._bindings.get(node.name);
 		if (!bindings) {
 			bindings = {
@@ -98,7 +102,9 @@ class SubscriptionNode implements pubsub.Destination {
 export class HubClient extends events.EventEmitter {
 	public name: string; // TODO move this to higher layer?
 	private _hub: Hub;
-	private _subscriptions: Dict<SubscriptionNode> = new Dict<SubscriptionNode>();
+	private _subscriptions: Dict<SubscriptionNode> = new Dict<
+		SubscriptionNode
+	>();
 	private _username: string | undefined;
 	private _authorizer: Authorizer;
 
@@ -186,7 +192,9 @@ export class HubClient extends events.EventEmitter {
 		}
 	}
 
-	private _handlePublish(msg: protocol.PublishCommand): protocol.PubAckResponse | undefined {
+	private _handlePublish(
+		msg: protocol.PublishCommand
+	): protocol.PubAckResponse | undefined {
 		if (!this._authorizer.canPublish(msg.node, msg.topic)) {
 			throw new Error("permission denied");
 		}
@@ -212,7 +220,9 @@ export class HubClient extends events.EventEmitter {
 		}
 	}
 
-	private _handleSubscribe(msg: protocol.SubscribeCommand): protocol.SubAckResponse | undefined {
+	private _handleSubscribe(
+		msg: protocol.SubscribeCommand
+	): protocol.SubAckResponse | undefined {
 		// First check whether (un-)subscribing is allowed at all, to
 		// prevent giving away info about (non-)existence of nodes.
 		const authResult = this._authorizer.canSubscribe(msg.node, msg.pattern);
@@ -241,7 +251,8 @@ export class HubClient extends events.EventEmitter {
 		const patternMatcher = getMatcher(msg.pattern);
 		let finalMatcher: (topic: string) => boolean;
 		if (typeof authResult === "function") {
-			finalMatcher = (topic) => authResult(topic) && patternMatcher(topic);
+			finalMatcher = (topic) =>
+				authResult(topic) && patternMatcher(topic);
 		} else {
 			// authResult is true
 			finalMatcher = patternMatcher;
@@ -256,7 +267,9 @@ export class HubClient extends events.EventEmitter {
 		}
 	}
 
-	private _handleUnsubscribe(msg: protocol.UnsubscribeCommand): protocol.UnsubAckResponse | undefined {
+	private _handleUnsubscribe(
+		msg: protocol.UnsubscribeCommand
+	): protocol.UnsubAckResponse | undefined {
 		// First check whether (un-)subscribing is allowed at all, to
 		// prevent giving away info about (non-)existence of nodes.
 		const authResult = this._authorizer.canSubscribe(msg.node, msg.pattern);
@@ -294,7 +307,9 @@ export class HubClient extends events.EventEmitter {
 		};
 	}
 
-	private async _handleLogin(msg: protocol.LoginCommand): Promise<protocol.LoginAckResponse | undefined> {
+	private async _handleLogin(
+		msg: protocol.LoginCommand
+	): Promise<protocol.LoginAckResponse | undefined> {
 		if (this._username !== undefined) {
 			// Wouldn't really be a problem for now, but may be in
 			// the future if e.g. different users have different quota
@@ -302,7 +317,10 @@ export class HubClient extends events.EventEmitter {
 			throw new Error("already logged in");
 		}
 
-		const authenticated = await this._hub.authenticate(msg.username, msg.password);
+		const authenticated = await this._hub.authenticate(
+			msg.username,
+			msg.password
+		);
 		if (!authenticated) {
 			throw new Error("authentication failed");
 		}

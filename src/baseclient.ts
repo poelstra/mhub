@@ -15,7 +15,7 @@ import * as protocol from "./protocol";
 
 const MAX_SEQ = 65536;
 
-type Resolver<T> = (v: T|PromiseLike<T>) => void;
+type Resolver<T> = (v: T | PromiseLike<T>) => void;
 
 /**
  * Options to be passed to constructor.
@@ -88,7 +88,10 @@ export interface BaseClient {
 	 * Attach event handler for receiving a new message.
 	 * If no explicit subscriptionId was passed during subscribe, string "default" is used.
 	 */
-	on(event: "message", listener: (message: Message, subscriptionId: string) => void): this;
+	on(
+		event: "message",
+		listener: (message: Message, subscriptionId: string) => void
+	): this;
 }
 
 /**
@@ -105,7 +108,9 @@ export interface BaseClient {
 export abstract class BaseClient extends events.EventEmitter {
 	private _options: BaseClientOptions;
 	private _socket: Connection | undefined;
-	private _transactions: { [seqNo: number]: Resolver<protocol.Response> } = {};
+	private _transactions: {
+		[seqNo: number]: Resolver<protocol.Response>;
+	} = {};
 	private _seqNo: number = 0;
 	private _idleTimer: any = undefined;
 	private _connecting: Promise<void> | undefined;
@@ -117,11 +122,14 @@ export abstract class BaseClient extends events.EventEmitter {
 	 * Create new BaseClient.
 	 * @param options Protocol settings
 	 */
-	constructor(socketConstructor: () => Connection, options?: BaseClientOptions) {
+	constructor(
+		socketConstructor: () => Connection,
+		options?: BaseClientOptions
+	) {
 		super();
 
 		// Ensure options is an object and fill in defaults
-		options = {...defaultBaseClientOptions, ...options};
+		options = { ...defaultBaseClientOptions, ...options };
 		this._options = options;
 		this._socketConstructor = socketConstructor;
 	}
@@ -144,10 +152,18 @@ export abstract class BaseClient extends events.EventEmitter {
 				if (!this._socket) {
 					const socketConstructor = this._socketConstructor;
 					this._socket = socketConstructor(); // call it without a `this`
-					this._socket.on("error", (e: any): void => { this._handleSocketError(e); });
-					this._socket.on("open", (): void => { this._handleSocketOpen(); });
-					this._socket.on("close", (): void => { this._handleSocketClose(); });
-					this._socket.on("message", (data: object): void => { this._handleSocketMessage(data); });
+					this._socket.on("error", (e: any): void => {
+						this._handleSocketError(e);
+					});
+					this._socket.on("open", (): void => {
+						this._handleSocketOpen();
+					});
+					this._socket.on("close", (): void => {
+						this._handleSocketClose();
+					});
+					this._socket.on("message", (data: object): void => {
+						this._handleSocketMessage(data);
+					});
 				}
 
 				this._socket.once("open", resolve);
@@ -183,12 +199,15 @@ export abstract class BaseClient extends events.EventEmitter {
 				}
 
 				// Abort pending transactions
-				const transactionError = error || new Error("connection closed");
+				const transactionError =
+					error || new Error("connection closed");
 				for (const t in this._transactions) {
 					if (!this._transactions[t]) {
 						continue;
 					}
-					this._transactions[t](Promise.reject<protocol.Response>(transactionError));
+					this._transactions[t](
+						Promise.reject<protocol.Response>(transactionError)
+					);
 				}
 				this._transactions = {};
 
@@ -243,7 +262,11 @@ export abstract class BaseClient extends events.EventEmitter {
 	 * @param pattern  Optional pattern glob (e.g. "/some/foo*"). Matches all topics if omitted.
 	 * @param id       Optional subscription ID sent back with all matching messages
 	 */
-	public subscribe(nodeName: string, pattern?: string, id?: string): Promise<void> {
+	public subscribe(
+		nodeName: string,
+		pattern?: string,
+		id?: string
+	): Promise<void> {
 		return this._send(<protocol.SubscribeCommand>{
 			type: "subscribe",
 			node: nodeName,
@@ -261,7 +284,11 @@ export abstract class BaseClient extends events.EventEmitter {
 	 *                 if omitted.
 	 * @param id       Subscription ID, or "default"
 	 */
-	public unsubscribe(nodeName: string, pattern?: string, id?: string): Promise<void> {
+	public unsubscribe(
+		nodeName: string,
+		pattern?: string,
+		id?: string
+	): Promise<void> {
 		return this._send(<protocol.UnsubscribeCommand>{
 			type: "unsubscribe",
 			node: nodeName,
@@ -278,7 +305,12 @@ export abstract class BaseClient extends events.EventEmitter {
 	 * @param data  Message data
 	 * @param headers Message headers
 	 */
-	public publish(nodeName: string, topic: string, data?: any, headers?: Headers): Promise<void>;
+	public publish(
+		nodeName: string,
+		topic: string,
+		data?: any,
+		headers?: Headers
+	): Promise<void>;
 	/**
 	 * Publish message to a node.
 	 *
@@ -378,18 +410,21 @@ export abstract class BaseClient extends events.EventEmitter {
 			switch (response.type) {
 				case "message":
 					const msgRes = <protocol.MessageResponse>response;
-					const message = new Message(msgRes.topic, msgRes.data, msgRes.headers);
-					message.validate();
-					this._asyncEmit(
-						"message",
-						message,
-						msgRes.subscription
+					const message = new Message(
+						msgRes.topic,
+						msgRes.data,
+						msgRes.headers
 					);
+					message.validate();
+					this._asyncEmit("message", message, msgRes.subscription);
 					break;
 				case "error":
 					const errRes = <protocol.ErrorResponse>response;
 					const err = new Error("server error: " + errRes.message);
-					if (errRes.seq === undefined || !this._release(errRes.seq, err, response)) {
+					if (
+						errRes.seq === undefined ||
+						!this._release(errRes.seq, err, response)
+					) {
 						// Emit as a generic error when it could not be attributed to
 						// a specific request
 						this._asyncEmit("error", err);
@@ -399,15 +434,20 @@ export abstract class BaseClient extends events.EventEmitter {
 				case "unsuback":
 				case "puback":
 				case "loginack":
-					const ackDec = <protocol.PubAckResponse | protocol.SubAckResponse | protocol.UnsubAckResponse |
-							protocol.LoginAckResponse>response;
+					const ackDec = <
+						| protocol.PubAckResponse
+						| protocol.SubAckResponse
+						| protocol.UnsubAckResponse
+						| protocol.LoginAckResponse
+					>response;
 					if (protocol.hasSequenceNumber(ackDec)) {
 						this._release(ackDec.seq, undefined, ackDec);
 					}
 					break;
 				case "pingack":
 					const pingDec = <protocol.PingAckResponse>response;
-					if (protocol.hasSequenceNumber(pingDec)) { // ignore 'gratuitous' pings from the server
+					if (protocol.hasSequenceNumber(pingDec)) {
+						// ignore 'gratuitous' pings from the server
 						this._release(pingDec.seq, undefined, pingDec);
 					}
 					break;
@@ -416,7 +456,10 @@ export abstract class BaseClient extends events.EventEmitter {
 			}
 			this._restartIdleTimer();
 		} catch (e) {
-			this._asyncEmit("error", new Error("message decode error: " + e.message));
+			this._asyncEmit(
+				"error",
+				new Error("message decode error: " + e.message)
+			);
 		}
 	}
 
@@ -429,16 +472,16 @@ export abstract class BaseClient extends events.EventEmitter {
 		if (!this._socket) {
 			return;
 		}
-		if (typeof this._options.keepalive !== "number" || this._options.keepalive <= 0) {
+		if (
+			typeof this._options.keepalive !== "number" ||
+			this._options.keepalive <= 0
+		) {
 			return;
 		}
-		this._idleTimer = setTimeout(
-			() => {
-				this._idleTimer = undefined;
-				this._handleIdleTimeout();
-			},
-			this._options.keepalive
-		);
+		this._idleTimer = setTimeout(() => {
+			this._idleTimer = undefined;
+			this._handleIdleTimeout();
+		}, this._options.keepalive);
 	}
 
 	private _stopIdleTimer(): void {
@@ -452,22 +495,21 @@ export abstract class BaseClient extends events.EventEmitter {
 		if (!this._socket || !this._connected) {
 			return;
 		}
-		this.ping(this._options.keepalive)
-			.catch((e) => {
-				if (e && e.message === "server error: unknown node 'undefined'") {
-					// Older MHub didn't support ping, so ignore this error.
-					// (Additionally, all then-existing commands had to refer to a node.)
-					// TCP machinery will terminate the connection if needed.
-					// (Only doesn't work if this goes through proxies, and the
-					// connection after that is dead.)
-					return;
-				}
-				if (this._connected) {
-					// Only close (and emit an error) when we (seemed to be)
-					// succesfully connected (i.e. prevent multiple errors).
-					this.close(e);
-				}
-			});
+		this.ping(this._options.keepalive).catch((e) => {
+			if (e && e.message === "server error: unknown node 'undefined'") {
+				// Older MHub didn't support ping, so ignore this error.
+				// (Additionally, all then-existing commands had to refer to a node.)
+				// TCP machinery will terminate the connection if needed.
+				// (Only doesn't work if this goes through proxies, and the
+				// connection after that is dead.)
+				return;
+			}
+			if (this._connected) {
+				// Only close (and emit an error) when we (seemed to be)
+				// succesfully connected (i.e. prevent multiple errors).
+				this.close(e);
+			}
+		});
 	}
 
 	private _send(msg: protocol.Command): Promise<protocol.Response> {
@@ -492,7 +534,11 @@ export abstract class BaseClient extends events.EventEmitter {
 	 * Resolve pending transaction promise (either fulfill or reject with error).
 	 * Returns true when the given sequence number was actually found.
 	 */
-	private _release(seqNr: number, err: Error | void, msg?: protocol.Response): boolean {
+	private _release(
+		seqNr: number,
+		err: Error | void,
+		msg?: protocol.Response
+	): boolean {
 		const resolver = this._transactions[seqNr];
 		if (!resolver) {
 			return false;

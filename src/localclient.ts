@@ -80,9 +80,7 @@ export class LocalClient extends BaseClient {
 	 * @param options Optional options, see `MClientOptions`.
 	 */
 	constructor(hub: Hub, name: string) {
-		super(
-			() => new LocalConnection(hub, name)
-		);
+		super(() => new LocalConnection(hub, name));
 	}
 }
 

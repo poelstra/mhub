@@ -39,7 +39,7 @@ export interface TcpServerOptions {
 
 export interface NodeDefinition {
 	type: string;
-	options?: { [key: string]: any; };
+	options?: { [key: string]: any };
 }
 
 export interface NodesConfig {
@@ -52,7 +52,13 @@ export interface UserOptions {
 	[username: string]: string;
 }
 
-export type LoggingOptions = "none" | "fatal" | "error" | "warning" | "info" | "debug";
+export type LoggingOptions =
+	| "none"
+	| "fatal"
+	| "error"
+	| "warning"
+	| "info"
+	| "debug";
 
 export interface Config {
 	listen?: ListenOption | ListenOption[];
@@ -86,8 +92,9 @@ import Queue from "./nodes/queue";
 import TestSource from "./nodes/testSource";
 import TopicStore from "./nodes/topicStore";
 
-type ConstructableNode =
-	new(name: string, options?: KeyValues<any>) => pubsub.Source | pubsub.Destination;
+type ConstructableNode = new (name: string, options?: KeyValues<any>) =>
+	| pubsub.Source
+	| pubsub.Destination;
 
 const nodeClasses: ConstructableNode[] = [
 	ConsoleDestination,
@@ -114,10 +121,7 @@ export class MServer {
 	private normalizedConfig: NormalizedConfig;
 	private logger: Logger | undefined = undefined;
 	private connectionId = 0;
-	constructor(
-		normalizedConfig: NormalizedConfig,
-		hub?: Hub
-	) {
+	constructor(normalizedConfig: NormalizedConfig, hub?: Hub) {
 		this.plainAuth = new PlainAuthenticator();
 		this.hub = hub || new Hub(this.plainAuth);
 		this.normalizedConfig = normalizedConfig;
@@ -129,11 +133,16 @@ export class MServer {
 	}
 
 	public init(): Promise<void> {
-		return this.hub.init().then(() => {
-			return this.startTransports(this.hub, this.normalizedConfig);
-		}).catch((err: Error) => {
-			throw new Error(`Failed to initialize:` + JSON.stringify(err, null, 2));
-		});
+		return this.hub
+			.init()
+			.then(() => {
+				return this.startTransports(this.hub, this.normalizedConfig);
+			})
+			.catch((err: Error) => {
+				throw new Error(
+					`Failed to initialize:` + JSON.stringify(err, null, 2)
+				);
+			});
 	}
 
 	public setLogger(logger: Logger): void {
@@ -159,7 +168,9 @@ export class MServer {
 		try {
 			this.hub.setRights(rights);
 		} catch (err) {
-			throw new Error("Invalid configuration: `rights` property: " + err.message);
+			throw new Error(
+				"Invalid configuration: `rights` property: " + err.message
+			);
 		}
 	}
 
@@ -176,7 +187,9 @@ export class MServer {
 			const typeName = def.type;
 			const nodeConstructor = nodeClassMap[typeName];
 			if (!nodeConstructor) {
-				throw new Error(`Unknown node type '${typeName}' for node '${nodeName}'`);
+				throw new Error(
+					`Unknown node type '${typeName}' for node '${nodeName}'`
+				);
 			}
 			const node = new nodeConstructor(nodeName, def.options);
 			this.hub.add(node);
@@ -189,11 +202,15 @@ export class MServer {
 		bindings.forEach((binding: Binding, index: number): void => {
 			const from = this.hub.findSource(binding.from);
 			if (!from) {
-				throw new Error(`Unknown Source node '${binding.from}' in \`binding[${index}].from\``);
+				throw new Error(
+					`Unknown Source node '${binding.from}' in \`binding[${index}].from\``
+				);
 			}
 			const to = this.hub.findDestination(binding.to);
 			if (!to) {
-				throw new Error(`Unknown Destination node '${binding.to}' in \`binding[${index}].to\``);
+				throw new Error(
+					`Unknown Destination node '${binding.to}' in \`binding[${index}].to\``
+				);
 			}
 			from.bind(to, binding.pattern);
 		});
@@ -203,19 +220,25 @@ export class MServer {
 		if (typeof storageRoot !== "string") {
 			throw new Error(`Invalid storage root, string expected`);
 		}
-		const simpleStorage = new storage.ThrottledStorage(new storage.SimpleFileStorage<any>(storageRoot));
+		const simpleStorage = new storage.ThrottledStorage(
+			new storage.SimpleFileStorage<any>(storageRoot)
+		);
 		this.hub.setStorage(simpleStorage);
 	}
 
 	// Initialize and start server
-	private startWebSocketServer(hub: Hub, options: WSServerOptions): Promise<void> {
+	private startWebSocketServer(
+		hub: Hub,
+		options: WSServerOptions
+	): Promise<void> {
 		return new Promise<void>((resolve, reject) => {
 			options = { ...options }; // clone
 
 			let server: http.Server | https.Server;
 			const useTls = !!(options.key || options.pfx);
 
-			options.port = options.port || (useTls ? DEFAULT_PORT_WSS : DEFAULT_PORT_WS);
+			options.port =
+				options.port || (useTls ? DEFAULT_PORT_WSS : DEFAULT_PORT_WS);
 
 			if (useTls) {
 				server = https.createServer(options);
@@ -234,7 +257,11 @@ export class MServer {
 			});
 
 			server.listen(options.port, (): void => {
-				this.log(`WebSocket Server started on port ${options.port}${useTls ? " (TLS)" : ""}`);
+				this.log(
+					`WebSocket Server started on port ${options.port}${
+						useTls ? " (TLS)" : ""
+					}`
+				);
 				resolve(undefined);
 			});
 		});
@@ -269,16 +296,26 @@ export class MServer {
 	}
 
 	private startTransports(hub: Hub, config: NormalizedConfig): Promise<void> {
-		const serverOptions = Array.isArray(config.listen) ? config.listen : [config.listen];
+		const serverOptions = Array.isArray(config.listen)
+			? config.listen
+			: [config.listen];
 		return Promise.all(
 			serverOptions.map((options: ListenOption) => {
 				switch (options.type) {
 					case "websocket":
-						return this.startWebSocketServer(hub, <WSServerOptions>options);
+						return this.startWebSocketServer(
+							hub,
+							<WSServerOptions>options
+						);
 					case "tcp":
-						return this.startTcpServer(hub, <TcpServerOptions>options);
+						return this.startTcpServer(
+							hub,
+							<TcpServerOptions>options
+						);
 					default:
-						throw new Error(`unsupported transport '${options!.type}'`);
+						throw new Error(
+							`unsupported transport '${options!.type}'`
+						);
 				}
 			})
 		).then(() => undefined);

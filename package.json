@@ -1,78 +1,81 @@
 {
-  "name": "mhub",
-  "version": "2.1.0",
-  "description": "Simple, flexible message hub using websockets",
-  "main": "./dist/src/index.js",
-  "bin": {
-    "mhub-client": "./bin/mhub-client",
-    "mhub-ping": "./bin/mhub-ping",
-    "mhub-server": "./bin/mhub-server",
-    "mclient": "./bin/mhub-client",
-    "mping": "./bin/mhub-ping",
-    "mserver": "./bin/mhub-server"
-  },
-  "scripts": {
-    "test": "npm run -s build && npm run -s lint && npm run -s mocha",
-    "mocha": "mocha",
-    "cover": "npm run -s build && npm run -s lint && nyc npm -s run mocha",
-    "start": "node ./bin/mhub-server",
-    "lint": "tslint --format verbose -p src/ && tslint --format verbose -p test/",
-    "build:src": "tsc -p src/",
-    "watch:src": "tsc -p src/ --watch",
-    "build:test": "tsc -p test/",
-    "watch:test": "tsc -p test/ --watch",
-    "build": "npm run -s build:src && npm run -s build:test",
-    "watch:start": "mkdir -p dist/src/ && touch dist/src/mhub-server.js && nodemon ./bin/mhub-server --delay 1 --watch dist/",
-    "watch": "parallelshell 'npm run -s watch:src' 'npm run -s watch:test' 'npm run -s watch:start'",
-    "clean": "rimraf dist",
-    "prepare": "npm run -s test",
-    "prepublishOnly": "npm run -s test",
-    "preversion": "npm install",
-    "version": "git add package-lock.json"
-  },
-  "author": "Martin Poelstra <martin@beryllium.net>",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/poelstra/mhub.git"
-  },
-  "keywords": [
-    "mhub",
-    "iot",
-    "message",
-    "bus",
-    "pubsub",
-    "publish",
-    "subscribe"
-  ],
-  "bugs": {
-    "url": "https://github.com/poelstra/mhub/issues"
-  },
-  "homepage": "https://github.com/poelstra/mhub#readme",
-  "devDependencies": {
-    "@types/chai": "^4.2.11",
-    "@types/micromatch": "^4.0.1",
-    "@types/mocha": "^7.0.2",
-    "chai": "^4.2.0",
-    "coveralls": "^3.0.11",
-    "mocha": "^7.1.1",
-    "nyc": "^15.0.0",
-    "parallelshell": "^3.0.2",
-    "rimraf": "^3.0.2",
-    "tslint": "^6.1.0",
-    "typescript": "^3.8.3"
-  },
-  "dependencies": {
-    "@types/mkdirp": "^1.0.0",
-    "@types/node": "^12.12.31",
-    "@types/ws": "^7.2.3",
-    "@types/yargs": "^15.0.4",
-    "micromatch": "^4.0.2",
-    "mkdirp": "^1.0.3",
-    "source-map-support": "^0.5.16",
-    "ws": "^7.2.3",
-    "yargs": "^15.3.1"
-  },
-  "typings": "./dist/src/index.d.ts",
-  "tslintConfig": "tslint.json"
+	"name": "mhub",
+	"version": "2.1.0",
+	"description": "Simple, flexible message hub using websockets",
+	"main": "./dist/src/index.js",
+	"bin": {
+		"mhub-client": "./bin/mhub-client",
+		"mhub-ping": "./bin/mhub-ping",
+		"mhub-server": "./bin/mhub-server",
+		"mclient": "./bin/mhub-client",
+		"mping": "./bin/mhub-ping",
+		"mserver": "./bin/mhub-server"
+	},
+	"scripts": {
+		"test": "npm run -s build && npm run -s lint && npm run -s mocha",
+		"mocha": "mocha",
+		"cover": "npm run -s build && npm run -s lint && nyc npm -s run mocha",
+		"start": "node ./bin/mhub-server",
+		"lint": "tslint --format verbose -p src/ && tslint --format verbose -p test/ && prettier --check '{src,test}/*.ts' '*.json' '*.yml' '.vscode/*.json'",
+		"format": "prettier --write '{src,test}/*.ts' '*.json' '*.yml' '.vscode/*.json'",
+		"build:src": "tsc -p src/",
+		"watch:src": "tsc -p src/ --watch",
+		"build:test": "tsc -p test/",
+		"watch:test": "tsc -p test/ --watch",
+		"build": "npm run -s build:src && npm run -s build:test",
+		"watch:start": "mkdir -p dist/src/ && touch dist/src/mhub-server.js && nodemon ./bin/mhub-server --delay 1 --watch dist/",
+		"watch": "parallelshell 'npm run -s watch:src' 'npm run -s watch:test' 'npm run -s watch:start'",
+		"clean": "rimraf dist",
+		"prepare": "npm run -s test",
+		"prepublishOnly": "npm run -s test",
+		"preversion": "npm install",
+		"version": "git add package-lock.json"
+	},
+	"author": "Martin Poelstra <martin@beryllium.net>",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/poelstra/mhub.git"
+	},
+	"keywords": [
+		"mhub",
+		"iot",
+		"message",
+		"bus",
+		"pubsub",
+		"publish",
+		"subscribe"
+	],
+	"bugs": {
+		"url": "https://github.com/poelstra/mhub/issues"
+	},
+	"homepage": "https://github.com/poelstra/mhub#readme",
+	"devDependencies": {
+		"@types/chai": "^4.2.11",
+		"@types/micromatch": "^4.0.1",
+		"@types/mocha": "^7.0.2",
+		"chai": "^4.2.0",
+		"coveralls": "^3.0.11",
+		"mocha": "^7.1.1",
+		"nyc": "^15.0.0",
+		"parallelshell": "^3.0.2",
+		"prettier": "^2.0.5",
+		"rimraf": "^3.0.2",
+		"tslint": "^6.1.0",
+		"tslint-config-prettier": "^1.18.0",
+		"typescript": "^3.8.3"
+	},
+	"dependencies": {
+		"@types/mkdirp": "^1.0.0",
+		"@types/node": "^12.12.31",
+		"@types/ws": "^7.2.3",
+		"@types/yargs": "^15.0.4",
+		"micromatch": "^4.0.2",
+		"mkdirp": "^1.0.3",
+		"source-map-support": "^0.5.16",
+		"ws": "^7.2.3",
+		"yargs": "^15.3.1"
+	},
+	"typings": "./dist/src/index.d.ts",
+	"tslintConfig": "tslint.json"
 }

@@ -35,8 +35,6 @@
 			}
 		}
 	},
-	"bindings": [
-		{ "from": "blib", "to": "test" }
-	],
+	"bindings": [{ "from": "blib", "to": "test" }],
 	"storage": "./storage/"
 }

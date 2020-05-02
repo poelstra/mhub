@@ -28,9 +28,11 @@ import { Storage } from "./storage";
  * the server currently doesn't perform an intersection on the patterns
  * to see if they are disjoint.
  */
-export type Permission = boolean | {
-	[nodeName: string]: boolean | string | string[];
-};
+export type Permission =
+	| boolean
+	| {
+			[nodeName: string]: boolean | string | string[];
+	  };
 
 /**
  * Permissions specify whether a user can e.g. publish or subscribe
@@ -70,22 +72,38 @@ export const defaultPermissions = defaultDenyPermissions;
 export class Authorizer {
 	private _permissions: Permissions;
 	// tslint:disable-next-line:no-null-keyword
-	private _publishMatchers: { [nodeName: string]: Matcher; } = Object.create(null);
+	private _publishMatchers: { [nodeName: string]: Matcher } = Object.create(
+		null
+	);
 
 	constructor(partialPermissions: PartialPermissions | undefined) {
 		if (typeof partialPermissions === "boolean") {
-			partialPermissions = partialPermissions ? defaultAllowPermissions : defaultDenyPermissions;
+			partialPermissions = partialPermissions
+				? defaultAllowPermissions
+				: defaultDenyPermissions;
 		}
 		this._permissions = { ...defaultPermissions, ...partialPermissions };
 	}
 
 	public canPublish(node: string, topic: string): boolean {
 		// Note: Matcher doesn't occur for publish, because the topic is never considered pattern
-		return this._hasPermission(this._permissions.publish, node, topic, false) === true;
+		return (
+			this._hasPermission(
+				this._permissions.publish,
+				node,
+				topic,
+				false
+			) === true
+		);
 	}
 
 	public canSubscribe(node: string, pattern?: string): boolean | Matcher {
-		return this._hasPermission(this._permissions.subscribe, node, pattern, true);
+		return this._hasPermission(
+			this._permissions.subscribe,
+			node,
+			pattern,
+			true
+		);
 	}
 
 	private _hasPermission(
@@ -116,19 +134,22 @@ export class Authorizer {
 				}
 				return getMatcher(nodePermission);
 			}
-			const patternFoundInPermissions = nodePermission.some((pattern) => pattern === topicOrPattern);
+			const patternFoundInPermissions = nodePermission.some(
+				(pattern) => pattern === topicOrPattern
+			);
 			if (patternFoundInPermissions) {
 				return true;
 			} else {
 				return getMatcher(nodePermission);
 			}
-		} else { // topicOrPattern is a topic
+		} else {
+			// topicOrPattern is a topic
 			let matcher = this._publishMatchers[node];
 			if (!matcher) {
 				this._publishMatchers[node] = getMatcher(nodePermission);
 				matcher = this._publishMatchers[node];
 			}
-			return (topicOrPattern !== undefined) && matcher(topicOrPattern);
+			return topicOrPattern !== undefined && matcher(topicOrPattern);
 		}
 	}
 }
@@ -199,7 +220,10 @@ export class Hub {
 		return pubsub.isDestination(n) ? n : undefined;
 	}
 
-	public async authenticate(username: string, password: string): Promise<boolean> {
+	public async authenticate(
+		username: string,
+		password: string
+	): Promise<boolean> {
 		return this._authenticator.authenticate(username, password);
 	}
 }
@@ -220,10 +244,13 @@ export function validateUserRights(rights: UserRights): void {
 			continue;
 		}
 		if (typeof perms !== "object") {
-			throw new TypeError(`invalid UserRights: object or boolean expected for user "${user}"`);
+			throw new TypeError(
+				`invalid UserRights: object or boolean expected for user "${user}"`
+			);
 		}
 		// Check each Permission
-		for (const action in perms) { // publish/subscribe
+		for (const action in perms) {
+			// publish/subscribe
 			if (!perms.hasOwnProperty(action)) {
 				continue;
 			}
@@ -232,7 +259,9 @@ export function validateUserRights(rights: UserRights): void {
 				continue;
 			}
 			if (typeof perm !== "object") {
-				throw new TypeError(`invalid UserRights: object or boolean expected for user "${user}", action "${action}"`);
+				throw new TypeError(
+					`invalid UserRights: object or boolean expected for user "${user}", action "${action}"`
+				);
 			}
 
 			// It's a node->bool|string|string[] map
@@ -248,13 +277,17 @@ export function validateUserRights(rights: UserRights): void {
 					continue;
 				}
 				if (!Array.isArray(nodePerm)) {
-					throw new TypeError(`invalid UserRights: boolean, string or array of strings expected for user ` +
-						`"${user}", action "${action}", node "${node}"`);
+					throw new TypeError(
+						`invalid UserRights: boolean, string or array of strings expected for user ` +
+							`"${user}", action "${action}", node "${node}"`
+					);
 				}
 				const allStrings = nodePerm.every((x) => typeof x === "string");
 				if (!allStrings) {
-					throw new TypeError(`invalid UserRights: boolean, string or array of strings expected for user ` +
-							`"${user}", action "${action}", node "${node}"`);
+					throw new TypeError(
+						`invalid UserRights: boolean, string or array of strings expected for user ` +
+							`"${user}", action "${action}", node "${node}"`
+					);
 				}
 			}
 		}

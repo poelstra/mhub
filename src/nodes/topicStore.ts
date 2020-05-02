@@ -31,7 +31,8 @@ interface TopicStoreStorage {
  * When a new Destination binds to this, all currently remembered topics are
  * sent to it.
  */
-export class TopicStore extends pubsub.BaseSource implements pubsub.Initializable {
+export class TopicStore extends pubsub.BaseSource
+	implements pubsub.Initializable {
 	public name: string;
 
 	// tslint:disable-next-line:no-null-keyword
@@ -54,22 +55,27 @@ export class TopicStore extends pubsub.BaseSource implements pubsub.Initializabl
 		if (!this._storage) {
 			return Promise.resolve(undefined);
 		}
-		return this._storage.load(this.name).then((data?: TopicStoreStorage) => {
-			if (!data || typeof data !== "object") {
-				return;
-			}
-			if (
-					(data.type !== TOPIC_STORE_STORAGE_ID && data.type !== "TopicStateStorage") ||
+		return this._storage
+			.load(this.name)
+			.then((data?: TopicStoreStorage) => {
+				if (!data || typeof data !== "object") {
+					return;
+				}
+				if (
+					(data.type !== TOPIC_STORE_STORAGE_ID &&
+						data.type !== "TopicStateStorage") ||
 					data.version !== TOPIC_STORE_STORAGE_VERSION
 				) {
-				log.warning(`Warning: discarding invalid storage ID / version for node '${this.name}'`);
-				return;
-			}
-			// tslint:disable-next-line:forin
-			for (const topic in data.state) {
-				this._state[topic] = Message.fromObject(data.state[topic]);
-			}
-		});
+					log.warning(
+						`Warning: discarding invalid storage ID / version for node '${this.name}'`
+					);
+					return;
+				}
+				// tslint:disable-next-line:forin
+				for (const topic in data.state) {
+					this._state[topic] = Message.fromObject(data.state[topic]);
+				}
+			});
 	}
 
 	public send(message: Message): void {
@@ -87,15 +93,19 @@ export class TopicStore extends pubsub.BaseSource implements pubsub.Initializabl
 				this._state[topic] = message;
 			}
 			if (this._storage) {
-				this._storage.save(this.name, {
-					type: TOPIC_STORE_STORAGE_ID,
-					version: TOPIC_STORE_STORAGE_VERSION,
-					state: this._state,
-				}).catch((err: any) => {
-					log.error(`Error saving topic data in node '${this.name}': ${err}`);
-					// TODO replace with a more appropriate mechanism
-					process.exit(1);
-				});
+				this._storage
+					.save(this.name, {
+						type: TOPIC_STORE_STORAGE_ID,
+						version: TOPIC_STORE_STORAGE_VERSION,
+						state: this._state,
+					})
+					.catch((err: any) => {
+						log.error(
+							`Error saving topic data in node '${this.name}': ${err}`
+						);
+						// TODO replace with a more appropriate mechanism
+						process.exit(1);
+					});
 			}
 		}
 	}

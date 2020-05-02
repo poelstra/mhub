@@ -25,14 +25,16 @@ export class Dict<T> {
 
 	public keys(): string[] {
 		const keys: string[] = [];
-		for (const key in this._items) { // tslint:disable-line:forin
+		for (const key in this._items) {
+			// tslint:disable-line:forin
 			keys.push(key.substr(1)); // strip the $
 		}
 		return keys;
 	}
 
 	public forEach(cb: (value: T, key: string, dict: this) => void): void {
-		for (const key in this._items) { // tslint:disable-line:forin
+		for (const key in this._items) {
+			// tslint:disable-line:forin
 			cb(this._items[key], key.substr(1), this);
 		}
 	}

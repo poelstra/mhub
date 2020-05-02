@@ -46,12 +46,14 @@ const argv = yargs
 	.option("data", {
 		type: "string",
 		alias: "d",
-		description: "Optional message data as JSON object, e.g. '\"a string\"' or '{ \"foo\": \"bar\" }'",
+		description:
+			'Optional message data as JSON object, e.g. \'"a string"\' or \'{ "foo": "bar" }\'',
 	})
 	.option("headers", {
 		type: "string",
 		alias: "h",
-		description: "Optional message headers as JSON object, e.g. '{ \"my-header\": \"foo\" }'",
+		description:
+			'Optional message headers as JSON object, e.g. \'{ "my-header": "foo" }\'',
 	})
 	.option("count", {
 		type: "number",
@@ -61,7 +63,8 @@ const argv = yargs
 	})
 	.option("insecure", {
 		type: "boolean",
-		description: "Disable server certificate validation, useful for testing using self-signed certificates",
+		description:
+			"Disable server certificate validation, useful for testing using self-signed certificates",
 	})
 	.option("key", {
 		type: "string",
@@ -81,7 +84,8 @@ const argv = yargs
 	})
 	.option("pfx", {
 		type: "string",
-		description: "Filename of TLS private key, certificate and CA certificates " +
+		description:
+			"Filename of TLS private key, certificate and CA certificates " +
 			"(in PFX or PKCS12 format). Mutually exclusive with --key, --cert and --ca.",
 	})
 	.option("crl", {
@@ -100,11 +104,11 @@ const argv = yargs
 	.option("password", {
 		type: "string",
 		alias: "P",
-		description: "Password. Note: sent in plain-text, so only use on secure connection. " +
-				"Also note it may appear in e.g. `ps` output.",
+		description:
+			"Password. Note: sent in plain-text, so only use on secure connection. " +
+			"Also note it may appear in e.g. `ps` output.",
 	})
-	.strict()
-	.argv;
+	.strict().argv;
 
 function createClient(): Promise<MClient> {
 	const tlsOptions: tls.TlsOptions = {};
@@ -123,11 +127,14 @@ function createClient(): Promise<MClient> {
 		die("Client error:", e);
 	});
 
-	return client.connect().then(() => {
-		if (argv.username) {
-			return client.login(argv.username, argv.password || "");
-		}
-	}).then(() => client);
+	return client
+		.connect()
+		.then(() => {
+			if (argv.username) {
+				return client.login(argv.username, argv.password || "");
+			}
+		})
+		.then(() => client);
 }
 
 let data: any;
@@ -138,7 +145,7 @@ try {
 	console.error("Error parsing message data as JSON: " + e.message);
 	die(
 		"Hint: if you're passing a string, make sure to put double-quotes around it, " +
-		"and escape these quotes for your shell with single-quotes, e.g.: '\"my string\"'"
+			"and escape these quotes for your shell with single-quotes, e.g.: '\"my string\"'"
 	);
 }
 
@@ -159,38 +166,48 @@ function now(): number {
 	return hrTime[0] * 1000000000 + hrTime[1] / 1000000;
 }
 
-createClient().then(async (client) => {
-	async function ping(): Promise<void> {
-		const response = new Promise<void>(resolve => {
-			client.once("message", (msg: Message): void => {
-				const reply = JSON.stringify(msg.data);
-				if (argv.data === reply) {
-					resolve();
-				}
+createClient()
+	.then(async (client) => {
+		async function ping(): Promise<void> {
+			const response = new Promise<void>((resolve) => {
+				client.once("message", (msg: Message): void => {
+					const reply = JSON.stringify(msg.data);
+					if (argv.data === reply) {
+						resolve();
+					}
+				});
 			});
-		});
 
-		const request = client.publish(argv.node, "ping:request", data, headers);
-		let timeoutTimer: NodeJS.Timer;
-		const timeout = new Promise((_, reject) => {
-			timeoutTimer = setTimeout(() => reject(new Error("timeout")), 1000);
-		});
-		try {
-			await Promise.race([Promise.all([request, response]), timeout]);
-		} finally {
-			clearTimeout(timeoutTimer!);
+			const request = client.publish(
+				argv.node,
+				"ping:request",
+				data,
+				headers
+			);
+			let timeoutTimer: NodeJS.Timer;
+			const timeout = new Promise((_, reject) => {
+				timeoutTimer = setTimeout(
+					() => reject(new Error("timeout")),
+					1000
+				);
+			});
+			try {
+				await Promise.race([Promise.all([request, response]), timeout]);
+			} finally {
+				clearTimeout(timeoutTimer!);
+			}
 		}
-	}
 
-	client.subscribe(argv.node, "ping:response");
-	for (let i = 0; i < pingCount; i++) {
-		const start = now();
-		try {
-			await ping();
-			console.log(`pong ${i}: ${(now() - start).toFixed(3)}ms`); // tslint:disable-line:no-console
-		} catch (err) {
-			console.warn(err.message || `${err}`); // tslint:disable-line:no-console
+		client.subscribe(argv.node, "ping:response");
+		for (let i = 0; i < pingCount; i++) {
+			const start = now();
+			try {
+				await ping();
+				console.log(`pong ${i}: ${(now() - start).toFixed(3)}ms`); // tslint:disable-line:no-console
+			} catch (err) {
+				console.warn(err.message || `${err}`); // tslint:disable-line:no-console
+			}
 		}
-	}
-	return client.close();
-}).catch(die);
+		return client.close();
+	})
+	.catch(die);

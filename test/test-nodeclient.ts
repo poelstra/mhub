@@ -27,7 +27,7 @@ class TestServer {
 	private _server: http.Server;
 	private _wss: ws.Server;
 	private _connectionId: number = 0;
-	private _connections: { [id: string]: ws; } = {};
+	private _connections: { [id: string]: ws } = {};
 
 	constructor(port: number) {
 		this._port = port;
@@ -101,7 +101,8 @@ describe("MClient", (): void => {
 		it("closes the connection", () => {
 			// Note: another close will also be executed in the
 			// afterEach() call
-			return client.close()
+			return client
+				.close()
 				.then(() => delay(10)) // FIXME: websocket server calls close event a bit later
 				.then(() => {
 					expect(server.connectionCount).to.equal(0);
@@ -122,7 +123,8 @@ describe("MClient", (): void => {
 		});
 
 		it("allows to reconnect after closing", () => {
-			return client.close()
+			return client
+				.close()
 				.then(() => delay(10)) // FIXME: websocket server calls close event a bit later
 				.then(() => expect(server.connectionCount).to.equal(0))
 				.then(() => client.connect())

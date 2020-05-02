@@ -160,7 +160,7 @@ export interface PublishCommand {
 	 * Can be used to pass meta-information about a message (e.g. which servers
 	 * it passed through).
 	 */
-	headers?: { [header: string]: string | boolean | number; };
+	headers?: { [header: string]: string | boolean | number };
 }
 
 /**
@@ -238,7 +238,7 @@ export interface MessageResponse {
 	 * Message headers (similar to HTTP headers), encoded as an object of
 	 * key-value pairs.
 	 */
-	headers: { [header: string]: string | boolean | number; };
+	headers: { [header: string]: string | boolean | number };
 	/**
 	 * ID of subscription (`SubscribeCommand.id`) or `"default"`.
 	 */
@@ -350,13 +350,24 @@ export interface ErrorResponse {
 /**
  * All supported commands (i.e. client to server).
  */
-export type Command = SubscribeCommand | UnsubscribeCommand | PublishCommand | PingCommand | LoginCommand;
+export type Command =
+	| SubscribeCommand
+	| UnsubscribeCommand
+	| PublishCommand
+	| PingCommand
+	| LoginCommand;
 
 /**
  * All supported responses (i.e. server to client)
  */
-export type Response = MessageResponse | SubAckResponse | UnsubAckResponse | PubAckResponse |
-		PingAckResponse | LoginAckResponse | ErrorResponse;
+export type Response =
+	| MessageResponse
+	| SubAckResponse
+	| UnsubAckResponse
+	| PubAckResponse
+	| PingAckResponse
+	| LoginAckResponse
+	| ErrorResponse;
 
 /**
  * Interface that helps with strict null checks.

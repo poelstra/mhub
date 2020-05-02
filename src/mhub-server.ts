@@ -22,7 +22,9 @@ function die(fmt: string, ...args: any[]): void {
 }
 
 // Build list of valid log level names (e.g. none, fatal, error, ...)
-const logLevelNames = Object.keys(LogLevel).filter((s) => !/\d+/.test(s)).map((s) => s.toLowerCase());
+const logLevelNames = Object.keys(LogLevel)
+	.filter((s) => !/\d+/.test(s))
+	.map((s) => s.toLowerCase());
 
 // Parse input arguments
 
@@ -36,15 +38,17 @@ const args = yargs
 	.option("config", {
 		type: "string",
 		alias: "c",
-		description: "Filename of config, uses mhub's server.conf.json by default",
+		description:
+			"Filename of config, uses mhub's server.conf.json by default",
 	})
 	.option("loglevel", {
 		type: "string",
 		alias: "l",
-		description: "Override log level in config file. Valid options: " + logLevelNames.join(", "),
+		description:
+			"Override log level in config file. Valid options: " +
+			logLevelNames.join(", "),
 	})
-	.strict()
-	.argv;
+	.strict().argv;
 
 // Parse config file
 
@@ -63,7 +67,11 @@ function setLogLevel(logLevelName: LoggingOptions | string) {
 	if (matching) {
 		log.logLevel = (<any>LogLevel)[matching] as LogLevel;
 	} else {
-		die(`Invalid log level '${logLevelName}', expected one of: ${logLevelNames.join(", ")}`);
+		die(
+			`Invalid log level '${logLevelName}', expected one of: ${logLevelNames.join(
+				", "
+			)}`
+		);
 	}
 }
 
@@ -79,6 +87,8 @@ function main(): Promise<void> {
 	return server.init();
 }
 
-Promise.resolve().then(main).catch((err: Error) => {
-	die("main failed: ", err);
-});
+Promise.resolve()
+	.then(main)
+	.catch((err: Error) => {
+		die("main failed: ", err);
+	});

@@ -23,7 +23,7 @@ describe("HubClient", (): void => {
 
 		hub.setRights({
 			"": { publish: false, subscribe: true },
-			"foo": { publish: true, subscribe: true },
+			foo: { publish: true, subscribe: true },
 		});
 
 		hub.add(new Exchange("default"));
@@ -97,7 +97,9 @@ describe("HubClient", (): void => {
 		it("disallows (anonymous) publish when configured", (done: MochaDone) => {
 			client.once("response", (res: protocol.Response) => {
 				expect(res.type).to.equal("error");
-				expect((<protocol.ErrorResponse>res).message).to.contain("permission denied");
+				expect((<protocol.ErrorResponse>res).message).to.contain(
+					"permission denied"
+				);
 				done();
 			});
 			client.processCommand({

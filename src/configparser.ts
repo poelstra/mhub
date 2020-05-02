@@ -3,15 +3,22 @@ import * as path from "path";
 
 import { UserRights } from "./hub";
 import {
-	Binding, Config, ListenOption, LoggingOptions,
-	NodesConfig, NormalizedConfig, UserOptions
+	Binding,
+	Config,
+	ListenOption,
+	LoggingOptions,
+	NodesConfig,
+	NormalizedConfig,
+	UserOptions,
 } from "./nodeserver";
 import { replaceKeyFiles } from "./tlsHelpers";
 
 function normalizeListen(config: Config, rootDir: string): ListenOption[] {
 	// Checks
 	if (config.port && config.listen) {
-		throw new Error("Invalid configuration: specify either `port` or `listen`");
+		throw new Error(
+			"Invalid configuration: specify either `port` or `listen`"
+		);
 	}
 	if (!(config.port || config.listen)) {
 		throw new Error("Invalid configuration: `port` or `listen` missing");
@@ -20,10 +27,12 @@ function normalizeListen(config: Config, rootDir: string): ListenOption[] {
 	let listen: ListenOption[] = [];
 	// Normalize listen options, also handling port option
 	if (config.port) {
-		listen = [{
-			type: "websocket",
-			port: config.port,
-		}];
+		listen = [
+			{
+				type: "websocket",
+				port: config.port,
+			},
+		];
 	}
 	if (config.listen) {
 		// Allowing for single instances as well as arrays
@@ -45,9 +54,9 @@ function normalizeListen(config: Config, rootDir: string): ListenOption[] {
 function normalizeUsers(config: Config, rootDir: string): UserOptions {
 	// Checks
 	if (
-		(config.users !== undefined) &&
-		(typeof config.users !== "string") &&
-		(typeof config.users !== "object")
+		config.users !== undefined &&
+		typeof config.users !== "string" &&
+		typeof config.users !== "object"
 	) {
 		throw new Error(
 			"Invalid configuration: `users` should be a filename or object containting username -> password pairs"
@@ -61,7 +70,10 @@ function normalizeUsers(config: Config, rootDir: string): UserOptions {
 		try {
 			users = JSON.parse(fs.readFileSync(usersFile, "utf8"));
 		} catch (e) {
-			throw new Error(`Cannot parse users file '${usersFile}': ` + JSON.stringify(e, null, 2));
+			throw new Error(
+				`Cannot parse users file '${usersFile}': ` +
+					JSON.stringify(e, null, 2)
+			);
 		}
 	} else if (typeof config.users === "object") {
 		users = config.users;
@@ -80,16 +92,20 @@ function normalizeNodes(config: Config): NodesConfig {
 		throw new Error("Invalid configuration: missing `nodes`");
 	}
 	if (!(Array.isArray(config.nodes) || typeof config.nodes === "object")) {
-		throw new Error("Invalid configuration: `nodes` should be a NodeDefinition map, or an array of strings");
+		throw new Error(
+			"Invalid configuration: `nodes` should be a NodeDefinition map, or an array of strings"
+		);
 	}
 
 	if (Array.isArray(config.nodes)) {
 		// Backward compatibility, convert to new format
 		return config.nodes.reduce((newNodes: NodesConfig, n: string) => {
 			if (typeof n !== "string") {
-				throw new Error("Invalid configuration: `nodes` is given as array, and must then contain only strings");
+				throw new Error(
+					"Invalid configuration: `nodes` is given as array, and must then contain only strings"
+				);
 			}
-			return {...newNodes, [n]: {type: "exchange"}};
+			return { ...newNodes, [n]: { type: "exchange" } };
 		}, {});
 	} else {
 		return config.nodes;

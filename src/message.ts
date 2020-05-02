@@ -35,7 +35,9 @@ export class Message {
 	 */
 	public static fromObject(o: MessageLike): Message {
 		if (!o || typeof o !== "object") {
-			throw new TypeError(`cannot create message from object, got ${typeof o}`);
+			throw new TypeError(
+				`cannot create message from object, got ${typeof o}`
+			);
 		}
 		return new Message(o.topic, o.data, o.headers);
 	}
@@ -90,11 +92,15 @@ export class Message {
 	 */
 	public validate(): void {
 		if (typeof this.topic !== "string") {
-			throw new TypeError(`invalid topic: expected string, got ${typeof this.topic}`);
+			throw new TypeError(
+				`invalid topic: expected string, got ${typeof this.topic}`
+			);
 		}
 		const headers = this.headers;
 		if (headers !== undefined && typeof headers !== "object") {
-			throw new TypeError(`invalid headers: expected object or undefined, got ${typeof headers}`);
+			throw new TypeError(
+				`invalid headers: expected object or undefined, got ${typeof headers}`
+			);
 		}
 		for (const key in headers) {
 			if (!headers.hasOwnProperty(key)) {
@@ -102,7 +108,9 @@ export class Message {
 			}
 			const t = typeof headers[key];
 			if (t !== "string" && t !== "boolean" && t !== "number") {
-				throw new TypeError(`invalid headers: expected string, boolean or number for header '${key}', got ${t}`);
+				throw new TypeError(
+					`invalid headers: expected string, boolean or number for header '${key}', got ${t}`
+				);
 			}
 		}
 	}

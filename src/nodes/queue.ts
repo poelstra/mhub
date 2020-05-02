@@ -33,7 +33,7 @@ export class Queue extends pubsub.BaseSource implements pubsub.Initializable {
 	constructor(name: string, options?: QueueOptions) {
 		super(name);
 		this.name = name;
-		this.capacity = options && options.capacity || 10;
+		this.capacity = (options && options.capacity) || 10;
 		this._matcher = getMatcher(options && options.pattern);
 		this._options = options || {};
 	}
@@ -49,8 +49,13 @@ export class Queue extends pubsub.BaseSource implements pubsub.Initializable {
 			if (!data || typeof data !== "object") {
 				return;
 			}
-			if (data.type !== QUEUE_STORAGE_ID || data.version !== QUEUE_STORAGE_VERSION) {
-				log.warning(`Warning: discarding invalid storage ID / version for node '${this.name}'`);
+			if (
+				data.type !== QUEUE_STORAGE_ID ||
+				data.version !== QUEUE_STORAGE_VERSION
+			) {
+				log.warning(
+					`Warning: discarding invalid storage ID / version for node '${this.name}'`
+				);
 				return;
 			}
 			for (const msg of data.queue) {
@@ -72,15 +77,19 @@ export class Queue extends pubsub.BaseSource implements pubsub.Initializable {
 				this._queue.shift();
 			}
 			if (this._storage) {
-				this._storage.save(this.name, {
-					type: QUEUE_STORAGE_ID,
-					version: QUEUE_STORAGE_VERSION,
-					queue: this._queue,
-				}).catch((err: any) => {
-					log.error(`Error saving topic data in node '${this.name}': ${err}`);
-					// TODO replace with a more appropriate mechanism
-					process.exit(1);
-				});
+				this._storage
+					.save(this.name, {
+						type: QUEUE_STORAGE_ID,
+						version: QUEUE_STORAGE_VERSION,
+						queue: this._queue,
+					})
+					.catch((err: any) => {
+						log.error(
+							`Error saving topic data in node '${this.name}': ${err}`
+						);
+						// TODO replace with a more appropriate mechanism
+						process.exit(1);
+					});
 			}
 		}
 	}
