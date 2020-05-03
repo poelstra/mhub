@@ -10,6 +10,7 @@ import * as yargs from "yargs";
 import { Headers, Message } from "./message";
 import MClient from "./nodeclient";
 import { replaceKeyFiles } from "./tlsHelpers";
+import { die } from "./util";
 
 const usage = [
 	"Sends a message to the given node, waits for an answer, then sends the next etc.",
@@ -18,12 +19,6 @@ const usage = [
 	"Make sure you have the `test` node enabled in mhub-server, or provide your own",
 	"routing to respond with `ping:response` to each `ping:request`",
 ].join("\n");
-
-function die(fmt: string, ...args: any[]): never {
-	// tslint:disable-next-line:no-console
-	console.error(fmt, ...args);
-	return process.exit(1);
-}
 
 const argv = yargs
 	.usage(usage)

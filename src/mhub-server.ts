@@ -14,12 +14,7 @@ import { LogLevel } from "./logger";
 import { LoggingOptions, MServer } from "./nodeserver";
 
 import log from "./log";
-
-// tslint:disable-next-line:no-shadowed-variable
-function die(fmt: string, ...args: any[]): void {
-	log.fatal(fmt, ...args);
-	process.exit(1);
-}
+import { die } from "./util";
 
 // Build list of valid log level names (e.g. none, fatal, error, ...)
 const logLevelNames = Object.keys(LogLevel)

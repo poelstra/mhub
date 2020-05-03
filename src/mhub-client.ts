@@ -10,6 +10,7 @@ import * as yargs from "yargs";
 import { Headers, Message } from "./message";
 import MClient from "./nodeclient";
 import { replaceKeyFiles } from "./tlsHelpers";
+import { die } from "./util";
 
 // tslint:disable:no-console
 
@@ -25,12 +26,6 @@ const usage = [
 	"To use SSL/TLS, use e.g. -s wss://your_host.",
 	"For self-signed certs, see --insecure.",
 ].join("\n");
-
-// tslint:disable-next-line:no-shadowed-variable
-function die(fmt: string, ...args: any[]): never {
-	console.error(fmt, ...args);
-	return process.exit(1);
-}
 
 const args = yargs
 	.usage(usage)
