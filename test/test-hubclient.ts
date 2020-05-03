@@ -3,6 +3,7 @@
  */
 
 import { expect } from "chai";
+import { once } from "events";
 
 import { PlainAuthenticator } from "../src/authenticator";
 import Hub from "../src/hub";
@@ -12,124 +13,163 @@ import * as protocol from "../src/protocol";
 
 import "./common";
 
+function waitFor<T extends protocol.Response>(
+	client: HubClient,
+	type: T["type"]
+): Promise<T> {
+	return new Promise((resolve) => {
+		const handler = (response: protocol.Response) => {
+			if (response.type === type) {
+				resolve(response as T);
+				client.off("response", handler);
+			}
+		};
+		client.on("response", handler);
+	});
+}
+
+async function invoke<T extends protocol.Response>(
+	client: HubClient,
+	command: protocol.Command,
+	responseType: T["type"]
+): Promise<T>;
+async function invoke<T extends protocol.Response>(
+	client: HubClient,
+	command: protocol.Command
+): Promise<protocol.Response>;
+async function invoke<T extends protocol.Response>(
+	client: HubClient,
+	command: protocol.Command,
+	responseType?: T["type"]
+): Promise<T> {
+	if (responseType) {
+		const response = waitFor(client, responseType);
+		await client.processCommand(command);
+		return response;
+	} else {
+		const response = once(client, "response");
+		await client.processCommand(command);
+		return (await response)[0];
+	}
+}
+
 describe("HubClient", (): void => {
+	let hub: Hub;
+	let auth: PlainAuthenticator;
 	let client: HubClient;
 
 	beforeEach(() => {
-		const auth = new PlainAuthenticator();
-		const hub = new Hub(auth);
-
-		auth.setUser("foo", "bar");
-
-		hub.setRights({
-			"": { publish: false, subscribe: true },
-			foo: { publish: true, subscribe: true },
-		});
-
+		auth = new PlainAuthenticator();
+		hub = new Hub(auth);
 		hub.add(new Exchange("default"));
 
-		client = new HubClient(hub, "testclient");
+		// Need to create client later, because some tests want to set
+		// different rights and otherwise authorizer for anonymous will
+		// already be assigned.
+		client = undefined as any;
 	});
 
 	describe("#processCommand", () => {
-		it("handles invalid input (undefined)", (done: MochaDone) => {
-			client.once("response", (res: protocol.Response) => {
-				expect(res.type).to.equal("error");
-				done();
-			});
-			client.processCommand(<any>undefined);
+		beforeEach(() => {
+			hub.setRights({ "": true });
+			client = new HubClient(hub, "testclient");
 		});
 
-		it("handles invalid input (not an object)", (done: MochaDone) => {
-			client.once("response", (res: protocol.Response) => {
-				expect(res.type).to.equal("error");
-				done();
-			});
-			client.processCommand(<any>true);
+		it("handles invalid input (undefined)", async () => {
+			await invoke(client, <any>undefined, "error");
 		});
 
-		it("handles invalid input (missing type)", (done: MochaDone) => {
-			client.once("response", (res: protocol.Response) => {
-				expect(res.type).to.equal("error");
-				done();
-			});
-			client.processCommand(<any>{});
+		it("handles invalid input (not an object)", async () => {
+			await invoke(client, <any>true, "error");
 		});
 
-		it("handles invalid input (invalid type)", (done: MochaDone) => {
-			client.once("response", (res: protocol.Response) => {
-				expect(res.type).to.equal("error");
-				done();
-			});
-			client.processCommand(<any>{ type: "foo" });
+		it("handles invalid input (missing type)", async () => {
+			await invoke(client, <any>{}, "error");
+		});
+
+		it("handles invalid input (invalid type)", async () => {
+			await invoke(client, <any>{ type: "foo" }, "error");
 		});
 	});
 
 	describe("#login", () => {
-		it("allows plain login", (done: MochaDone): void => {
-			client.once("response", (res: protocol.Response) => {
-				expect(res.type).to.equal("loginack");
-				done();
-			});
-			client.processCommand({
-				type: "login",
-				seq: 0,
-				username: "foo",
-				password: "bar",
-			});
+		beforeEach(() => {
+			auth.setUser("foo", "bar");
+			client = new HubClient(hub, "testclient");
 		});
 
-		it("rejects invalid user/pass", (done: MochaDone): void => {
-			client.once("response", (res: protocol.Response) => {
-				expect(res.type).to.equal("error");
-				done();
-			});
-			client.processCommand({
-				type: "login",
-				seq: 0,
-				username: "foo",
-				password: "baz",
-			});
+		it("allows plain login", async () => {
+			await invoke(
+				client,
+				{
+					type: "login",
+					seq: 0,
+					username: "foo",
+					password: "bar",
+				},
+				"loginack"
+			);
+		});
+
+		it("rejects invalid user/pass", async () => {
+			await invoke(
+				client,
+				{
+					type: "login",
+					seq: 0,
+					username: "foo",
+					password: "baz",
+				},
+				"error"
+			);
 		});
 	});
 
 	describe("#publish", () => {
-		it("disallows (anonymous) publish when configured", (done: MochaDone) => {
-			client.once("response", (res: protocol.Response) => {
-				expect(res.type).to.equal("error");
-				expect((<protocol.ErrorResponse>res).message).to.contain(
-					"permission denied"
-				);
-				done();
+		beforeEach(() => {
+			auth.setUser("foo", "bar");
+			hub.setRights({
+				"": { publish: false, subscribe: true },
+				foo: { publish: true, subscribe: true },
 			});
-			client.processCommand({
+			client = new HubClient(hub, "testclient");
+		});
+
+		it("disallows (anonymous) publish when configured", async () => {
+			const res = await invoke(client, {
 				type: "publish",
 				seq: 0,
 				node: "default",
 				topic: "test",
 			});
+			expect(res.type).to.equal("error");
+			expect((<protocol.ErrorResponse>res).message).to.contain(
+				"permission denied"
+			);
 		});
 
-		it("allows publish when configured", (done: MochaDone) => {
-			client.once("response", (res: protocol.Response) => {
-				expect(res.type).to.equal("loginack");
-				client.once("response", (res2: protocol.Response) => {
-					expect(res2.type).to.equal("puback");
-					done();
-				});
-				client.processCommand({
-					type: "publish",
+		it("allows publish when configured", async () => {
+			await invoke(
+				client,
+				{
+					type: "login",
 					seq: 0,
+					username: "foo",
+					password: "bar",
+				},
+				"loginack"
+			);
+
+			await invoke(
+				client,
+				{
+					type: "publish",
+					seq: 1,
 					node: "default",
 					topic: "test",
-				});
-			});
-			client.processCommand({
-				type: "login",
-				seq: 0,
-				username: "foo",
-				password: "bar",
-			});
+				},
+				"puback"
+			);
 		});
 	});
 });
