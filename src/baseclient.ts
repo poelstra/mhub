@@ -12,8 +12,9 @@ import * as events from "events";
 import Message, { Headers } from "./message";
 import { delay } from "./promise";
 import * as protocol from "./protocol";
+import { once } from "events";
 
-const MAX_SEQ = 65536;
+export const MAX_SEQ = 65536;
 
 type Resolver<T> = (v: T | PromiseLike<T>) => void;
 
@@ -95,17 +96,16 @@ export interface BaseClient {
 }
 
 /**
- * Abstract MHub client.
+ * Base MHub client.
  *
  * Implements MHub client protocol, but does not implement the transport layer
  * such as WebSocket, raw TCP, etc.
  *
- * @event open() Emitted when connection was established.
- * @event close() Emitted when connection was closed.
- * @event error(e: Error) Emitted when there was a connection, server or protocol error.
- * @event message(m: Message, subscriptionId: string) Emitted when message was received (due to subscription).
+ * You'll typically derive a transport-specific class from this one.
+ * @see NodeClient
+ * @see MClient
  */
-export abstract class BaseClient extends events.EventEmitter {
+export class BaseClient extends events.EventEmitter {
 	private _options: BaseClientOptions;
 	private _socket: Connection | undefined;
 	private _transactions: {
@@ -139,41 +139,45 @@ export abstract class BaseClient extends events.EventEmitter {
 	 * If connection is already active or pending, this is a no-op.
 	 * Note: a connection is already initiated when the constructor is called.
 	 */
-	public connect(): Promise<void> {
+	public async connect(): Promise<void> {
 		if (this._connected) {
-			return Promise.resolve();
+			return;
 		}
 		if (this._closing) {
-			return this.close().then(() => this.connect());
+			await this.close();
+			return this.connect();
 		}
 
 		if (!this._connecting) {
-			this._connecting = new Promise<void>((resolve, reject) => {
-				if (!this._socket) {
-					const socketConstructor = this._socketConstructor;
-					this._socket = socketConstructor(); // call it without a `this`
-					this._socket.on("error", (e: any): void => {
-						this._handleSocketError(e);
-					});
-					this._socket.on("open", (): void => {
-						this._handleSocketOpen();
-					});
-					this._socket.on("close", (): void => {
-						this._handleSocketClose();
-					});
-					this._socket.on("message", (data: object): void => {
-						this._handleSocketMessage(data);
-					});
-				}
-
-				this._socket.once("open", resolve);
-				this._socket.once("error", reject);
-			}).finally(() => {
-				this._connecting = undefined;
-			});
+			this._connecting = this._doConnect();
 		}
 
 		return this._connecting;
+	}
+
+	private async _doConnect(): Promise<void> {
+		try {
+			if (!this._socket) {
+				const socketConstructor = this._socketConstructor;
+				this._socket = socketConstructor(); // call it without a `this`
+				this._socket.on("error", (e: any): void => {
+					this._handleSocketError(e);
+				});
+				this._socket.on("open", (): void => {
+					this._handleSocketOpen();
+				});
+				this._socket.on("close", (): void => {
+					this._handleSocketClose();
+				});
+				this._socket.on("message", (data: object): void => {
+					this._handleSocketMessage(data);
+				});
+			}
+
+			await once(this._socket, "open");
+		} finally {
+			this._connecting = undefined;
+		}
 	}
 
 	/**
@@ -190,48 +194,49 @@ export abstract class BaseClient extends events.EventEmitter {
 	 * @param error (optional) Error to emit, reject transactions with, and
 	 *              forcefully close connection.
 	 */
-	public close(error?: Error): Promise<void> {
+	public async close(error?: Error): Promise<void> {
 		if (!this._closing) {
-			this._closing = new Promise<void>((resolve) => {
-				// Announce error if necessary
-				if (error) {
-					this._asyncEmit("error", error);
-				}
-
-				// Abort pending transactions
-				const transactionError =
-					error || new Error("connection closed");
-				for (const t in this._transactions) {
-					if (!this._transactions[t]) {
-						continue;
-					}
-					this._transactions[t](
-						Promise.reject<protocol.Response>(transactionError)
-					);
-				}
-				this._transactions = {};
-
-				if (this._socket) {
-					if (error || !this._connected) {
-						// Forcefully close in case of an error, or when
-						// not connected yet (otherwise we may have to wait
-						// until the connect times out).
-						return resolve(this._socket.terminate());
-					} else {
-						// Gracefully close in normal cases, meaning any
-						// in-progress writes will be completed first.
-						return resolve(this._socket.close());
-					}
-				} else {
-					resolve(undefined);
-				}
-			}).finally(() => {
-				this._socket = undefined;
-				this._closing = undefined;
-			});
+			this._closing = this._doClose(error);
 		}
 
 		return this._closing;
+	}
+
+	private async _doClose(error?: Error): Promise<void> {
+		try {
+			// Announce error if necessary
+			if (error) {
+				this._asyncEmit("error", error);
+			}
+
+			// Abort pending transactions
+			const transactionError = error || new Error("connection closed");
+			for (const t in this._transactions) {
+				if (!this._transactions[t]) {
+					continue;
+				}
+				this._transactions[t](
+					Promise.reject<protocol.Response>(transactionError)
+				);
+			}
+			this._transactions = {};
+
+			if (this._socket) {
+				if (error || !this._connected) {
+					// Forcefully close in case of an error, or when
+					// not connected yet (otherwise we may have to wait
+					// until the connect times out).
+					await this._socket.terminate();
+				} else {
+					// Gracefully close in normal cases, meaning any
+					// in-progress writes will be completed first.
+					await this._socket.close();
+				}
+			}
+		} finally {
+			this._socket = undefined;
+			this._closing = undefined;
+		}
 	}
 
 	/**
@@ -243,12 +248,12 @@ export abstract class BaseClient extends events.EventEmitter {
 	 * @param username Username.
 	 * @param password Password.
 	 */
-	public login(username: string, password: string): Promise<void> {
-		return this._send(<protocol.LoginCommand>{
+	public async login(username: string, password: string): Promise<void> {
+		await this._send(<protocol.LoginCommand>{
 			type: "login",
 			username,
 			password,
-		}).then(() => undefined);
+		});
 	}
 
 	/**
@@ -262,17 +267,17 @@ export abstract class BaseClient extends events.EventEmitter {
 	 * @param pattern  Optional pattern glob (e.g. "/some/foo*"). Matches all topics if omitted.
 	 * @param id       Optional subscription ID sent back with all matching messages
 	 */
-	public subscribe(
+	public async subscribe(
 		nodeName: string,
 		pattern?: string,
 		id?: string
 	): Promise<void> {
-		return this._send(<protocol.SubscribeCommand>{
+		await this._send(<protocol.SubscribeCommand>{
 			type: "subscribe",
 			node: nodeName,
 			pattern,
 			id,
-		}).then(() => undefined);
+		});
 	}
 
 	/**
@@ -284,17 +289,17 @@ export abstract class BaseClient extends events.EventEmitter {
 	 *                 if omitted.
 	 * @param id       Subscription ID, or "default"
 	 */
-	public unsubscribe(
+	public async unsubscribe(
 		nodeName: string,
 		pattern?: string,
 		id?: string
 	): Promise<void> {
-		return this._send(<protocol.UnsubscribeCommand>{
+		await this._send(<protocol.UnsubscribeCommand>{
 			type: "unsubscribe",
 			node: nodeName,
 			pattern,
 			id,
-		}).then(() => undefined);
+		});
 	}
 
 	/**
@@ -319,7 +324,7 @@ export abstract class BaseClient extends events.EventEmitter {
 	 */
 	public publish(nodeName: string, message: Message): Promise<void>;
 	// Implementation
-	public publish(nodeName: string, ...args: any[]): Promise<void> {
+	public async publish(nodeName: string, ...args: any[]): Promise<void> {
 		let message: Message;
 		if (typeof args[0] === "object") {
 			message = args[0];
@@ -327,13 +332,13 @@ export abstract class BaseClient extends events.EventEmitter {
 			message = new Message(args[0], args[1], args[2]);
 		}
 		message.validate();
-		return this._send(<protocol.PublishCommand>{
+		await this._send(<protocol.PublishCommand>{
 			type: "publish",
 			node: nodeName,
 			topic: message.topic,
 			data: message.data,
 			headers: message.headers,
-		}).then(() => undefined);
+		});
 	}
 
 	/**
@@ -512,22 +517,23 @@ export abstract class BaseClient extends events.EventEmitter {
 		});
 	}
 
-	private _send(msg: protocol.Command): Promise<protocol.Response> {
-		return new Promise<protocol.Response>((resolve, reject) => {
-			const seq = this._nextSeq();
-			msg.seq = seq;
+	private async _send(msg: protocol.Command): Promise<protocol.Response> {
+		if (!this._socket || !this._connected) {
+			throw new Error("not connected");
+		}
+
+		const seq = this._nextSeq();
+		msg.seq = seq;
+		const transaction = new Promise<protocol.Response>((resolve) => {
 			this._transactions[seq] = resolve;
-			if (!this._socket || !this._connected) {
-				throw new Error("not connected");
-			}
-			this._restartIdleTimer();
-			this._socket.send(msg).catch((err: Error) => {
-				if (err) {
-					this._release(seq, err);
-					return reject(err);
-				}
-			});
 		});
+		this._restartIdleTimer();
+		try {
+			await this._socket.send(msg);
+		} catch (err) {
+			this._release(seq, err);
+		}
+		return transaction;
 	}
 
 	/**
@@ -562,7 +568,7 @@ export abstract class BaseClient extends events.EventEmitter {
 		while (--maxIteration > 0 && this._transactions[this._seqNo]) {
 			this._seqNo = (this._seqNo + 1) % MAX_SEQ;
 		}
-		assert(maxIteration, "out of sequence numbers");
+		assert(maxIteration > 0, "out of sequence numbers");
 		const result = this._seqNo;
 		this._seqNo = (this._seqNo + 1) % MAX_SEQ;
 		return result;
