@@ -8,7 +8,7 @@ import * as tls from "tls";
 import * as yargs from "yargs";
 
 import { Headers, Message } from "./message";
-import MClient from "./nodeclient";
+import NodeClient from "./nodeclient";
 import { replaceKeyFiles } from "./tlsHelpers";
 import { die } from "./util";
 
@@ -158,7 +158,7 @@ function parseOutputFormat(s: string): OutputFormat {
 	}
 }
 
-function createClient(argv: any): Promise<MClient> {
+function createClient(argv: any): Promise<NodeClient> {
 	const tlsOptions: tls.TlsOptions = {};
 	tlsOptions.pfx = argv.pfx;
 	tlsOptions.key = argv.key;
@@ -170,7 +170,7 @@ function createClient(argv: any): Promise<MClient> {
 	tlsOptions.rejectUnauthorized = !argv.insecure;
 	replaceKeyFiles(tlsOptions, process.cwd());
 
-	const client = new MClient(argv.socket, tlsOptions);
+	const client = new NodeClient(argv.socket, tlsOptions);
 	client.on("error", (e: Error): void => {
 		die("Client error:", e);
 	});

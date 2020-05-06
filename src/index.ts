@@ -2,8 +2,8 @@
  * MHub programmatic interface.
  */
 
-import MClient from "./nodeclient";
-export default MClient;
+import NodeClient from "./nodeclient";
+export default NodeClient;
 
 export * from "./authenticator";
 export * from "./baseclient";

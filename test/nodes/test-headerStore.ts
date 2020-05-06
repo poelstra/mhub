@@ -14,6 +14,7 @@ import { Storage } from "../../src/storage";
 
 import "../common";
 
+// TODO move to be reusable
 export class MemStorage<T> implements Storage<T> {
 	private _store: Dict<string> = new Dict();
 

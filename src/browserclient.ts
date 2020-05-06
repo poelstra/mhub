@@ -5,27 +5,35 @@
 import * as events from "events";
 import { BaseClient, BaseClientOptions, Connection } from "./baseclient";
 import * as protocol from "./protocol";
+import { once } from "events";
 
 const DEFAULT_PORT_WS = 13900;
 const DEFAULT_PORT_WSS = 13901;
 
 /**
- * Options to be passed to MClient constructor.
+ * Options to be passed to BrowserClient constructor.
  */
 // tslint:disable-next-line:no-empty-interface
-export interface MClientOptions extends BaseClientOptions {}
+export interface BrowserClientOptions extends BaseClientOptions {}
 
-export const defaultClientOptions: MClientOptions = {};
+export const defaultClientOptions: BrowserClientOptions = {};
 
 const CLOSE_GOING_AWAY = 1001; // https://developer.mozilla.org/en-US/docs/Web/API/CloseEvent#Status_codes
 
 class WebSocketConnection extends events.EventEmitter implements Connection {
-	private _socket: WebSocket;
+	private _url: string;
+	private _socket: WebSocket | undefined;
 
 	constructor(url: string) {
 		super();
+		this._url = url;
+	}
 
-		this._socket = new WebSocket(url);
+	public async open(): Promise<void> {
+		if (this._socket) {
+			return;
+		}
+		this._socket = new WebSocket(this._url);
 		this._socket.addEventListener("error", (e: any) =>
 			this.emit("error", e)
 		);
@@ -34,6 +42,7 @@ class WebSocketConnection extends events.EventEmitter implements Connection {
 		});
 		this._socket.addEventListener("close", () => {
 			this.emit("close");
+			this._socket = undefined;
 		});
 		this._socket.addEventListener("message", (event: MessageEvent) => {
 			if (!event.data) {
@@ -43,6 +52,7 @@ class WebSocketConnection extends events.EventEmitter implements Connection {
 			const response = JSON.parse(event.data);
 			this.emit("message", response);
 		});
+		await once(this._socket, "open");
 	}
 
 	/**
@@ -50,11 +60,11 @@ class WebSocketConnection extends events.EventEmitter implements Connection {
 	 * @return Promise that resolves when transmit is accepted (i.e. not necessarily
 	 * arrived at other side, can be e.g. queued).
 	 */
-	public send(data: protocol.Command): Promise<void> {
-		return new Promise<void>((resolve) => {
-			this._socket.send(JSON.stringify(data));
-			resolve(undefined);
-		});
+	public async send(data: protocol.Command): Promise<void> {
+		if (!this._socket) {
+			throw new Error("not connected");
+		}
+		this._socket.send(JSON.stringify(data));
 	}
 
 	/**
@@ -62,19 +72,21 @@ class WebSocketConnection extends events.EventEmitter implements Connection {
 	 * to be completed.
 	 * @return Promise that resolves when connection is succesfully closed.
 	 */
-	public close(code?: number): Promise<void> {
-		let result: Promise<void>;
-		if (!this._connected) {
-			result = Promise.resolve();
-		} else {
-			result = new Promise<void>((resolve) => {
-				this._socket.addEventListener("close", () =>
-					resolve(undefined)
-				);
-			});
+	public async close(code?: number): Promise<void> {
+		if (!this._socket) {
+			return;
 		}
-		this._socket.close(code);
-		return result;
+		try {
+			const willEmitClose =
+				this._socket.readyState === WebSocket.CONNECTING ||
+				this._socket.readyState === WebSocket.OPEN;
+			this._socket.close(code);
+			if (willEmitClose) {
+				await events.once(this._socket, "close");
+			}
+		} finally {
+			this._socket = undefined;
+		}
 	}
 
 	/**
@@ -83,13 +95,6 @@ class WebSocketConnection extends events.EventEmitter implements Connection {
 	 */
 	public terminate(): Promise<void> {
 		return this.close(CLOSE_GOING_AWAY);
-	}
-
-	private get _connected(): boolean {
-		return (
-			this._socket.readyState === WebSocket.CONNECTING ||
-			this._socket.readyState === WebSocket.OPEN
-		);
 	}
 }
 
@@ -103,15 +108,15 @@ class WebSocketConnection extends events.EventEmitter implements Connection {
  * @event error(e: Error) Emitted when there was a connection, server or protocol error.
  * @event message(m: Message) Emitted when message was received (due to subscription).
  */
-export class MClient extends BaseClient {
+export class BrowserClient extends BaseClient {
 	private _url: string;
 
 	/**
 	 * Create new connection to MServer.
 	 * @param url Websocket URL of MServer, e.g. ws://localhost:13900
-	 * @param options Optional options, see `MClientOptions`.
+	 * @param options Optional options, see `BrowserClientOptions`.
 	 */
-	constructor(url: string, options?: MClientOptions) {
+	constructor(url: string, options?: BrowserClientOptions) {
 		// Ensure options is an object and fill in defaults
 		options = { ...defaultClientOptions, ...options };
 
@@ -125,7 +130,7 @@ export class MClient extends BaseClient {
 			url = url + ":" + (useTls ? DEFAULT_PORT_WSS : DEFAULT_PORT_WS);
 		}
 
-		super(() => new WebSocketConnection(url), options);
+		super(new WebSocketConnection(url), options);
 
 		this._url = url;
 	}
@@ -138,4 +143,4 @@ export class MClient extends BaseClient {
 	}
 }
 
-export default MClient;
+export default BrowserClient;

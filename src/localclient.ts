@@ -15,22 +15,26 @@ import { HubClient } from "./hubclient";
 import * as protocol from "./protocol";
 
 class LocalConnection extends events.EventEmitter implements Connection {
-	private _hubClient: HubClient;
+	private readonly _hub: Hub;
+	private readonly _name: string;
+	private _hubClient: HubClient | undefined;
 
 	constructor(hub: Hub, name: string) {
 		super();
+		this._hub = hub;
+		this._name = name;
+	}
 
-		this._hubClient = new HubClient(hub, name);
+	public async open(): Promise<void> {
+		if (this._hubClient) {
+			return;
+		}
+		this._hubClient = new HubClient(this._hub, this._name);
 		this._hubClient.on("response", (response: protocol.Response) => {
 			this.emit("message", response);
 		});
 		this._hubClient.on("error", (e: any) => this.emit("error", e));
-		Promise.resolve().then(() => {
-			// We're a direct connection, so immediately connected.
-			// However, need to defer it a bit, because our creator
-			// needs to attach the event handler.
-			this.emit("open");
-		});
+		this.emit("open");
 	}
 
 	/**
@@ -39,6 +43,9 @@ class LocalConnection extends events.EventEmitter implements Connection {
 	 * arrived at other side, can be e.g. queued).
 	 */
 	public async send(data: protocol.Command): Promise<void> {
+		if (!this._hubClient) {
+			throw new Error("not connected");
+		}
 		await this._hubClient.processCommand(data);
 	}
 
@@ -47,19 +54,21 @@ class LocalConnection extends events.EventEmitter implements Connection {
 	 * to be completed.
 	 * @return Promise that resolves when connection is succesfully closed.
 	 */
-	public close(): Promise<void> {
-		this._hubClient.close();
-		this.emit("close");
-		return Promise.resolve();
+	public async close(): Promise<void> {
+		this.terminate();
 	}
 
 	/**
 	 * Forcefully close connection.
 	 * @return Promise that resolves when connection is succesfully closed.
 	 */
-	public terminate(): Promise<void> {
+	public async terminate(): Promise<void> {
+		if (!this._hubClient) {
+			return;
+		}
 		this._hubClient.close();
-		return Promise.resolve();
+		this._hubClient = undefined;
+		this.emit("close");
 	}
 }
 
@@ -80,7 +89,7 @@ export class LocalClient extends BaseClient {
 	 * @param options Optional options, see `MClientOptions`.
 	 */
 	constructor(hub: Hub, name: string) {
-		super(() => new LocalConnection(hub, name));
+		super(new LocalConnection(hub, name));
 	}
 }
 

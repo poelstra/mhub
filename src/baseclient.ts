@@ -12,11 +12,14 @@ import * as events from "events";
 import Message, { Headers } from "./message";
 import { delay } from "./promise";
 import * as protocol from "./protocol";
-import { once } from "events";
+import { swallowError, assertNever, deferred, Deferred } from "./util";
 
 export const MAX_SEQ = 65536;
 
-type Resolver<T> = (v: T | PromiseLike<T>) => void;
+interface Transaction<T extends protocol.Response = protocol.Response> {
+	promise: Promise<T>;
+	resolve: (v: T | PromiseLike<T>) => void;
+}
 
 /**
  * Options to be passed to constructor.
@@ -39,17 +42,43 @@ export const defaultBaseClientOptions: BaseClientOptions = {
 /**
  * Interface for coupling of MHub client to transport protocol
  * such as a WebSocket or raw TCP stream.
- *
- * Events expected from the interface:
- * @event open() Emitted when connection was established.
- * @event close() Emitted when connection was closed.
- * @event error(e: Error) Emitted when there was a connection, server or protocol error.
- * @event message(data: protocol.Response) Emitted when a message (object) was received.
- *            Note: object needs to be deserialized already. Don't pass a string.
  */
 export interface Connection extends events.EventEmitter {
 	/**
+	 * Emitted when connection is closed by server.
+	 *
+	 * Ignored (but allowed) when closing due to close() or terminate()
+	 * call, in which case the system waits until such calls to
+	 * fulfill.
+	 */
+	// tslint:disable-next-line: unified-signatures
+	on(event: "close", handler: () => void): this;
+
+	/**
+	 * Emitted when there was a connection or other low-level error
+	 * about the connection/transport.
+	 */
+	on(event: "error", handler: (e: Error) => void): this;
+
+	/**
+	 * Emitted when a message (object) was received.
+	 * Note: object needs to be deserialized already. Don't pass a string.
+	 */
+	on(event: "message", handler: (data: protocol.Response) => void): this;
+
+	/**
+	 * Start connection.
+	 *
+	 * @return Fulfilled promise once the connection can be used to transmit commands.
+	 * If the promise is rejected, the connection is considered closed, and open()
+	 * may be called again.
+	 */
+	open(): Promise<void>;
+
+	/**
 	 * Transmit data object.
+	 * Will only be called when the connection is open.
+	 *
 	 * @return Promise that resolves when transmit is accepted (i.e. not necessarily
 	 * arrived at other side, can be e.g. queued).
 	 */
@@ -57,13 +86,26 @@ export interface Connection extends events.EventEmitter {
 
 	/**
 	 * Gracefully close connection, i.e. allow pending transmissions
-	 * to be completed.
+	 * to be completed. All pending client transactions are already
+	 * completed before calling close().
+	 *
+	 * Terminate will be called when close() fails.
+	 *
+	 * Will only be called when the connection is open.
+	 *
 	 * @return Promise that resolves when connection is succesfully closed.
 	 */
 	close(): Promise<void>;
 
 	/**
 	 * Forcefully close connection.
+	 *
+	 * Can always be called, and should also e.g. abort a pending open().
+	 * It can also be called while close() is still pending, and should
+	 * make sure the close is handled as quickly as possible.
+	 *
+	 * If terminate fails, the connection is still considered closed.
+	 *
 	 * @return Promise that resolves when connection is succesfully closed.
 	 */
 	terminate(): Promise<void>;
@@ -71,17 +113,21 @@ export interface Connection extends events.EventEmitter {
 
 export interface BaseClient {
 	/**
-	 * Attach event handler for connection established event.
+	 * Emitted when connection is established.
 	 */
 	on(event: "open", listener: () => void): this;
+
 	/**
-	 * Attache event handler for connection closed event.
+	 * Emitted when connection is closed.
 	 */
 	// tslint:disable-next-line: unified-signatures
 	on(event: "close", listener: () => void): this;
 
 	/**
-	 * Attach event handler for error event.
+	 * Emitted when there is an error on the connection that
+	 * is not related to the execution of a specific command.
+	 * (I.e. errors in response to commands are returned as
+	 * promise rejections from these commands.)
 	 */
 	on(event: "error", listener: (error: Error) => void): this;
 
@@ -93,6 +139,14 @@ export interface BaseClient {
 		event: "message",
 		listener: (message: Message, subscriptionId: string) => void
 	): this;
+}
+
+enum ConnectionState {
+	Disconnected,
+	Connecting,
+	Connected,
+	Closing, // gracefully
+	Terminating, // forcefully
 }
 
 /**
@@ -107,31 +161,41 @@ export interface BaseClient {
  */
 export class BaseClient extends events.EventEmitter {
 	private _options: BaseClientOptions;
-	private _socket: Connection | undefined;
 	private _transactions: {
-		[seqNo: number]: Resolver<protocol.Response>;
+		[seqNo: number]: Transaction;
 	} = {};
 	private _seqNo: number = 0;
 	private _idleTimer: any = undefined;
+	private _connection: Connection;
+	private _connectionState: ConnectionState = ConnectionState.Disconnected;
+	private _openEmitted: boolean = false;
 	private _connecting: Promise<void> | undefined;
 	private _closing: Promise<void> | undefined;
-	private _socketConstructor: () => Connection;
-	private _connected: boolean = false; // Prevent emitting `close` when not connected
+	private _terminated: Deferred<void> = deferred();
 
 	/**
 	 * Create new BaseClient.
 	 * @param options Protocol settings
 	 */
-	constructor(
-		socketConstructor: () => Connection,
-		options?: BaseClientOptions
-	) {
+	constructor(connection: Connection, options?: BaseClientOptions) {
 		super();
 
 		// Ensure options is an object and fill in defaults
 		options = { ...defaultBaseClientOptions, ...options };
 		this._options = options;
-		this._socketConstructor = socketConstructor;
+
+		this._connection = connection;
+		this._connection.on("error", (e: any): void => {
+			this._handleConnectionError(e);
+		});
+		this._connection.on("close", (): void => {
+			this._handleConnectionClose();
+		});
+		this._connection.on("message", (data: object): void => {
+			this._handleSocketMessage(data);
+		});
+
+		this._terminated.promise.catch(swallowError);
 	}
 
 	/**
@@ -140,102 +204,76 @@ export class BaseClient extends events.EventEmitter {
 	 * Note: a connection is already initiated when the constructor is called.
 	 */
 	public async connect(): Promise<void> {
-		if (this._connected) {
-			return;
-		}
-		if (this._closing) {
-			await this.close();
-			return this.connect();
-		}
-
-		if (!this._connecting) {
-			this._connecting = this._doConnect();
-		}
-
-		return this._connecting;
-	}
-
-	private async _doConnect(): Promise<void> {
-		try {
-			if (!this._socket) {
-				const socketConstructor = this._socketConstructor;
-				this._socket = socketConstructor(); // call it without a `this`
-				this._socket.on("error", (e: any): void => {
-					this._handleSocketError(e);
-				});
-				this._socket.on("open", (): void => {
-					this._handleSocketOpen();
-				});
-				this._socket.on("close", (): void => {
-					this._handleSocketClose();
-				});
-				this._socket.on("message", (data: object): void => {
-					this._handleSocketMessage(data);
-				});
-			}
-
-			await once(this._socket, "open");
-		} finally {
-			this._connecting = undefined;
+		switch (this._connectionState) {
+			case ConnectionState.Connected:
+				return;
+			case ConnectionState.Closing:
+			case ConnectionState.Terminating:
+				await this.close();
+				return this.connect();
+			case ConnectionState.Disconnected:
+				this._connecting = this._doConnect();
+				return this._connecting;
+			case ConnectionState.Connecting:
+				return this._connecting;
+			default:
+				assertNever(this._connectionState);
 		}
 	}
 
 	/**
-	 * Disconnect from MServer.
-	 * Pending requests will be rejected with an error.
+	 * Gracefully disconnect from MHub server.
+	 *
+	 * Pending requests will be waited for, but new requests will
+	 * be rejected.
+	 *
+	 * If already disconnected, this becomes a no-op.
+	 *
+	 * Note: any existing subscriptions will be lost.
+	 */
+	public async close(): Promise<void> {
+		switch (this._connectionState) {
+			case ConnectionState.Disconnected:
+				return;
+			case ConnectionState.Connected:
+			case ConnectionState.Connecting:
+				this._closing = this._doClose();
+				return this._closing;
+			case ConnectionState.Closing:
+			case ConnectionState.Terminating:
+				return this._closing;
+			default:
+				assertNever(this._connectionState);
+		}
+	}
+
+	/**
+	 * Forcefully disconnect from MHub server.
+	 *
+	 * Pending and new requests will be rejected with an error.
 	 * If already disconnected, this becomes a no-op.
 	 *
 	 * Note: any existing subscriptions will be lost.
 	 *
-	 * Optionally pass an error to signal abrupt failure,
-	 * forcefully terminating the connection.
-	 * The same error will be used to reject any pending
+	 * Optionally pass an error to use for rejecting any pending
 	 * requests.
+	 *
 	 * @param error (optional) Error to emit, reject transactions with, and
 	 *              forcefully close connection.
 	 */
-	public async close(error?: Error): Promise<void> {
-		if (!this._closing) {
-			this._closing = this._doClose(error);
-		}
-
-		return this._closing;
-	}
-
-	private async _doClose(error?: Error): Promise<void> {
-		try {
-			// Announce error if necessary
-			if (error) {
-				this._asyncEmit("error", error);
-			}
-
-			// Abort pending transactions
-			const transactionError = error || new Error("connection closed");
-			for (const t in this._transactions) {
-				if (!this._transactions[t]) {
-					continue;
-				}
-				this._transactions[t](
-					Promise.reject<protocol.Response>(transactionError)
-				);
-			}
-			this._transactions = {};
-
-			if (this._socket) {
-				if (error || !this._connected) {
-					// Forcefully close in case of an error, or when
-					// not connected yet (otherwise we may have to wait
-					// until the connect times out).
-					await this._socket.terminate();
-				} else {
-					// Gracefully close in normal cases, meaning any
-					// in-progress writes will be completed first.
-					await this._socket.close();
-				}
-			}
-		} finally {
-			this._socket = undefined;
-			this._closing = undefined;
+	public async terminate(error?: Error): Promise<void> {
+		switch (this._connectionState) {
+			case ConnectionState.Disconnected:
+				return;
+			case ConnectionState.Connected:
+			case ConnectionState.Connecting:
+			case ConnectionState.Closing:
+				this._closing = this._doTerminate(error);
+				return this._closing;
+			case ConnectionState.Terminating:
+				return this._closing;
+			default:
+				assertNever(this._connectionState);
 		}
 	}
 
@@ -378,32 +416,158 @@ export class BaseClient extends events.EventEmitter {
 		});
 	}
 
-	private _handleSocketOpen(): void {
-		this._connected = true;
-		this._asyncEmit("open");
-		this._restartIdleTimer();
-	}
-
-	private _handleSocketError(err: any): void {
-		if (!(err instanceof Error)) {
-			err = new Error("WebSocket error: " + err);
+	private async _doConnect(): Promise<void> {
+		try {
+			assert(this._connectionState === ConnectionState.Disconnected);
+			this._connectionState = ConnectionState.Connecting;
+			await Promise.race([
+				this._connection.open(),
+				this._terminated.promise, // ensure connect always returns when connection is aborted
+			]);
+			this._connectionState = ConnectionState.Connected;
+			this._openEmitted = true;
+			this._asyncEmit("open");
+			this._restartIdleTimer();
+		} finally {
+			this._connecting = undefined;
 		}
-		this._asyncEmit("error", err);
 	}
 
-	private _handleSocketClose(): void {
-		if (this._connected) {
-			this._connected = false;
+	private async _doClose(): Promise<void> {
+		assert(
+			this._connectionState === ConnectionState.Connecting ||
+				this._connectionState === ConnectionState.Connected
+		);
+
+		const forceClose = this._connectionState === ConnectionState.Connecting;
+		this._connectionState = ConnectionState.Closing;
+
+		try {
+			if (forceClose) {
+				// Forcefully close when not connected yet, otherwise we may
+				// have to wait until the connect times out.
+				await this._connection.terminate();
+			} else {
+				// Gracefully close in normal cases, meaning any
+				// in-progress transactions will be completed first.
+				const inProgress: Promise<any>[] = [];
+				for (const t in this._transactions) {
+					if (!this._transactions[t]) {
+						continue;
+					}
+					// Keep waiting until all are done, even if some error out
+					inProgress.push(
+						this._transactions[t].promise.catch(swallowError)
+					);
+				}
+				await Promise.race([
+					Promise.all(inProgress),
+					this._terminated.promise, // ensure close is aborted with a rejection when terminated
+				]);
+				await Promise.race([
+					this._connection.close(),
+					this._terminated.promise, // ensure close always returns when connection is aborted
+				]);
+			}
+			this._closing = undefined;
+			this._doDisconnected();
+			this._triggerTerminated(new Error("connection closed"));
+		} catch (err) {
+			this.terminate(err).catch(swallowError);
+			throw err;
+		}
+	}
+
+	private async _doTerminate(error?: Error): Promise<void> {
+		assert(
+			this._connectionState === ConnectionState.Connecting ||
+				this._connectionState === ConnectionState.Connected ||
+				this._connectionState === ConnectionState.Closing
+		);
+
+		this._connectionState = ConnectionState.Terminating;
+		if (error) {
+			this._asyncEmit("error", error);
+		}
+		const transactionError = error ?? new Error("connection terminated");
+		this._triggerTerminated(transactionError);
+		this._abortTransactions(transactionError);
+		try {
+			await this._connection.terminate();
+		} finally {
+			this._closing = undefined;
+			this._doDisconnected();
+		}
+	}
+
+	private _triggerTerminated(error: Error): void {
+		this._terminated.reject(error);
+		this._terminated = deferred();
+		this._terminated.promise.catch(swallowError);
+	}
+
+	private _abortTransactions(error: Error): void {
+		for (const t in this._transactions) {
+			if (!this._transactions[t]) {
+				continue;
+			}
+			this._transactions[t].resolve(Promise.reject(error));
+		}
+		this._transactions = {};
+	}
+
+	private _doDisconnected(): void {
+		assert(
+			this._connectionState === ConnectionState.Closing ||
+				this._connectionState === ConnectionState.Terminating
+		);
+
+		this._connectionState = ConnectionState.Disconnected;
+
+		if (this._openEmitted) {
+			this._openEmitted = false;
 			// Emit `close` event when socket is closed (i.e. not just when
 			// `close()` is called without being connected yet)
 			this._asyncEmit("close");
 		}
-		// Discard socket, abort pending transactions
-		this.close();
+
 		this._stopIdleTimer();
 	}
 
+	private _handleConnectionError(err: any): void {
+		if (!(err instanceof Error)) {
+			err = new Error("connection error: " + err);
+		}
+		this.terminate(err);
+	}
+
+	private _handleConnectionClose(): void {
+		switch (this._connectionState) {
+			case ConnectionState.Disconnected:
+				// Nothing to be done
+				return;
+			case ConnectionState.Closing:
+			case ConnectionState.Terminating:
+				// Let promise returned from the .close() or .terminate()
+				// call be in the lead here
+				return;
+			case ConnectionState.Connecting:
+			case ConnectionState.Connected:
+				// Spontaneous close by server
+				this._abortTransactions(new Error("connection closed"));
+				this._connectionState = ConnectionState.Closing;
+				this._doDisconnected();
+				return;
+			default:
+				assertNever(this._connectionState);
+		}
+	}
+
 	private _handleSocketMessage(data: object): void {
+		assert(
+			this._connectionState === ConnectionState.Connected ||
+				this._connectionState === ConnectionState.Closing
+		);
 		try {
 			if (!data || typeof data !== "object") {
 				throw new Error("missing or invalid data received");
@@ -431,8 +595,9 @@ export class BaseClient extends events.EventEmitter {
 						!this._release(errRes.seq, err, response)
 					) {
 						// Emit as a generic error when it could not be attributed to
-						// a specific request
-						this._asyncEmit("error", err);
+						// a specific request. There's no sane way to continue, so
+						// terminate the connection
+						this.terminate(err).catch(swallowError);
 					}
 					break;
 				case "suback":
@@ -457,14 +622,16 @@ export class BaseClient extends events.EventEmitter {
 					}
 					break;
 				default:
-					throw new Error("unknown message type: " + response!.type);
+					assertNever(
+						response!.type,
+						`unknown message type: ${response!.type}`
+					);
 			}
 			this._restartIdleTimer();
 		} catch (e) {
-			this._asyncEmit(
-				"error",
+			this.terminate(
 				new Error("message decode error: " + e.message)
-			);
+			).catch(swallowError);
 		}
 	}
 
@@ -474,7 +641,7 @@ export class BaseClient extends events.EventEmitter {
 	 */
 	private _restartIdleTimer(): void {
 		this._stopIdleTimer();
-		if (!this._socket) {
+		if (this._connectionState !== ConnectionState.Connected) {
 			return;
 		}
 		if (
@@ -497,43 +664,49 @@ export class BaseClient extends events.EventEmitter {
 	}
 
 	private _handleIdleTimeout(): void {
-		if (!this._socket || !this._connected) {
+		if (this._connectionState !== ConnectionState.Connected) {
 			return;
 		}
-		this.ping(this._options.keepalive).catch((e) => {
-			if (e && e.message === "server error: unknown node 'undefined'") {
-				// Older MHub didn't support ping, so ignore this error.
-				// (Additionally, all then-existing commands had to refer to a node.)
-				// TCP machinery will terminate the connection if needed.
-				// (Only doesn't work if this goes through proxies, and the
-				// connection after that is dead.)
+		this.ping(this._options.keepalive! - 1).catch((e) => {
+			// Older MHub didn't support ping, so ignore this error.
+			if (this._isUnsupportedCommandError(e)) {
+				// We did send a request to the server, and the server did
+				// send a response, so it's basically the same as receiving
+				// a valid ping reply.
 				return;
 			}
-			if (this._connected) {
+			if (this._connectionState === ConnectionState.Connected) {
 				// Only close (and emit an error) when we (seemed to be)
-				// succesfully connected (i.e. prevent multiple errors).
-				this.close(e);
+				// succesfully connected still (i.e. prevent multiple errors).
+				this.terminate(e).catch(swallowError);
 			}
 		});
 	}
 
-	private async _send(msg: protocol.Command): Promise<protocol.Response> {
-		if (!this._socket || !this._connected) {
+	private async _send<R extends protocol.Response>(
+		msg: protocol.Command
+	): Promise<R> {
+		if (this._connectionState !== ConnectionState.Connected) {
 			throw new Error("not connected");
 		}
 
 		const seq = this._nextSeq();
 		msg.seq = seq;
-		const transaction = new Promise<protocol.Response>((resolve) => {
-			this._transactions[seq] = resolve;
-		});
+		let resolve: Transaction["resolve"];
+		const promise = new Promise<protocol.Response>(
+			(res) => (resolve = res)
+		);
+		this._transactions[seq] = {
+			promise,
+			resolve: resolve!,
+		};
 		this._restartIdleTimer();
 		try {
-			await this._socket.send(msg);
+			await this._connection.send(msg);
 		} catch (err) {
 			this._release(seq, err);
 		}
-		return transaction;
+		return promise as Promise<R>;
 	}
 
 	/**
@@ -545,15 +718,16 @@ export class BaseClient extends events.EventEmitter {
 		err: Error | void,
 		msg?: protocol.Response
 	): boolean {
-		const resolver = this._transactions[seqNr];
-		if (!resolver) {
+		const transaction = this._transactions[seqNr];
+		if (!transaction) {
 			return false;
 		}
 		delete this._transactions[seqNr];
 		if (err) {
-			resolver(Promise.reject<protocol.Response>(err));
+			transaction.resolve(Promise.reject(err));
 		} else {
-			resolver(msg!);
+			assert(msg);
+			transaction.resolve(msg!);
 		}
 		return true;
 	}
@@ -572,6 +746,29 @@ export class BaseClient extends events.EventEmitter {
 		const result = this._seqNo;
 		this._seqNo = (this._seqNo + 1) % MAX_SEQ;
 		return result;
+	}
+
+	/**
+	 * Determine whether given error object indicates that the
+	 * command is not supported.
+	 * This is not entirely trivial for older server versions.
+	 */
+	private _isUnsupportedCommandError(error: unknown): boolean {
+		if (!(error instanceof Error)) {
+			// Not even an error object, so definitely not a response
+			// from the server.
+			return false;
+		}
+		if (error.message.startsWith("unknown command")) {
+			return true;
+		}
+		if (error.message === "server error: unknown node 'undefined'") {
+			// For historic MHub protocol, all commands had to refer to a node,
+			// so those servers will respond with an error that the node wasn't
+			// specified.
+			return true;
+		}
+		return false;
 	}
 }
 

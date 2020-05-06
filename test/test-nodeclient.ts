@@ -12,7 +12,7 @@ import * as ws from "ws";
 
 import { PlainAuthenticator } from "../src/authenticator";
 import Hub from "../src/hub";
-import MClient from "../src/nodeclient";
+import NodeClient from "../src/nodeclient";
 import { delay } from "../src/promise";
 import WSConnection from "../src/transports/wsconnection";
 
@@ -80,15 +80,15 @@ class TestServer {
 	}
 }
 
-describe("MClient", (): void => {
+describe("NodeClient", (): void => {
 	let server: TestServer;
-	let client: MClient;
+	let client: NodeClient;
 
 	beforeEach(() => {
 		const port = 12345;
 		server = new TestServer(port);
 		return server.start().then(() => {
-			client = new MClient(`ws://localhost:${port}`);
+			client = new NodeClient(`ws://localhost:${port}`);
 			return client.connect();
 		});
 	});
