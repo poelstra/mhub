@@ -1,6 +1,25 @@
 import log from "./log";
 import { fail } from "assert";
 
+export function isStringArray(value: unknown): value is string | string[] {
+	if (!Array.isArray(value)) {
+		return false;
+	}
+	if (value.every((element) => typeof element === "string")) {
+		return true;
+	}
+	return false;
+}
+
+export function isStringOrStringArray(
+	value: unknown
+): value is string | string[] {
+	if (typeof value === "string" || isStringArray(value)) {
+		return true;
+	}
+	return false;
+}
+
 export function die(fmt: string, ...args: any[]): never {
 	log.fatal(fmt, ...args);
 	process.exit(1);

@@ -174,7 +174,8 @@ export class HubClient extends events.EventEmitter {
 					response = await this._handleLogin(msg);
 					break;
 				default:
-					throw new Error(`unknown command '${msg!.type}'`);
+					const checkNever: never = msg!.type;
+					throw new Error(`unknown command '${checkNever}'`);
 			}
 		} catch (e) {
 			const errorMessage = String(e);
@@ -195,6 +196,11 @@ export class HubClient extends events.EventEmitter {
 	private _handlePublish(
 		msg: protocol.PublishCommand
 	): protocol.PubAckResponse | undefined {
+		// topic and headers are checked by message.validate() below
+		if (typeof msg.node !== "string") {
+			throw new Error(`invalid node '${msg.node}': string expected`);
+		}
+
 		if (!this._authorizer.canPublish(msg.node, msg.topic)) {
 			throw new Error("permission denied");
 		}
@@ -223,6 +229,15 @@ export class HubClient extends events.EventEmitter {
 	private _handleSubscribe(
 		msg: protocol.SubscribeCommand
 	): protocol.SubAckResponse | undefined {
+		if (typeof msg.node !== "string") {
+			throw new Error(`invalid node '${msg.node}': string expected`);
+		}
+		if (typeof msg.pattern !== "string" && msg.pattern !== undefined) {
+			throw new Error(
+				`invalid pattern '${msg.pattern}': string or undefined expected`
+			);
+		}
+
 		// First check whether (un-)subscribing is allowed at all, to
 		// prevent giving away info about (non-)existence of nodes.
 		const authResult = this._authorizer.canSubscribe(msg.node, msg.pattern);
@@ -270,6 +285,15 @@ export class HubClient extends events.EventEmitter {
 	private _handleUnsubscribe(
 		msg: protocol.UnsubscribeCommand
 	): protocol.UnsubAckResponse | undefined {
+		if (typeof msg.node !== "string") {
+			throw new Error(`invalid node '${msg.node}': string expected`);
+		}
+		if (typeof msg.pattern !== "string" && msg.pattern !== undefined) {
+			throw new Error(
+				`invalid pattern '${msg.pattern}': string or undefined expected`
+			);
+		}
+
 		// First check whether (un-)subscribing is allowed at all, to
 		// prevent giving away info about (non-)existence of nodes.
 		const authResult = this._authorizer.canSubscribe(msg.node, msg.pattern);
@@ -310,6 +334,17 @@ export class HubClient extends events.EventEmitter {
 	private async _handleLogin(
 		msg: protocol.LoginCommand
 	): Promise<protocol.LoginAckResponse | undefined> {
+		if (typeof msg.username !== "string") {
+			throw new Error(
+				`invalid username '${msg.username}': string expected`
+			);
+		}
+		if (typeof msg.password !== "string") {
+			throw new Error(
+				`invalid password '${msg.password}': string expected`
+			);
+		}
+
 		if (this._username !== undefined) {
 			// Wouldn't really be a problem for now, but may be in
 			// the future if e.g. different users have different quota
