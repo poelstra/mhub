@@ -1,4 +1,5 @@
 import * as micromatch from "micromatch";
+import { isStringOrStringArray } from "./util";
 
 export type Matcher = (value: string) => boolean;
 
@@ -20,11 +21,14 @@ export type MatchSpec = string | string[] | Matcher;
  * @return Function that returns true when its argument matches the given pattern
  */
 export function getMatcher(pattern?: MatchSpec): Matcher {
-	if (!pattern) {
+	if (pattern === undefined || pattern === "") {
 		return () => true;
 	}
 	if (typeof pattern === "function") {
 		return pattern;
+	}
+	if (!isStringOrStringArray(pattern)) {
+		throw new TypeError("invalid pattern: string or string array expected");
 	}
 	return micromatch.matcher(pattern, {
 		strictSlashes: true,
