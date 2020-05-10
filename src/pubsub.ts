@@ -89,6 +89,9 @@ export class BaseSource implements Source {
 		} else {
 			// Remove only specific binding to destination
 			this._bindings = this._bindings.filter((b: Binding): boolean => {
+				if (b.destination !== destination) {
+					return true;
+				}
 				b.matchers = b.matchers.filter((m: MatchDef): boolean => {
 					const remove = m.pattern === pattern;
 					return !remove;
