@@ -7,85 +7,25 @@ import * as events from "events";
 
 import log from "./log";
 
-import Dict from "./dict";
 import Hub, { Authorizer } from "./hub";
-import { getMatcher, MatchSpec } from "./match";
 import Message from "./message";
 import * as protocol from "./protocol";
 import * as pubsub from "./pubsub";
+import { Session, SessionType, SubscriptionBindings } from "./session";
+import { isStringOrStringArray, isStringArray } from "./util";
+import { Matcher } from "./match";
 
-type ResponseHandler = (response: protocol.Response) => void;
+export interface HubClient {
+	/*
+	 * Emitted whenever a response to a command, or new data to a subscription, is sent to
+	 * this client.
+	 */
+	on(event: "response", handler: (response: protocol.Response) => void): this;
 
-interface SubscriptionBinding {
-	node: pubsub.Source;
-	patterns: Dict<MatchSpec>;
-}
-
-class SubscriptionNode implements pubsub.Destination {
-	public name: string;
-	private _id: string;
-	private _bindings: Dict<SubscriptionBinding> = new Dict();
-	private _onResponse: ResponseHandler;
-
-	constructor(conn: HubClient, id: string, onResponse: ResponseHandler) {
-		this.name = conn.name + "_" + id;
-		this._id = id;
-		this._onResponse = onResponse;
-	}
-
-	public send(message: Message): void {
-		log.debug("-> %s", this.name, message.topic);
-		const response: protocol.MessageResponse = {
-			type: "message",
-			topic: message.topic,
-			data: message.data,
-			headers: message.headers,
-			subscription: this._id,
-		};
-		this._onResponse(response);
-	}
-
-	public subscribe(
-		node: pubsub.Source,
-		pattern: string | undefined,
-		matcher: MatchSpec
-	): void {
-		let bindings = this._bindings.get(node.name);
-		if (!bindings) {
-			bindings = {
-				node,
-				patterns: new Dict(),
-			};
-			this._bindings.set(node.name, bindings);
-		}
-		pattern = pattern || "";
-		// Only bind if not already bound using this exact pattern
-		if (!bindings.patterns.get(pattern)) {
-			bindings.patterns.set(pattern, matcher);
-			node.bind(this, matcher);
-		}
-	}
-
-	public unsubscribe(node: pubsub.Source, pattern: string | undefined): void {
-		const bindings = this._bindings.get(node.name);
-		if (!bindings) {
-			return;
-		}
-		pattern = pattern || "";
-		const matcher = bindings.patterns.get(pattern);
-		if (!matcher) {
-			return;
-		}
-		bindings.patterns.remove(pattern);
-		node.unbind(this, matcher);
-	}
-
-	public destroy(): void {
-		this._bindings.forEach((binding): void => {
-			binding.node.unbind(this);
-		});
-		this._bindings.clear();
-	}
+	/**
+	 * Emitted when client experienced an error.
+	 */
+	on(event: "error", handler: (error: Error) => void): this;
 }
 
 /**
@@ -94,17 +34,11 @@ class SubscriptionNode implements pubsub.Destination {
  * connect to the hub, passing it raw JSON objects received over the wire
  * to `processCommand()` and receiving responses from it by listing to
  * the `response` event.
- *
- * Events emitted from HubClient:
- * @event response(data: protocol.Response) Emitted whenever a response to
- *        a command, or new data to a subscription, is sent to this client.
  */
 export class HubClient extends events.EventEmitter {
 	public name: string; // TODO move this to higher layer?
+	private _session: Session | undefined;
 	private _hub: Hub;
-	private _subscriptions: Dict<SubscriptionNode> = new Dict<
-		SubscriptionNode
-	>();
 	private _username: string | undefined;
 	private _authorizer: Authorizer;
 
@@ -119,8 +53,7 @@ export class HubClient extends events.EventEmitter {
 	 * Disconnect from Hub.
 	 */
 	public close(): void {
-		this._subscriptions.forEach((subscription) => subscription.destroy());
-		this._subscriptions.clear();
+		this._session?.detach();
 	}
 
 	/**
@@ -158,6 +91,9 @@ export class HubClient extends events.EventEmitter {
 				throw new Error("invalid message, missing or invalid type");
 			}
 			switch (msg.type) {
+				case "ack":
+					this._handleAck(msg);
+					break;
 				case "publish":
 					response = this._handlePublish(msg);
 					break;
@@ -169,6 +105,12 @@ export class HubClient extends events.EventEmitter {
 					break;
 				case "ping":
 					response = this._handlePing(msg);
+					break;
+				case "session":
+					response = this._handleSession(msg);
+					break;
+				case "subscription":
+					response = this._handleSubscription(msg);
 					break;
 				case "login":
 					response = await this._handleLogin(msg);
@@ -184,12 +126,13 @@ export class HubClient extends events.EventEmitter {
 				response = {
 					type: "error",
 					message: errorMessage,
-					seq: typeof msg === "object" ? msg.seq : undefined,
+					// Note: msg can be anything here, even undefined
+					seq: typeof msg === "object" ? (msg as any).seq : undefined,
 				};
 			}
 		}
 		if (response) {
-			this._onResponseHandler(response);
+			this.emit("response", response);
 		}
 	}
 
@@ -240,8 +183,8 @@ export class HubClient extends events.EventEmitter {
 
 		// First check whether (un-)subscribing is allowed at all, to
 		// prevent giving away info about (non-)existence of nodes.
-		const authResult = this._authorizer.canSubscribe(msg.node, msg.pattern);
-		if (!authResult) {
+		const authMatcher = this._authorizer.getSubscribeMatcher(msg.node);
+		if (!authMatcher) {
 			throw new Error("permission denied");
 		}
 
@@ -255,24 +198,9 @@ export class HubClient extends events.EventEmitter {
 		}
 
 		const id = msg.id || "default";
-		let sub = this._subscriptions.get(id);
-		if (!sub) {
-			sub = new SubscriptionNode(this, id, this._onResponseHandler);
-			this._subscriptions.set(id, sub);
-		}
-
-		// Create a matcher that filters both the subscription pattern and
-		// authorization pattern(s), if needed.
-		const patternMatcher = getMatcher(msg.pattern);
-		let finalMatcher: (topic: string) => boolean;
-		if (typeof authResult === "function") {
-			finalMatcher = (topic) =>
-				authResult(topic) && patternMatcher(topic);
-		} else {
-			// authResult is true
-			finalMatcher = patternMatcher;
-		}
-		sub.subscribe(node, msg.pattern, finalMatcher);
+		const session = this._getOrCreateSession();
+		const sub = session.getOrCreateSubscription(id);
+		sub.subscribe(node, msg.pattern ?? "", authMatcher);
 
 		if (protocol.hasSequenceNumber(msg)) {
 			return {
@@ -296,7 +224,7 @@ export class HubClient extends events.EventEmitter {
 
 		// First check whether (un-)subscribing is allowed at all, to
 		// prevent giving away info about (non-)existence of nodes.
-		const authResult = this._authorizer.canSubscribe(msg.node, msg.pattern);
+		const authResult = this._authorizer.getSubscribeMatcher(msg.node);
 		if (!authResult) {
 			throw new Error("permission denied");
 		}
@@ -311,10 +239,9 @@ export class HubClient extends events.EventEmitter {
 		}
 
 		const id = msg.id || "default";
-		const sub = this._subscriptions.get(id);
-		if (sub) {
-			sub.unsubscribe(node, msg.pattern);
-		}
+		const session = this._getOrCreateSession();
+		const sub = session.getOrCreateSubscription(id);
+		sub.unsubscribe(node, msg.pattern ?? "");
 
 		if (protocol.hasSequenceNumber(msg)) {
 			return {
@@ -371,9 +298,183 @@ export class HubClient extends events.EventEmitter {
 		}
 	}
 
-	private _onResponseHandler = (response: protocol.Response): void => {
-		this.emit("response", response);
-	};
+	private _handleSession(
+		msg: protocol.SessionCommand
+	): protocol.SessionAckResponse {
+		if (typeof msg.name !== "string") {
+			throw new Error(`missing or invalid session name '${msg.name}'`);
+		}
+		if (
+			msg.subscriptions !== undefined &&
+			!isStringArray(msg.subscriptions)
+		) {
+			throw new Error(
+				`invalid subscriptions '${msg.subscriptions}', undefined or string array expected`
+			);
+		}
+		if (this._session) {
+			// TODO allow re-attaching to the same session? Could be useful for stuff
+			// like Arduino connected over a serial link, that doesn't really have the
+			// concept of a connection, but does need to be able to 'reconnect'.
+			throw new Error("already have a session");
+		}
+		if (!this._username) {
+			throw new Error("cannot obtain session, not logged in");
+		}
+		let session = this._hub.findSession(this._username, msg.name);
+		if (!session) {
+			session = new Session(
+				`${this.name}-${this._username}-${msg.name}`,
+				SessionType.Memory
+			);
+		}
+		if (msg.subscriptions) {
+			session.setSubscriptions(msg.subscriptions);
+		}
+		this._attachSession(session);
+		return {
+			type: "sessionack",
+			seq: msg.seq,
+		};
+	}
+
+	private _handleSubscription(
+		msg: protocol.SubscriptionCommand
+	): protocol.SubscriptionAckResponse | undefined {
+		if (typeof msg.id !== "string") {
+			throw new Error(`invalid id '${msg.id}', string expected`);
+		}
+		if (msg.bindings !== undefined && typeof msg.bindings !== "object") {
+			throw new Error(
+				`invalid bindings '${msg.bindings}', undefined or object expected`
+			);
+		}
+
+		let authMatchers: Map<pubsub.Source, Matcher> | undefined;
+		let subBindings: SubscriptionBindings | undefined;
+		if (msg.bindings) {
+			authMatchers = new Map();
+			subBindings = new Map();
+			for (const nodeName of Object.keys(msg.bindings)) {
+				// First check whether (un-)subscribing is allowed at all, to
+				// prevent giving away info about (non-)existence of nodes.
+				const authMatcher = this._authorizer.getSubscribeMatcher(
+					nodeName
+				);
+				if (!authMatcher) {
+					throw new Error("permission denied");
+				}
+
+				const node = this._hub.find(nodeName);
+				if (!node) {
+					throw new Error(`unknown node '${nodeName}'`);
+				}
+
+				if (!pubsub.isSource(node)) {
+					throw new Error(`node '${nodeName}' is not a Source`);
+				}
+
+				const patterns = msg.bindings[nodeName];
+				const type = typeof patterns;
+				if (type !== "boolean" && !isStringOrStringArray(patterns)) {
+					throw new Error(
+						`invalid patterns for node '${nodeName}': '${patterns}', boolean or string or string array expected`
+					);
+				}
+
+				authMatchers.set(node, authMatcher);
+				subBindings.set(node, patterns);
+			}
+		}
+
+		const session = this._getSession();
+		const sub = session.getSubscription(msg.id);
+
+		if (subBindings && authMatchers) {
+			sub.setBindings(subBindings, authMatchers);
+		}
+
+		if (!protocol.hasSequenceNumber(msg)) {
+			return;
+		}
+
+		let bindings: protocol.Bindings | undefined;
+		if (!msg.bindings) {
+			bindings = {};
+			for (const [source, patterns] of sub.getBindings()) {
+				bindings[source.name] = patterns;
+			}
+		}
+
+		return {
+			type: "subscriptionack",
+			lastAck: sub.first,
+			bindings,
+			seq: msg.seq,
+		};
+	}
+
+	private _handleAck(msg: protocol.AckCommand): void {
+		if (typeof msg.id !== "string") {
+			throw new Error(`invalid id '${msg.id}', string expected`);
+		}
+		if (typeof msg.ack !== "number") {
+			throw new Error(`invalid ack '${msg.ack}', number expected`);
+		}
+		if (msg.window !== undefined && typeof msg.window !== "number") {
+			throw new Error(
+				`invalid window '${msg.window}', undefined or number expected`
+			);
+		}
+		this._getSession().getSubscription(msg.id).ack(msg.ack, msg.window);
+	}
+
+	private _getSession(): Session {
+		if (!this._session) {
+			throw new Error("no session");
+		}
+		return this._session;
+	}
+
+	private _getOrCreateSession(): Session {
+		if (!this._session) {
+			const session = new Session(
+				`${this.name}-<auto>`,
+				SessionType.Volatile
+			);
+			this._attachSession(session);
+		}
+		return this._session!;
+	}
+
+	private _attachSession(session: Session): void {
+		if (this._session) {
+			// TODO allow re-attaching to the same session? Could be useful for stuff
+			// like Arduino connected over a serial link, that doesn't really have the
+			// concept of a connection, but does need to be able to 'reconnect'.
+			throw new Error("already have a session");
+		}
+		this._session = session;
+		this._session.attach({
+			detach: () => {
+				// TODO dedicated protocol response for this? Or at least use ErrorCode
+				this.emit("message", {
+					type: "error",
+					message: "session detached",
+				} as protocol.ErrorResponse);
+			},
+			message: (message, id, seq) => {
+				this.emit("response", {
+					type: "message",
+					topic: message.topic,
+					data: message.data,
+					headers: message.headers,
+					subscription: id,
+					seq,
+				} as protocol.MessageResponse);
+			},
+		});
+	}
 }
 
 export default HubClient;

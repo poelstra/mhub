@@ -243,6 +243,20 @@ export interface MessageResponse {
 	 * ID of subscription (`SubscribeCommand.id`) or `"default"`.
 	 */
 	subscription: string;
+	/**
+	 * Sequence number of message, if message is sent in a session.
+	 * In that case, the message must be acked in order to keep receiving
+	 * new messages. Depending on the window size, messages may be acked
+	 * in batches.
+	 */
+	seq?: number;
+}
+
+export interface AckCommand {
+	type: "ack";
+	id: string;
+	ack: number;
+	window?: number;
 }
 
 /**
@@ -347,6 +361,45 @@ export interface ErrorResponse {
 	message: string;
 }
 
+export interface SessionCommand {
+	type: "session";
+	name: string;
+	seq?: number;
+	subscriptions?: string[];
+}
+
+export interface SessionAckResponse {
+	type: "sessionack";
+	seq?: number;
+	// TODO Add list of subscriptions when not given in SessionCommand?
+}
+
+/**
+ * Topic pattern.
+ * If empty string, matches everything.
+ */
+export type Pattern = string;
+
+export type Patterns = Pattern | Pattern[];
+
+export interface Bindings {
+	[nodeName: string]: Patterns;
+}
+
+export interface SubscriptionCommand {
+	type: "subscription";
+	seq?: number;
+	id: string;
+	bindings?: Bindings;
+}
+
+export interface SubscriptionAckResponse {
+	type: "subscriptionack";
+	seq: number;
+	bindings?: Bindings;
+	lastAck: number;
+}
+
 /**
  * All supported commands (i.e. client to server).
  */
@@ -355,7 +408,10 @@ export type Command =
 	| UnsubscribeCommand
 	| PublishCommand
 	| PingCommand
-	| LoginCommand;
+	| LoginCommand
+	| SessionCommand
+	| SubscriptionCommand
+	| AckCommand;
 
 /**
  * All supported responses (i.e. server to client)
@@ -367,7 +423,9 @@ export type Response =
 	| PubAckResponse
 	| PingAckResponse
 	| LoginAckResponse
-	| ErrorResponse;
+	| ErrorResponse
+	| SessionAckResponse
+	| SubscriptionAckResponse;
 
 /**
  * Interface that helps with strict null checks.

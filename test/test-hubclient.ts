@@ -172,4 +172,68 @@ describe("HubClient", (): void => {
 			);
 		});
 	});
+
+	describe("#subscribe", () => {
+		beforeEach(() => {
+			hub.setRights({ "": true });
+			client = new HubClient(hub, "testclient");
+		});
+
+		it("supports subscribe without session", async () => {
+			expect(
+				await invoke(client, {
+					type: "subscribe",
+					node: "default",
+					seq: 0,
+				})
+			).to.deep.equal({ type: "suback", seq: 0 });
+		});
+
+		it("auto-acks all messages on session-less subscription", async () => {
+			await invoke(
+				client,
+				{
+					type: "subscribe",
+					node: "default",
+					seq: 0,
+				},
+				"suback"
+			);
+
+			const message = waitFor<protocol.MessageResponse>(
+				client,
+				"message"
+			);
+			await invoke(
+				client,
+				{
+					type: "publish",
+					node: "default",
+					topic: "foo0",
+					seq: 1,
+				},
+				"puback"
+			);
+			expect(await message)
+				.property("topic")
+				.to.equal("foo0");
+		});
+	});
+
+	describe("#session", () => {
+		beforeEach(() => {
+			client = new HubClient(hub, "testclient");
+		});
+
+		it("disallows creating anonymous session", async () => {
+			const response = await invoke(client, {
+				type: "session",
+				name: "something",
+			});
+			expect(response.type).to.equal("error");
+			expect((<protocol.ErrorResponse>response).message).to.contain(
+				"not logged in"
+			);
+		});
+	});
 });

@@ -1,9 +1,17 @@
 import * as micromatch from "micromatch";
 import { isStringOrStringArray } from "./util";
 
-export type Matcher = (value: string) => boolean;
+export type Matcher = (topic: string) => boolean;
 
 export type MatchSpec = string | string[] | Matcher;
+
+export function allowAll(_topic: string): true {
+	return true;
+}
+
+export function denyAll(_topic: string): false {
+	return false;
+}
 
 /**
  * Build a function that will return true when its input argument matches the
@@ -22,7 +30,7 @@ export type MatchSpec = string | string[] | Matcher;
  */
 export function getMatcher(pattern?: MatchSpec): Matcher {
 	if (pattern === undefined || pattern === "") {
-		return () => true;
+		return allowAll;
 	}
 	if (typeof pattern === "function") {
 		return pattern;

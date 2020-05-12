@@ -9,9 +9,11 @@
 
 import { Authenticator } from "./authenticator";
 import Dict from "./dict";
-import { getMatcher, Matcher } from "./match";
+import { getMatcher, Matcher, allowAll } from "./match";
 import * as pubsub from "./pubsub";
+import { Session } from "./session";
 import { Storage } from "./storage";
+import { assertOrDie } from "./util";
 
 /**
  * Specify what permission a user has to e.g. publish or subscribe.
@@ -69,12 +71,35 @@ export const defaultAllowPermissions: Permissions = {
 
 export const defaultPermissions = defaultDenyPermissions;
 
+type PermissionMatcher = false | Matcher;
+
+interface PermissionMatchers {
+	publish: boolean | Map<string, PermissionMatcher>;
+	subscribe: boolean | Map<string, PermissionMatcher>;
+}
+
+function permissionToMatchers(
+	permission: Permission
+): boolean | Map<string, PermissionMatcher> {
+	if (typeof permission === "boolean") {
+		return permission;
+	}
+	const result = new Map<string, PermissionMatcher>();
+	for (const node of Object.keys(permission)) {
+		const nodePermission = permission[node];
+		if (nodePermission === false) {
+			result.set(node, false);
+		} else if (nodePermission === true) {
+			result.set(node, allowAll);
+		} else {
+			result.set(node, getMatcher(nodePermission));
+		}
+	}
+	return result;
+}
+
 export class Authorizer {
-	private _permissions: Permissions;
-	// tslint:disable-next-line:no-null-keyword
-	private _publishMatchers: { [nodeName: string]: Matcher } = Object.create(
-		null
-	);
+	private _permissions: PermissionMatchers;
 
 	constructor(partialPermissions: PartialPermissions | undefined) {
 		if (typeof partialPermissions === "boolean") {
@@ -82,75 +107,43 @@ export class Authorizer {
 				? defaultAllowPermissions
 				: defaultDenyPermissions;
 		}
-		this._permissions = { ...defaultPermissions, ...partialPermissions };
+		const permissions: Permissions = {
+			...defaultPermissions,
+			...partialPermissions,
+		};
+		this._permissions = {
+			publish: permissionToMatchers(permissions.publish),
+			subscribe: permissionToMatchers(permissions.subscribe),
+		};
 	}
 
 	public canPublish(node: string, topic: string): boolean {
-		// Note: Matcher doesn't occur for publish, because the topic is never considered pattern
-		return (
-			this._hasPermission(
-				this._permissions.publish,
-				node,
-				topic,
-				false
-			) === true
-		);
-	}
-
-	public canSubscribe(node: string, pattern?: string): boolean | Matcher {
-		return this._hasPermission(
-			this._permissions.subscribe,
-			node,
-			pattern,
-			true
-		);
-	}
-
-	private _hasPermission(
-		permission: Permission,
-		node: string,
-		topicOrPattern: string | undefined,
-		isPattern: boolean
-	): boolean | Matcher {
-		if (typeof permission === "boolean") {
-			return permission;
-		}
-		// Otherwise, must be a node->(boolean | string | string[]) map
-		const nodePermission = permission[node];
-		if (nodePermission === undefined) {
+		const matcher = this._getMatcher(this._permissions.publish, node);
+		if (!matcher) {
 			return false;
 		}
-		if (typeof nodePermission === "boolean") {
-			return nodePermission;
+		return matcher(topic);
+	}
+
+	public getSubscribeMatcher(node: string): false | Matcher {
+		return this._getMatcher(this._permissions.subscribe, node);
+	}
+
+	private _getMatcher(
+		permission: boolean | Map<string, PermissionMatcher>,
+		node: string
+	): false | Matcher {
+		if (!permission) {
+			return false;
 		}
-		if (isPattern) {
-			// If pattern is specified as-is, we grant access completely, no further
-			// filtering necessary. If pattern isn't found, we assume the two patterns
-			// (subscription and permissions) may intersect, but further checking will
-			// be necessary.
-			if (typeof nodePermission === "string") {
-				if (nodePermission === topicOrPattern) {
-					return true;
-				}
-				return getMatcher(nodePermission);
-			}
-			const patternFoundInPermissions = nodePermission.some(
-				(pattern) => pattern === topicOrPattern
-			);
-			if (patternFoundInPermissions) {
-				return true;
-			} else {
-				return getMatcher(nodePermission);
-			}
-		} else {
-			// topicOrPattern is a topic
-			let matcher = this._publishMatchers[node];
-			if (!matcher) {
-				this._publishMatchers[node] = getMatcher(nodePermission);
-				matcher = this._publishMatchers[node];
-			}
-			return topicOrPattern !== undefined && matcher(topicOrPattern);
+		if (permission === true) {
+			return allowAll;
 		}
+		const nodePermission = permission.get(node);
+		if (!nodePermission) {
+			return false;
+		}
+		return getMatcher(nodePermission);
 	}
 }
 
@@ -159,6 +152,7 @@ export class Hub {
 	private _authenticator: Authenticator;
 	private _rights: Dict<PartialPermissions> = new Dict<PartialPermissions>();
 	private _storage: Storage<any> | undefined;
+	private _sessions: Map<string, Map<string, Session>> = new Map();
 
 	constructor(authenticator: Authenticator) {
 		this._authenticator = authenticator;
@@ -225,6 +219,46 @@ export class Hub {
 		password: string
 	): Promise<boolean> {
 		return this._authenticator.authenticate(username, password);
+	}
+
+	public findSession(
+		username: string,
+		sessionId: string
+	): Session | undefined {
+		const userSessions = this._sessions.get(username);
+		if (!userSessions) {
+			return undefined;
+		}
+		const session = userSessions.get(sessionId);
+		if (!session) {
+			return undefined;
+		}
+		return session;
+	}
+
+	public registerSession(
+		username: string,
+		sessionId: string,
+		session: Session
+	): void {
+		let userSessions = this._sessions.get(username);
+		if (!userSessions) {
+			userSessions = new Map();
+			this._sessions.set(username, userSessions);
+		}
+		const existingSession = userSessions.get(sessionId);
+		if (existingSession) {
+			existingSession.destroy();
+		}
+
+		session.on("destroy", () => {
+			assertOrDie(
+				userSessions?.get(sessionId) === session,
+				"destroyed session does not match registered session"
+			);
+			userSessions?.delete(sessionId);
+		});
+		userSessions.set(sessionId, session);
 	}
 }
 

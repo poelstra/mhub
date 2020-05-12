@@ -39,6 +39,10 @@ export const defaultBaseClientOptions: BaseClientOptions = {
 	keepalive: 30000, // milliseconds
 };
 
+export interface SessionOptions {
+	subscriptions?: string[];
+}
+
 /**
  * Interface for coupling of MHub client to transport protocol
  * such as a WebSocket or raw TCP stream.
@@ -292,6 +296,41 @@ export class BaseClient extends events.EventEmitter {
 			username,
 			password,
 		});
+	}
+
+	public async session(
+		name: string,
+		sessionOptions?: SessionOptions
+	): Promise<void> {
+		await this._send(<protocol.SessionCommand>{
+			type: "session",
+			name,
+			...sessionOptions,
+		});
+	}
+
+	/**
+	 * Try to create/reattach to server session, but don't fail if
+	 * server doesn't support it.
+	 *
+	 * Note: this does throw an error for cases where sessions are supported
+	 * on the server, but it's not possible to obtain one.
+	 *
+	 * @return true when session is attached to
+	 */
+	public async trySession(
+		name: string,
+		sessionOptions?: SessionOptions
+	): Promise<boolean> {
+		try {
+			await this.session(name, sessionOptions);
+			return true;
+		} catch (err) {
+			if (this._isUnsupportedCommandError(err)) {
+				return false;
+			}
+			throw err;
+		}
 	}
 
 	/**
@@ -604,11 +643,15 @@ export class BaseClient extends events.EventEmitter {
 				case "unsuback":
 				case "puback":
 				case "loginack":
+				case "sessionack":
+				case "subscriptionack":
 					const ackDec = <
 						| protocol.PubAckResponse
 						| protocol.SubAckResponse
 						| protocol.UnsubAckResponse
 						| protocol.LoginAckResponse
+						| protocol.SessionAckResponse
+						| protocol.SubscriptionAckResponse
 					>response;
 					if (protocol.hasSequenceNumber(ackDec)) {
 						this._release(ackDec.seq, undefined, ackDec);
@@ -691,7 +734,9 @@ export class BaseClient extends events.EventEmitter {
 		}
 
 		const seq = this._nextSeq();
-		msg.seq = seq;
+		if (msg.type !== "ack") {
+			msg.seq = seq;
+		}
 		let resolve: Transaction["resolve"];
 		const promise = new Promise<protocol.Response>(
 			(res) => (resolve = res)
