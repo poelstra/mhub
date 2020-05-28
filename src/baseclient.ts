@@ -537,7 +537,7 @@ export class BaseClient extends events.EventEmitter {
 	 * @param password Password.
 	 */
 	public async login(username: string, password: string): Promise<void> {
-		await this._invoke(<protocol.LoginCommand>{
+		await this._invoke({
 			type: "login",
 			username,
 			password,
@@ -586,7 +586,7 @@ export class BaseClient extends events.EventEmitter {
 		pattern?: string,
 		id?: string
 	): Promise<void> {
-		await this._invoke(<protocol.SubscribeCommand>{
+		await this._invoke({
 			type: "subscribe",
 			node: nodeName,
 			pattern,
@@ -608,7 +608,7 @@ export class BaseClient extends events.EventEmitter {
 		pattern?: string,
 		id?: string
 	): Promise<void> {
-		await this._invoke(<protocol.UnsubscribeCommand>{
+		await this._invoke({
 			type: "unsubscribe",
 			node: nodeName,
 			pattern,
@@ -646,7 +646,7 @@ export class BaseClient extends events.EventEmitter {
 			message = new Message(args[0], args[1], args[2]);
 		}
 		message.validate();
-		await this._invoke(<protocol.PublishCommand>{
+		await this._invoke({
 			type: "publish",
 			node: nodeName,
 			topic: message.topic,
@@ -843,7 +843,7 @@ export class BaseClient extends events.EventEmitter {
 			if (!data || typeof data !== "object") {
 				throw new Error("missing or invalid data received");
 			}
-			const response = <protocol.Response>data;
+			const response = data as protocol.Response;
 			if (typeof response.type !== "string") {
 				throw new Error("missing type property on received data");
 			}
@@ -852,11 +852,10 @@ export class BaseClient extends events.EventEmitter {
 					this._handleMessage(response);
 					break;
 				case "error":
-					const errRes = <protocol.ErrorResponse>response;
-					const err = new Error("server error: " + errRes.message);
+					const err = new Error("server error: " + response.message);
 					if (
-						errRes.seq === undefined ||
-						!this._transactions.reject(errRes.seq, err)
+						response.seq === undefined ||
+						!this._transactions.reject(response.seq, err)
 					) {
 						// Emit as a generic error when it could not be attributed to
 						// a specific request. There's no sane way to continue, so
@@ -870,23 +869,14 @@ export class BaseClient extends events.EventEmitter {
 				case "loginack":
 				case "sessionack":
 				case "subscriptionack":
-					const ackDec = <
-						| protocol.PubAckResponse
-						| protocol.SubAckResponse
-						| protocol.UnsubAckResponse
-						| protocol.LoginAckResponse
-						| protocol.SessionAckResponse
-						| protocol.SubscriptionAckResponse
-					>response;
-					if (protocol.hasSequenceNumber(ackDec)) {
-						this._transactions.resolve(ackDec.seq, ackDec);
+					if (protocol.hasSequenceNumber(response)) {
+						this._transactions.resolve(response.seq, response);
 					}
 					break;
 				case "pingack":
-					const pingDec = <protocol.PingAckResponse>response;
-					if (protocol.hasSequenceNumber(pingDec)) {
+					if (protocol.hasSequenceNumber(response)) {
 						// ignore 'gratuitous' pings from the server
-						this._transactions.resolve(pingDec.seq, pingDec);
+						this._transactions.resolve(response.seq, response);
 					}
 					break;
 				default:
