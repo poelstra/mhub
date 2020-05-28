@@ -556,30 +556,6 @@ export class BaseClient extends events.EventEmitter {
 		}
 	}
 
-	// /**
-	//  * Try to create/reattach to server session, but don't fail if
-	//  * server doesn't support it.
-	//  *
-	//  * Note: this does throw an error for cases where sessions are supported
-	//  * on the server, but it's not possible to obtain one.
-	//  *
-	//  * @return true when session is attached to
-	//  */
-	// public async trySession(
-	// 	name: string,
-	// 	sessionOptions?: SessionOptions
-	// ): Promise<boolean> {
-	// 	try {
-	// 		await this.session(name, sessionOptions);
-	// 		return true;
-	// 	} catch (err) {
-	// 		if (this._isUnsupportedCommandError(err)) {
-	// 			return false;
-	// 		}
-	// 		throw err;
-	// 	}
-	// }
-
 	/**
 	 * Create subscription with given `id` and bind to the given node/pattern combinations.
 	 */
@@ -593,20 +569,6 @@ export class BaseClient extends events.EventEmitter {
 			await sub.start(this);
 		}
 	}
-
-	// public consume(
-	// 	id: string,
-	// 	window: number,
-	// 	consumer: (message: Message) => void | Promise<void>
-	// ): () => void {
-	// 	const sub = this._subscriptions.get(id);
-	// 	if (!sub) {
-	// 		throw new Error(`unknown subscription '${id}'`);
-	// 	}
-	// 	sub.consume(consumer);
-	// 	sub.updateWindow(window);
-	// 	return () => sub.updateWindow(0);
-	// }
 
 	/**
 	 * Subscribe to a node.
