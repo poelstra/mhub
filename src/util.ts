@@ -58,16 +58,20 @@ export interface Deferred<T> {
 	reject: (error: Error) => void;
 }
 
+// deferred() is ran synchronously and doesn't call anything external,
+// so we can reuse the same lambda as promise executor.
+let deferResolve: Deferred<any>["resolve"];
+let deferReject: Deferred<any>["reject"];
+const deferExecutor = (res: typeof deferResolve, rej: typeof deferReject) => {
+	deferResolve = res;
+	deferReject = rej;
+};
+
 export function deferred<T>(): Deferred<T> {
-	let resolve: Deferred<T>["resolve"];
-	let reject: Deferred<T>["reject"];
-	const promise = new Promise<T>((res, rej) => {
-		resolve = res;
-		reject = rej;
-	});
+	const promise = new Promise<T>(deferExecutor);
 	return {
 		promise,
-		resolve: resolve!,
-		reject: reject!,
+		resolve: deferResolve!,
+		reject: deferReject!,
 	};
 }

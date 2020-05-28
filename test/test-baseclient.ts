@@ -14,12 +14,12 @@ import { EventEmitter } from "ws";
 import BaseClient, {
 	Connection,
 	defaultBaseClientOptions,
-	MAX_SEQ,
 	Subscription,
 } from "../src/baseclient";
 import Message from "../src/message";
 import * as protocol from "../src/protocol";
 import { swallowError } from "../src/util";
+import { Transactions } from "../src/transactions";
 
 chai.use(sinonChai);
 chai.use(chaiAsPromised);
@@ -247,13 +247,14 @@ describe("BaseClient", () => {
 		});
 
 		it("should wrap around", async () => {
+			// TODO move this test to Transactions tests
 			// Keep first request 'occupied'
 			const firstPing = client.ping();
 			connection.popRequest();
 
-			const startSeq = MAX_SEQ - 3;
-			(client as any)._seqNo = startSeq;
-			for (let i = startSeq; i < MAX_SEQ; i++) {
+			const startSeq = Transactions.MAX_SEQ - 3;
+			(client as any)._transactions._seqNo = startSeq;
+			for (let i = startSeq; i < Transactions.MAX_SEQ; i++) {
 				connection.expectAndReply(
 					{
 						type: "ping",

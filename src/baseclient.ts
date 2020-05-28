@@ -13,13 +13,7 @@ import Message, { Headers } from "./message";
 import { delay } from "./promise";
 import * as protocol from "./protocol";
 import { swallowError, assertNever, deferred, Deferred } from "./util";
-
-export const MAX_SEQ = 65536;
-
-interface Transaction<T extends protocol.Response = protocol.Response> {
-	promise: Promise<T>;
-	resolve: (v: T | PromiseLike<T>) => void;
-}
+import { Transactions } from "./transactions";
 
 /**
  * Options to be passed to constructor.
@@ -418,11 +412,8 @@ export class Subscription extends events.EventEmitter {
  */
 export class BaseClient extends events.EventEmitter {
 	private _options: BaseClientOptions;
-	private _transactions: {
-		[seqNo: number]: Transaction;
-	} = {};
+	private _transactions = new Transactions<protocol.Response>();
 	private _subscriptions: Map<string, Subscription> = new Map();
-	private _seqNo: number = 0;
 	private _idleTimer: any = undefined;
 	private _connection: Connection;
 	private _connectionState: ConnectionState = ConnectionState.Disconnected;
@@ -783,18 +774,8 @@ export class BaseClient extends events.EventEmitter {
 			} else {
 				// Gracefully close in normal cases, meaning any
 				// in-progress transactions will be completed first.
-				const inProgress: Promise<any>[] = [];
-				for (const t in this._transactions) {
-					if (!this._transactions[t]) {
-						continue;
-					}
-					// Keep waiting until all are done, even if some error out
-					inProgress.push(
-						this._transactions[t].promise.catch(swallowError)
-					);
-				}
 				await Promise.race([
-					Promise.all(inProgress),
+					this._transactions.join(),
 					this._terminated.promise, // ensure close is aborted with a rejection when terminated
 				]);
 				await Promise.race([
@@ -840,13 +821,7 @@ export class BaseClient extends events.EventEmitter {
 	}
 
 	private _abortTransactions(error: Error): void {
-		for (const t in this._transactions) {
-			if (!this._transactions[t]) {
-				continue;
-			}
-			this._transactions[t].resolve(Promise.reject(error));
-		}
-		this._transactions = {};
+		this._transactions.rejectAll(error);
 	}
 
 	private _doDisconnected(): void {
@@ -919,7 +894,7 @@ export class BaseClient extends events.EventEmitter {
 					const err = new Error("server error: " + errRes.message);
 					if (
 						errRes.seq === undefined ||
-						!this._release(errRes.seq, err, response)
+						!this._transactions.reject(errRes.seq, err)
 					) {
 						// Emit as a generic error when it could not be attributed to
 						// a specific request. There's no sane way to continue, so
@@ -942,14 +917,14 @@ export class BaseClient extends events.EventEmitter {
 						| protocol.SubscriptionAckResponse
 					>response;
 					if (protocol.hasSequenceNumber(ackDec)) {
-						this._release(ackDec.seq, undefined, ackDec);
+						this._transactions.resolve(ackDec.seq, ackDec);
 					}
 					break;
 				case "pingack":
 					const pingDec = <protocol.PingAckResponse>response;
 					if (protocol.hasSequenceNumber(pingDec)) {
 						// ignore 'gratuitous' pings from the server
-						this._release(pingDec.seq, undefined, pingDec);
+						this._transactions.resolve(pingDec.seq, pingDec);
 					}
 					break;
 				default:
@@ -1021,23 +996,11 @@ export class BaseClient extends events.EventEmitter {
 			throw new Error("not connected");
 		}
 
-		const seq = this._nextSeq();
-		cmd.seq = seq;
-		let resolve: Transaction["resolve"];
-		const promise = new Promise<protocol.Response>(
-			(res) => (resolve = res)
-		);
-		this._transactions[seq] = {
-			promise,
-			resolve: resolve!,
-		};
-		this._restartIdleTimer();
-		try {
-			await this._connection.send(cmd);
-		} catch (err) {
-			this._release(seq, err);
-		}
-		return promise as Promise<R>;
+		return this._transactions.add((seq) => {
+			cmd.seq = seq;
+			this._restartIdleTimer();
+			return this._connection.send(cmd);
+		}) as Promise<R>;
 	}
 
 	public async _send(cmd: protocol.SendCommand): Promise<void> {
@@ -1064,45 +1027,6 @@ export class BaseClient extends events.EventEmitter {
 		}
 
 		sub.handleMessage(message, response.seq);
-	}
-
-	/**
-	 * Resolve pending transaction promise (either fulfill or reject with error).
-	 * Returns true when the given sequence number was actually found.
-	 */
-	private _release(
-		seqNr: number,
-		err: Error | void,
-		msg?: protocol.Response
-	): boolean {
-		const transaction = this._transactions[seqNr];
-		if (!transaction) {
-			return false;
-		}
-		delete this._transactions[seqNr];
-		if (err) {
-			transaction.resolve(Promise.reject(err));
-		} else {
-			assert(msg);
-			transaction.resolve(msg!);
-		}
-		return true;
-	}
-
-	/**
-	 * Compute next available sequence number.
-	 * Throws an error when no sequence number is available (too many
-	 * pending transactions).
-	 */
-	private _nextSeq(): number {
-		let maxIteration = MAX_SEQ;
-		while (--maxIteration > 0 && this._transactions[this._seqNo]) {
-			this._seqNo = (this._seqNo + 1) % MAX_SEQ;
-		}
-		assert(maxIteration > 0, "out of sequence numbers");
-		const result = this._seqNo;
-		this._seqNo = (this._seqNo + 1) % MAX_SEQ;
-		return result;
 	}
 
 	/**
