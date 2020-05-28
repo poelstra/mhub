@@ -7,14 +7,15 @@
 import * as chai from "chai";
 import { expect } from "chai";
 import * as chaiAsPromised from "chai-as-promised";
+import { once } from "events";
 import * as sinon from "sinon";
 import * as sinonChai from "sinon-chai";
-import { setImmediate } from "timers";
 import { EventEmitter } from "ws";
 import BaseClient, {
 	Connection,
-	MAX_SEQ,
 	defaultBaseClientOptions,
+	MAX_SEQ,
+	Subscription,
 } from "../src/baseclient";
 import Message from "../src/message";
 import * as protocol from "../src/protocol";
@@ -30,13 +31,18 @@ const never = new Promise<never>(() => {
 	/* no op */
 });
 
+function nextTick(): Promise<void> {
+	return new Promise((resolve) => process.nextTick(resolve));
+}
+
 interface Request {
-	command: protocol.Command;
+	request: protocol.Command;
 }
 
 interface Response {
-	command: protocol.Command;
-	response: protocol.Response;
+	request: protocol.Command | undefined;
+	response?: protocol.Response;
+	resolve: (res?: void | Promise<void>) => void;
 }
 
 class FakeConnection extends EventEmitter implements Connection {
@@ -53,7 +59,7 @@ class FakeConnection extends EventEmitter implements Connection {
 	public async send(data: protocol.Command): Promise<void> {
 		expect(this.connected).to.equal(true);
 		this._requests.push({
-			command: data,
+			request: data,
 		});
 		this._flush();
 	}
@@ -79,19 +85,32 @@ class FakeConnection extends EventEmitter implements Connection {
 		this.connected = false;
 	}
 
+	public async expect(request: protocol.Command): Promise<void> {
+		await this._push(request);
+	}
+
 	public expectAndReply(
-		command: protocol.Command,
+		request: protocol.Command,
 		response: protocol.Response
-	): void {
-		this._responses.push({
-			command,
-			response,
-		});
-		this._flush();
+	): Promise<void> {
+		return this._push(request, response);
+	}
+
+	public async pushCallback(callback: () => void): Promise<void> {
+		await this._push();
+		callback();
+	}
+
+	public sync(): Promise<void> {
+		return this._push();
+	}
+
+	public pushResponse(response: protocol.Response): Promise<void> {
+		return this._push(undefined, response);
 	}
 
 	public popRequest(): protocol.Command | undefined {
-		return this._requests.shift()?.command;
+		return this._requests.shift()?.request;
 	}
 
 	public emitResponse(response: protocol.Response): void {
@@ -118,32 +137,51 @@ class FakeConnection extends EventEmitter implements Connection {
 
 	public assertEmpty() {
 		expect([]).to.deep.equal(
-			this._responses.map((r) => r.command),
+			this._responses.map((r) => r.request),
 			"not all expected commands came in"
 		);
 		expect([]).to.deep.equal(
-			this._requests.map((r) => r.command),
+			this._requests.map((r) => r.request),
 			"not all commands have been processed"
 		);
 	}
 
+	private async _push(
+		request?: protocol.Command,
+		response?: protocol.Response
+	): Promise<void> {
+		return new Promise((resolve) => {
+			this._responses.push({
+				request,
+				response,
+				resolve,
+			});
+			this._flush();
+		});
+	}
+
 	private _flush(): void {
-		while (this._requests.length > 0 && this._responses.length > 0) {
-			const req = this._requests.shift()!;
+		while (
+			(this._responses.length > 0 && this._requests.length > 0) ||
+			(this._responses.length > 0 &&
+				this._responses[0].request === undefined)
+		) {
 			const res = this._responses.shift()!;
+			const req = res !== undefined ? this._requests.shift()! : undefined;
 
 			try {
-				expect(req.command).to.deep.equal(
-					res.command,
-					"unexpected command received"
-				);
-				this.emitResponse(res.response);
+				if (req) {
+					expect(req.request).to.deep.equal(
+						res.request,
+						"unexpected command received"
+					);
+				}
+				if (res.response) {
+					this.emitResponse(res.response);
+				}
+				res.resolve();
 			} catch (e) {
-				// Ensure that any assertion failure is captured
-				// directly, not swallowed internally in the client
-				setImmediate(() => {
-					throw e;
-				});
+				res.resolve(Promise.reject(e));
 			}
 		}
 	}
@@ -349,7 +387,7 @@ describe("BaseClient", () => {
 
 			const pingPromise = client.ping();
 			const closePromise = client.close();
-			await Promise.resolve();
+			await nextTick();
 			expect(close).to.not.be.called;
 
 			connection.expectAndReply(
@@ -504,7 +542,7 @@ describe("BaseClient", () => {
 			connection.popRequest();
 
 			const closePromise = client.close();
-			await Promise.resolve();
+			await nextTick();
 			expect(close).to.not.be.called;
 
 			client.terminate();
@@ -513,6 +551,114 @@ describe("BaseClient", () => {
 				"connection terminated"
 			);
 			expect(onClose).to.be.called;
+		});
+	});
+
+	describe("connection close", () => {
+		it("handles spontaneous close with no pending transactions", async () => {
+			const onClose = sinon.spy();
+			client.on("close", onClose);
+
+			await client.connect();
+			connection.emitClose();
+
+			await nextTick();
+
+			expect(onClose).to.be.calledOnceWithExactly();
+		});
+
+		it("handles spontaneous close with pending transactions", async () => {
+			const onClose = sinon.spy();
+			client.on("close", onClose);
+
+			await client.connect();
+			const ping = client.ping();
+
+			connection.emitClose();
+			connection.popRequest(); // discard the ping
+
+			await nextTick();
+
+			expect(onClose).to.be.calledOnceWithExactly();
+			await expect(ping).to.be.rejectedWith(Error, "connection closed");
+		});
+
+		it("can reconnect after spontaneous close", async () => {
+			const onClose = sinon.spy();
+			client.on("close", onClose);
+
+			await client.connect();
+			connection.emitClose();
+
+			await nextTick();
+
+			expect(onClose).to.be.calledOnceWithExactly();
+
+			const onOpen = sinon.spy();
+			client.on("open", onOpen);
+
+			await client.connect();
+			expect(onOpen).to.be.calledOnceWithExactly();
+		});
+	});
+
+	describe("connection error", () => {
+		it("handles spontaneous error with no pending transactions", async () => {
+			const onClose = sinon.spy();
+			client.on("close", onClose);
+			const onError = sinon.spy();
+			client.on("error", onError);
+
+			const err = new Error("boom");
+			await client.connect();
+			connection.emitError(err);
+
+			await nextTick();
+
+			expect(onError).to.be.calledOnceWithExactly(err);
+			expect(onClose).to.be.calledOnceWithExactly();
+			expect(onError).to.be.calledBefore(onClose);
+		});
+
+		it("handles spontaneous error with pending transactions", async () => {
+			const onClose = sinon.spy();
+			client.on("close", onClose);
+			const onError = sinon.spy();
+			client.on("error", onError);
+
+			const err = new Error("boom");
+			await client.connect();
+			const ping = client.ping();
+			const pingCheck = expect(ping).to.be.rejectedWith(Error, "boom");
+
+			connection.emitError(err);
+			connection.popRequest(); // discard the ping
+
+			await nextTick();
+
+			expect(onError).to.be.calledOnceWithExactly(err);
+			expect(onClose).to.be.calledOnceWithExactly();
+			expect(onError).to.be.calledBefore(onClose);
+			await pingCheck;
+		});
+
+		it("can reconnect after spontaneous error", async () => {
+			const onClose = sinon.spy();
+			client.on("close", onClose);
+			const onError = sinon.spy();
+			client.on("error", onError);
+
+			await client.connect();
+			connection.emitError(new Error("boom"));
+
+			await nextTick();
+			expect(onError).to.be.called;
+
+			const onOpen = sinon.spy();
+			client.on("open", onOpen);
+
+			await client.connect();
+			expect(onOpen).to.be.calledOnceWithExactly();
 		});
 	});
 
@@ -852,7 +998,7 @@ describe("BaseClient", () => {
 				"default",
 				new Message("/dev/something", "doSomething")
 			);
-			await Promise.resolve();
+			await nextTick();
 
 			const stopClient = (async () => {
 				expect(messages).to.deep.equal([
@@ -861,6 +1007,158 @@ describe("BaseClient", () => {
 				await client.close();
 			})();
 			await stopClient;
+		});
+
+		it("supports consume() with non-session-aware server");
+
+		it("simple subscriber with in-memory session", async () => {
+			const messages: Message[] = [];
+			const runClient = async () => {
+				const sub = new Subscription(
+					"a",
+					(message) => {
+						messages.push(message);
+					},
+					{
+						window: 2,
+						bindings: { myNode: true },
+					}
+				);
+
+				await client.addSubscription(sub);
+
+				const closed1 = once(client, "close");
+				await client.connect();
+				await client.login("myUser", "myPass");
+				await client.session("mySession");
+
+				// Wait until the disconnect happens (to simulate a connection loss)
+				await closed1;
+
+				await client.connect();
+				await client.login("myUser", "myPass");
+				await client.session("mySession");
+			};
+
+			const runServer = async () => {
+				await connection.expectAndReply(
+					{
+						type: "login",
+						username: "myUser",
+						password: "myPass",
+						seq: 0,
+					},
+					{ type: "loginack", seq: 0 }
+				);
+				await connection.expectAndReply(
+					{
+						type: "session",
+						name: "mySession",
+						subscriptions: ["a"],
+						seq: 1,
+					},
+					{ type: "sessionack", seq: 1 }
+				);
+				await connection.expectAndReply(
+					{
+						type: "subscription",
+						id: "a",
+						bindings: {
+							myNode: [""],
+						},
+						seq: 2,
+					},
+					{ type: "subscriptionack", seq: 2, lastAck: 0 }
+				);
+				await connection.expect({
+					type: "ack",
+					id: "a",
+					window: 2,
+					ack: 0,
+				});
+
+				await connection.pushResponse({
+					type: "message",
+					topic: "myTopic",
+					data: "message1",
+					headers: {},
+					subscription: "a",
+					seq: 1,
+				});
+				await connection.expect({
+					type: "ack",
+					id: "a",
+					ack: 1,
+					window: undefined,
+				});
+
+				connection.emitClose();
+
+				await connection.expectAndReply(
+					{
+						type: "login",
+						username: "myUser",
+						password: "myPass",
+						seq: 3,
+					},
+					{ type: "loginack", seq: 3 }
+				);
+				await connection.expectAndReply(
+					{
+						type: "session",
+						name: "mySession",
+						subscriptions: ["a"],
+						seq: 4,
+					},
+					{
+						type: "sessionack",
+						seq: 4,
+					}
+				);
+				await connection.expectAndReply(
+					{
+						type: "subscription",
+						id: "a",
+						bindings: {
+							myNode: [""],
+						},
+						seq: 5,
+					},
+					{
+						type: "subscriptionack",
+						lastAck: 1,
+						bindings: undefined,
+						seq: 5,
+					}
+				);
+				await connection.expect({
+					type: "ack",
+					id: "a",
+					ack: 1,
+					window: 2,
+				});
+				await connection.pushResponse({
+					type: "message",
+					topic: "myTopic",
+					data: "message2",
+					headers: {},
+					subscription: "a",
+					seq: 2,
+				});
+				await connection.expect({
+					type: "ack",
+					id: "a",
+					ack: 2,
+					window: undefined,
+				});
+
+				expect(messages).to.deep.equal([
+					new Message("myTopic", "message1"),
+					new Message("myTopic", "message2"),
+				]);
+			};
+
+			await Promise.all([runClient(), runServer()]);
 		});
 	});
 });

@@ -60,14 +60,14 @@ export interface SubscribeCommand {
 	 */
 	node: string;
 	/**
-	 * Optional pattern to apply to message topics.
+	 * Optional pattern(s) to apply to message topics.
 	 * Patterns are matched using (https://www.npmjs.com/package/micromatch),
 	 * e.g. `"test*"` will match `"tester"`.
-	 * If the pattern matches, it will be forwarded to the client, otherwise it
+	 * If any of the pattern matches, it will be forwarded to the client, otherwise it
 	 * will be ignored.
 	 * If no pattern is given, all messages (from that node) will be forwarded.
 	 */
-	pattern?: string;
+	pattern?: string | string[];
 	/**
 	 * Optional identifier to use when sending matching messages to the client.
 	 * It will be set as the `subscription` field of each `MessageResponse`.
@@ -109,11 +109,11 @@ export interface UnsubscribeCommand {
 	 */
 	node: string;
 	/**
-	 * Optional pattern to unsubscribe.
+	 * Optional pattern(s) to unsubscribe.
 	 * If no pattern is given, all subscriptions on given `node` and `id` will be
 	 * unsubscribed.
 	 */
-	pattern?: string;
+	pattern?: string | string[];
 	/**
 	 * Optional identifier for matching a subscription.
 	 * If no identifier is given, `"default"` is used instead.
@@ -380,7 +380,12 @@ export interface SessionAckResponse {
  */
 export type Pattern = string;
 
-export type Patterns = Pattern | Pattern[];
+/**
+ * Array of topic patterns.
+ * If empty, will match nothing.
+ * Duplicate patterns are ignored.
+ */
+export type Patterns = Pattern[];
 
 export interface Bindings {
 	[nodeName: string]: Patterns;
@@ -401,17 +406,26 @@ export interface SubscriptionAckResponse {
 }
 
 /**
- * All supported commands (i.e. client to server).
+ * All supported requests (i.e. client to server) that (can) have a response.
  */
-export type Command =
+export type InvokeCommand =
 	| SubscribeCommand
 	| UnsubscribeCommand
 	| PublishCommand
 	| PingCommand
 	| LoginCommand
 	| SessionCommand
-	| SubscriptionCommand
-	| AckCommand;
+	| SubscriptionCommand;
+
+/**
+ * All supported requests (i.e. client to server) that have no response.
+ */
+export type SendCommand = AckCommand;
+
+/**
+ * All supported requests (i.e. client to server).
+ */
+export type Command = InvokeCommand | SendCommand;
 
 /**
  * All supported responses (i.e. server to client)

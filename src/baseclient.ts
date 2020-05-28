@@ -39,10 +39,6 @@ export const defaultBaseClientOptions: BaseClientOptions = {
 	keepalive: 30000, // milliseconds
 };
 
-export interface SessionOptions {
-	subscriptions?: string[];
-}
-
 /**
  * Interface for coupling of MHub client to transport protocol
  * such as a WebSocket or raw TCP stream.
@@ -153,6 +149,263 @@ enum ConnectionState {
 	Terminating, // forcefully
 }
 
+export interface SubscriptionBindings {
+	[nodeName: string]: boolean | string | string[];
+}
+
+export interface SubscriptionOptions {
+	/**
+	 * Specify sequence number of last succesfully received
+	 * message.
+	 * If not specified, the oldest message available on the
+	 * server will be used.
+	 */
+	lastAck?: number;
+	/**
+	 * Specify amount of unacked messages that can be in flight
+	 * at any time.
+	 * Note: if set to 0, no messages will be sent by the server,
+	 * which can be used to pause message delivery.
+	 */
+	window?: number;
+	/**
+	 * Specify the initial list of bindings to use.
+	 * The bindings on the server will be updated to match these
+	 * bindings, by adding and removing nodes and patterns as
+	 * necessary.
+	 */
+	bindings?: SubscriptionBindings | undefined;
+}
+
+function patternToProtocolPatterns(
+	pattern?: boolean | string | string[]
+): string[] {
+	if (!pattern) {
+		pattern = true;
+	}
+	if (pattern === true) {
+		pattern = "";
+	}
+	if (!Array.isArray(pattern)) {
+		pattern = [pattern];
+	}
+	return pattern;
+}
+
+export interface Subscription {
+	on(event: "error", handler: (error: Error) => void): this;
+}
+
+export class Subscription extends events.EventEmitter {
+	private _client: BaseClient | undefined;
+	private _consumer: (message: Message) => void | Promise<void>;
+	private _handleQueue: Promise<void> = Promise.resolve();
+	private _bindings: Map<string, Set<string>> | undefined;
+	private _window: number;
+	private _lastAck: number | undefined;
+	private _inProgress: number = 0;
+	private _announcedWindow: number | undefined;
+
+	public readonly id: string;
+
+	constructor(
+		id: string,
+		consumer: (message: Message) => void,
+		options?: SubscriptionOptions
+	) {
+		super();
+		this.id = id;
+		this._consumer = consumer;
+
+		this._lastAck = options?.lastAck;
+		this._window = options?.window ?? 10;
+
+		// Use existing on-server bindings if no bindings were given
+		if (options?.bindings) {
+			// Protocol bindings only use strings (no booleans) to simplify
+			// implementation of other clients.
+			this._bindings = new Map();
+			for (const nodeName of Object.keys(options.bindings)) {
+				const pattern = patternToProtocolPatterns(
+					options.bindings[nodeName]
+				);
+				this._bindings.set(nodeName, new Set(pattern));
+			}
+		}
+	}
+
+	public setWindow(window: number): Promise<void> {
+		this._window = window;
+		return this._sendAckIfConnected();
+	}
+
+	public async subscribe(
+		nodeName: string,
+		pattern?: boolean | string | string[]
+	): Promise<void> {
+		if (!this._bindings) {
+			this._bindings = new Map();
+		}
+		let nodePatterns = this._bindings.get(nodeName);
+		if (!nodePatterns) {
+			nodePatterns = new Set();
+			this._bindings.set(nodeName, nodePatterns);
+		}
+		const toAdd: string[] = [];
+		for (const pat of patternToProtocolPatterns(pattern)) {
+			if (!nodePatterns.has(pat)) {
+				// TODO defer adding to bindings to when subscribe succeeded?
+				// If so, how to handle case where subscribe handles at session restore?
+				nodePatterns.add(pat);
+				toAdd.push(pat);
+			}
+		}
+		// If we have a connection, and the subscriptions actually
+		// changed, send it to the server
+		if (this._client && toAdd.length > 0) {
+			await this._client._invoke({
+				type: "subscribe",
+				node: nodeName,
+				pattern: toAdd,
+				id: this.id,
+			});
+		}
+	}
+
+	public async unsubscribe(
+		nodeName: string,
+		pattern?: boolean | string | string[]
+	): Promise<void> {
+		if (!this._bindings) {
+			return;
+		}
+		const nodePatterns = this._bindings.get(nodeName);
+		if (!nodePatterns) {
+			return;
+		}
+		if (pattern === undefined || pattern === true) {
+			// Special case: unsubscribe everything
+			this._bindings.delete(nodeName);
+			pattern = undefined;
+		} else {
+			for (const pat of patternToProtocolPatterns(pattern)) {
+				nodePatterns.delete(pat);
+			}
+			if (nodePatterns.size === 0) {
+				this._bindings.delete(nodeName);
+			}
+		}
+		await this._client?._invoke(<protocol.UnsubscribeCommand>{
+			type: "unsubscribe",
+			node: nodeName,
+			pattern,
+			id: this.id,
+		});
+	}
+
+	public async start(client: BaseClient): Promise<void> {
+		if (this._client) {
+			throw new Error(
+				`cannot start subscription '${this.id}': already assigned to a client`
+			);
+		}
+		this._client = client;
+		this._client.once("close", () => this._handleClose());
+		let protocolBindings: protocol.Bindings | undefined;
+		if (this._bindings) {
+			protocolBindings = {};
+			for (const [nodeName, patterns] of this._bindings) {
+				protocolBindings[nodeName] = [...patterns.values()];
+			}
+		}
+		const response = await this._client._invoke<
+			protocol.SubscriptionAckResponse
+		>({
+			type: "subscription",
+			id: this.id,
+			bindings: protocolBindings,
+		});
+		if (this._lastAck === undefined) {
+			// If lastAck is already known, keep it as-is
+			this._lastAck = response.lastAck;
+		}
+		if (this._inProgress === 0) {
+			// Don't send out an ACK if a message is in-progress (i.e.
+			// already received on a previous connection, and still being
+			// processed across a reconnect): because we'd receive the
+			// message(s) we're already processing again. Instead, let
+			// those messages finish and send their acks themselves.
+			await this._sendAckIfConnected();
+		}
+	}
+
+	/**
+	 * @internal
+	 */
+	public handleMessage(message: Message, seq?: number): void {
+		this._handleQueue = this._doHandleMessage(message, seq);
+	}
+
+	private async _doHandleMessage(
+		message: Message,
+		seq?: number
+	): Promise<void> {
+		await this._handleQueue;
+		try {
+			if (!this._consumer) {
+				throw new Error(`cannot handle message: no consumer`);
+			}
+			// TODO ack message on error anyway? (in addition to closing the connection)
+			// Otherwise, messages may get 'stuck' by being reprocessed over-and-over again
+			this._inProgress++;
+			await this._consumer(message);
+			this._inProgress--;
+			if (seq !== undefined) {
+				this._lastAck = seq;
+				this._sendAckIfConnected();
+			}
+		} catch (err) {
+			this._emitError(err);
+		}
+	}
+
+	private async _sendAckIfConnected(): Promise<void> {
+		if (this._client && this._lastAck !== undefined) {
+			const window =
+				this._window !== this._announcedWindow
+					? this._window
+					: undefined;
+			this._announcedWindow = this._window;
+			return this._client._send({
+				type: "ack",
+				id: this.id,
+				ack: this._lastAck,
+				window,
+			});
+		}
+	}
+
+	private _handleClose(): void {
+		// When client disconnects, unset client.
+		// We do keep updating lastAck in that case, such that
+		// on reconnect (and start is called again), the lastAck
+		// is sent as necessary.
+		this._client = undefined;
+		this._announcedWindow = undefined;
+	}
+
+	private _emitError(err: Error): void {
+		try {
+			this.emit("error", err);
+		} catch (err2) {
+			if (!this._client) {
+				throw err2;
+			}
+			this._client.terminate(err2).catch(swallowError);
+		}
+	}
+}
+
 /**
  * Base MHub client.
  *
@@ -168,6 +421,7 @@ export class BaseClient extends events.EventEmitter {
 	private _transactions: {
 		[seqNo: number]: Transaction;
 	} = {};
+	private _subscriptions: Map<string, Subscription> = new Map();
 	private _seqNo: number = 0;
 	private _idleTimer: any = undefined;
 	private _connection: Connection;
@@ -176,6 +430,7 @@ export class BaseClient extends events.EventEmitter {
 	private _connecting: Promise<void> | undefined;
 	private _closing: Promise<void> | undefined;
 	private _terminated: Deferred<void> = deferred();
+	private _haveSession: boolean = false;
 
 	/**
 	 * Create new BaseClient.
@@ -291,47 +546,76 @@ export class BaseClient extends events.EventEmitter {
 	 * @param password Password.
 	 */
 	public async login(username: string, password: string): Promise<void> {
-		await this._send(<protocol.LoginCommand>{
+		await this._invoke(<protocol.LoginCommand>{
 			type: "login",
 			username,
 			password,
 		});
 	}
 
-	public async session(
-		name: string,
-		sessionOptions?: SessionOptions
-	): Promise<void> {
-		await this._send(<protocol.SessionCommand>{
+	public async session(name: string): Promise<void> {
+		await this._invoke(<protocol.SessionCommand>{
 			type: "session",
 			name,
-			...sessionOptions,
+			subscriptions: [...this._subscriptions.keys()],
 		});
-	}
-
-	/**
-	 * Try to create/reattach to server session, but don't fail if
-	 * server doesn't support it.
-	 *
-	 * Note: this does throw an error for cases where sessions are supported
-	 * on the server, but it's not possible to obtain one.
-	 *
-	 * @return true when session is attached to
-	 */
-	public async trySession(
-		name: string,
-		sessionOptions?: SessionOptions
-	): Promise<boolean> {
-		try {
-			await this.session(name, sessionOptions);
-			return true;
-		} catch (err) {
-			if (this._isUnsupportedCommandError(err)) {
-				return false;
-			}
-			throw err;
+		this._haveSession = true;
+		for (const [, sub] of this._subscriptions) {
+			await sub.start(this);
 		}
 	}
+
+	// /**
+	//  * Try to create/reattach to server session, but don't fail if
+	//  * server doesn't support it.
+	//  *
+	//  * Note: this does throw an error for cases where sessions are supported
+	//  * on the server, but it's not possible to obtain one.
+	//  *
+	//  * @return true when session is attached to
+	//  */
+	// public async trySession(
+	// 	name: string,
+	// 	sessionOptions?: SessionOptions
+	// ): Promise<boolean> {
+	// 	try {
+	// 		await this.session(name, sessionOptions);
+	// 		return true;
+	// 	} catch (err) {
+	// 		if (this._isUnsupportedCommandError(err)) {
+	// 			return false;
+	// 		}
+	// 		throw err;
+	// 	}
+	// }
+
+	/**
+	 * Create subscription with given `id` and bind to the given node/pattern combinations.
+	 */
+	public async addSubscription(sub: Subscription): Promise<void> {
+		if (this._subscriptions.has(sub.id)) {
+			throw new Error(`already have a subscription for '${sub.id}'`);
+		}
+		sub.on("error", (err) => this.terminate(err));
+		this._subscriptions.set(sub.id, sub);
+		if (this._haveSession) {
+			await sub.start(this);
+		}
+	}
+
+	// public consume(
+	// 	id: string,
+	// 	window: number,
+	// 	consumer: (message: Message) => void | Promise<void>
+	// ): () => void {
+	// 	const sub = this._subscriptions.get(id);
+	// 	if (!sub) {
+	// 		throw new Error(`unknown subscription '${id}'`);
+	// 	}
+	// 	sub.consume(consumer);
+	// 	sub.updateWindow(window);
+	// 	return () => sub.updateWindow(0);
+	// }
 
 	/**
 	 * Subscribe to a node.
@@ -349,7 +633,7 @@ export class BaseClient extends events.EventEmitter {
 		pattern?: string,
 		id?: string
 	): Promise<void> {
-		await this._send(<protocol.SubscribeCommand>{
+		await this._invoke(<protocol.SubscribeCommand>{
 			type: "subscribe",
 			node: nodeName,
 			pattern,
@@ -371,7 +655,7 @@ export class BaseClient extends events.EventEmitter {
 		pattern?: string,
 		id?: string
 	): Promise<void> {
-		await this._send(<protocol.UnsubscribeCommand>{
+		await this._invoke(<protocol.UnsubscribeCommand>{
 			type: "unsubscribe",
 			node: nodeName,
 			pattern,
@@ -409,7 +693,7 @@ export class BaseClient extends events.EventEmitter {
 			message = new Message(args[0], args[1], args[2]);
 		}
 		message.validate();
-		await this._send(<protocol.PublishCommand>{
+		await this._invoke(<protocol.PublishCommand>{
 			type: "publish",
 			node: nodeName,
 			topic: message.topic,
@@ -429,7 +713,7 @@ export class BaseClient extends events.EventEmitter {
 	 *                the promise with an error, or infinite if not given.
 	 */
 	public ping(timeout?: number): Promise<void> {
-		const pingResult = this._send(<protocol.PingCommand>{
+		const pingResult = this._invoke(<protocol.PingCommand>{
 			type: "ping",
 		}).then(() => undefined);
 		if (timeout) {
@@ -451,7 +735,17 @@ export class BaseClient extends events.EventEmitter {
 	 */
 	private _asyncEmit(event: string, ...args: any[]): void {
 		Promise.resolve().then(() => {
-			this.emit(event, ...args);
+			try {
+				this.emit(event, ...args);
+			} catch (err) {
+				const message =
+					err instanceof Error
+						? (err as Error).message
+						: "<unknown error>";
+				throw new Error(
+					`unhandled exception in event handler for '${event}': ${message}`
+				);
+			}
 		});
 	}
 
@@ -562,6 +856,7 @@ export class BaseClient extends events.EventEmitter {
 		);
 
 		this._connectionState = ConnectionState.Disconnected;
+		this._haveSession = false;
 
 		if (this._openEmitted) {
 			this._openEmitted = false;
@@ -617,14 +912,7 @@ export class BaseClient extends events.EventEmitter {
 			}
 			switch (response.type) {
 				case "message":
-					const msgRes = <protocol.MessageResponse>response;
-					const message = new Message(
-						msgRes.topic,
-						msgRes.data,
-						msgRes.headers
-					);
-					message.validate();
-					this._asyncEmit("message", message, msgRes.subscription);
+					this._handleMessage(response);
 					break;
 				case "error":
 					const errRes = <protocol.ErrorResponse>response;
@@ -726,17 +1014,15 @@ export class BaseClient extends events.EventEmitter {
 		});
 	}
 
-	private async _send<R extends protocol.Response>(
-		msg: protocol.Command
+	public async _invoke<R extends protocol.Response>(
+		cmd: protocol.InvokeCommand
 	): Promise<R> {
 		if (this._connectionState !== ConnectionState.Connected) {
 			throw new Error("not connected");
 		}
 
 		const seq = this._nextSeq();
-		if (msg.type !== "ack") {
-			msg.seq = seq;
-		}
+		cmd.seq = seq;
 		let resolve: Transaction["resolve"];
 		const promise = new Promise<protocol.Response>(
 			(res) => (resolve = res)
@@ -747,11 +1033,37 @@ export class BaseClient extends events.EventEmitter {
 		};
 		this._restartIdleTimer();
 		try {
-			await this._connection.send(msg);
+			await this._connection.send(cmd);
 		} catch (err) {
 			this._release(seq, err);
 		}
 		return promise as Promise<R>;
+	}
+
+	public async _send(cmd: protocol.SendCommand): Promise<void> {
+		if (this._connectionState !== ConnectionState.Connected) {
+			throw new Error("not connected");
+		}
+		this._restartIdleTimer();
+		await this._connection.send(cmd);
+	}
+
+	private _handleMessage(response: protocol.MessageResponse): void {
+		const message = new Message(
+			response.topic,
+			response.data,
+			response.headers
+		);
+		message.validate();
+
+		const sub = this._subscriptions.get(response.subscription);
+		if (!sub) {
+			// Old-style emit
+			this._asyncEmit("message", message, response.subscription);
+			return;
+		}
+
+		sub.handleMessage(message, response.seq);
 	}
 
 	/**

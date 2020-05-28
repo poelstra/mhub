@@ -235,5 +235,8 @@ describe("HubClient", (): void => {
 				"not logged in"
 			);
 		});
+
+		it("sets subscriptions");
+		it("allows subscriptions to be undefined");
 	});
 });
