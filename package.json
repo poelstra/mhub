@@ -12,7 +12,7 @@
 		"mserver": "./bin/mhub-server"
 	},
 	"scripts": {
-		"test": "npm-run-all build && npm lint && npm mocha",
+		"test": "npm-run-all --silent build lint mocha",
 		"mocha": "mocha",
 		"cover": "npm run -s build && npm run -s lint && nyc npm -s run mocha",
 		"start": "node ./bin/mhub-server",
